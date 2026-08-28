@@ -654,23 +654,23 @@ namespace TransBrain.Application.Tests.Common.Messaging;
 
 public class SenderTests
 {
-    private sealed record EchoCommand(string Text) : ICommand<string>;
+    public sealed record EchoCommand(string Text) : ICommand<string>;
 
-    private sealed class EchoCommandHandler : ICommandHandler<EchoCommand, string>
+    public sealed class EchoCommandHandler : ICommandHandler<EchoCommand, string>
     {
         public Task<Result<string>> Handle(EchoCommand command, CancellationToken cancellationToken)
             => Task.FromResult(Result<string>.Success(command.Text));
     }
 
-    private sealed record FailingQuery : IQuery<string>;
+    public sealed record FailingQuery : IQuery<string>;
 
-    private sealed class FailingQueryHandler : IQueryHandler<FailingQuery, string>
+    public sealed class FailingQueryHandler : IQueryHandler<FailingQuery, string>
     {
         public Task<Result<string>> Handle(FailingQuery query, CancellationToken cancellationToken)
             => Task.FromResult(Result<string>.Failure(Error.NotFound("Q.NotFound", "nothing here")));
     }
 
-    private sealed class SuffixBehavior : IPipelineBehavior<EchoCommand, string>
+    public sealed class SuffixBehavior : IPipelineBehavior<EchoCommand, string>
     {
         public async Task<Result<string>> Handle(
             EchoCommand request,
@@ -723,6 +723,23 @@ public class SenderTests
         Result<string> result = await sender.Send(new EchoCommand("hello"), CancellationToken.None);
 
         result.Value.Should().Be("hello!");
+    }
+
+    // One behaviour cannot reveal a reversed wrapping order, so this test registers two and
+    // pins the strict in/out nesting. A reversed loop in Sender makes it fail.
+    [Fact]
+    public async Task Send_CommandWithTwoBehaviors_RunsFirstRegisteredOutermost()
+    {
+        List<string> log = [];
+        ISender sender = BuildSender(services =>
+        {
+            services.AddScoped<IPipelineBehavior<EchoCommand, string>>(_ => new RecordingBehaviorA(log));
+            services.AddScoped<IPipelineBehavior<EchoCommand, string>>(_ => new RecordingBehaviorB(log));
+        });
+
+        await sender.Send(new EchoCommand("hello"), CancellationToken.None);
+
+        log.Should().Equal("A-enter", "B-enter", "B-exit", "A-exit");
     }
 
     [Fact]
@@ -867,7 +884,9 @@ internal sealed class Sender(IServiceProvider serviceProvider) : ISender
 Run: `dotnet test tests/TransBrain.Application.Tests --filter FullyQualifiedName~SenderTests`
 Expected: 4 passed.
 
-If the build fails with "Compiler dynamic dispatch requires Microsoft.CSharp", add `<PackageReference Include="Microsoft.CSharp" />` to the Application project and a matching `PackageVersion`.
+**Resolved during execution:** `Microsoft.CSharp` is **not** needed — the net10.0 SDK resolves `dynamic` without it. Do not add the package.
+
+**Also learned the hard way:** `dynamic` dispatch respects accessibility. The test fakes above are `public` for exactly that reason — as `private` nested types they compile fine and then throw `RuntimeBinderException` at runtime, because the DLR cannot bind `Handle` on a type it cannot see. Production slices are unaffected, since real handlers and `Sender` share the Application assembly. Do not "tighten" these fakes back to `private`, and do not paper over it with an `InternalsVisibleTo` from the test assembly to the production assembly — production code must never be granted sight of test internals. Only the reverse grant exists, in `src/TransBrain.Application/AssemblyInfo.cs`, because `Sender` is `internal`.
 
 - [ ] **Step 7: Commit**
 
