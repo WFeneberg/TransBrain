@@ -1,4 +1,5 @@
 using TransBrain.Application.Abstractions;
+using TransBrain.Domain.Common;
 using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Tests.Fakes;
@@ -14,10 +15,10 @@ public sealed class InMemoryVehicleRepository : IVehicleRepository
     public Task<bool> ExistsByLicensePlateAsync(LicensePlate plate, CancellationToken cancellationToken)
         => Task.FromResult(_vehicles.Any(v => v.LicensePlate == plate));
 
-    public Task AddAsync(Vehicle vehicle, CancellationToken cancellationToken)
+    public Task<Result<Vehicle>> AddAsync(Vehicle vehicle, CancellationToken cancellationToken)
     {
         _vehicles.Add(vehicle);
-        return Task.CompletedTask;
+        return Task.FromResult(Result<Vehicle>.Success(vehicle));
     }
 
     // Ordinal, not culture-sensitive, comparison: the later EF-backed repository must order

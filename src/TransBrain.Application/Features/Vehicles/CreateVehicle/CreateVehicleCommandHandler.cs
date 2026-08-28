@@ -42,8 +42,12 @@ internal sealed class CreateVehicleCommandHandler(IVehicleRepository repository)
             return vehicle.Error!;
         }
 
-        await repository.AddAsync(vehicle.Value, cancellationToken);
+        Result<Vehicle> added = await repository.AddAsync(vehicle.Value, cancellationToken);
+        if (!added.IsSuccess)
+        {
+            return added.Error!;
+        }
 
-        return VehicleResponse.From(vehicle.Value);
+        return VehicleResponse.From(added.Value);
     }
 }
