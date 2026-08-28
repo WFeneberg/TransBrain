@@ -1,7 +1,13 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
+// Deliberately NO data volume, for the same reason Keycloak has none: a persisted volume
+// keeps the password from the run that created it, while Aspire supplies the current one.
+// When the two drift apart Postgres rejects every connection with "password authentication
+// failed", and everything with WaitFor(database) — including the API — hangs in `Waiting`
+// with nothing naming the cause. This cost two separate debugging rounds during execution.
+// Phase 1 has no seed data worth preserving; migrations rebuild the schema on every start,
+// which is what makes a run reproducible.
 var postgres = builder.AddPostgres("postgres")
-    .WithDataVolume()
     .WithPgAdmin();
 
 var database = postgres.AddDatabase("transbraindb");
