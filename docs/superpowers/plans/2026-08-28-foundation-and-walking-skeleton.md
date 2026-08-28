@@ -1765,7 +1765,6 @@ The EF implementation catches only the unique-violation and turns it into the ve
 Every other `DbUpdateException` propagates as a genuine exception — a broken connection or a bug is not a business outcome and must not be swallowed.
 
 This changes an interface Task 7 established, so three call sites move together: `InMemoryVehicleRepository` returns `Result<Vehicle>.Success(vehicle)` after adding, and `CreateVehicleCommandHandler` propagates a failed `AddAsync` result instead of ignoring it. Keep the handler's existing pre-check — it gives the common case a clean answer without a database round-trip into an error path. Cover the race itself with an integration test in Task 13; only a real database can produce the violation.
-```
 
 `DependencyInjection.cs`:
 
