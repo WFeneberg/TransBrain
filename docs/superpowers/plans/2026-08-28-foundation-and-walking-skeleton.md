@@ -2852,7 +2852,11 @@ test('adminUser_afterKeycloakLogin_seesVehicleList', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('login').click();
     await page.getByLabel('Username or email').fill('admin.user');
-    await page.getByLabel('Password').fill('admin');
+    // Target the input by id, not by label. Keycloak's theme renders both the password
+    // input and a "Show password" toggle button carrying aria-label="Show password",
+    // so getByLabel('Password') matches two elements and Playwright's strict mode throws
+    // before any credentials are submitted. Verified during execution.
+    await page.locator('#password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
 });
@@ -3150,7 +3154,11 @@ test('adminUser_afterKeycloakLogin_seesVehicleList', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('login').click();
     await page.getByLabel('Username or email').fill('admin.user');
-    await page.getByLabel('Password').fill('admin');
+    // Target the input by id, not by label. Keycloak's theme renders both the password
+    // input and a "Show password" toggle button carrying aria-label="Show password",
+    // so getByLabel('Password') matches two elements and Playwright's strict mode throws
+    // before any credentials are submitted. Verified during execution.
+    await page.locator('#password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
 });
