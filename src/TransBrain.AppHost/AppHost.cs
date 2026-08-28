@@ -42,12 +42,11 @@ var api = builder.AddProject<Projects.TransBrain_Api>("api")
     .WithHttpHealthCheck("/health")
     .WithExternalHttpEndpoints();
 
-// TransBrain.Web does not exist yet: it is created by Task 14. Re-enable this block then.
-// builder.AddViteApp("web", "../TransBrain.Web", "start")
-//     .WithNpm()
-//     .WithReference(api).WaitFor(api)
-//     .WithHttpEndpoint(port: 4200, targetPort: 4200, isProxied: false)
-//     .WithExternalHttpEndpoints();
+builder.AddViteApp("web", "../TransBrain.Web", "start")
+    .WithNpm()
+    .WithReference(api).WaitFor(api)
+    .WithHttpEndpoint(port: 4200, targetPort: 4200, isProxied: false)
+    .WithExternalHttpEndpoints();
 
 // TransBrain.VueWeb does not exist yet: it is created by Task 15. Re-enable this block then.
 // builder.AddViteApp("vueweb", "../TransBrain.VueWeb")
