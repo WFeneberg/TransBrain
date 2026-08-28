@@ -5,6 +5,7 @@ using TransBrain.Api.Endpoints;
 using TransBrain.Application;
 using TransBrain.Infrastructure;
 using TransBrain.Infrastructure.Persistence;
+using TransBrain.ServiceDefaults;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 
+    // No retry here: this assumes PostgreSQL is already reachable. Aspire's WaitFor in the
+    // AppHost (Task 11) is what guarantees the database is up before the Api starts, so a
+    // cold start where PostgreSQL isn't ready yet will throw here rather than retry.
     using IServiceScope scope = app.Services.CreateScope();
     await scope.ServiceProvider.GetRequiredService<TransBrainDbContext>().Database.MigrateAsync();
 }

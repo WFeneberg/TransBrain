@@ -12,12 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- TransBrain.ServiceDefaults.Extensions lives in the TransBrain.ServiceDefaults namespace;
-         this makes AddServiceDefaults()/MapDefaultEndpoints() available in Program.cs without an explicit using. -->
-    <Using Include="TransBrain.ServiceDefaults" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Aspire.Keycloak.Authentication" />
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
