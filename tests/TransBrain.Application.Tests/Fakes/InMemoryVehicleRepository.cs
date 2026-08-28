@@ -20,9 +20,11 @@ public sealed class InMemoryVehicleRepository : IVehicleRepository
         return Task.CompletedTask;
     }
 
+    // Ordinal, not culture-sensitive, comparison: the later EF-backed repository must order
+    // under a matching ordinal collation so the fake and the real repository cannot drift.
     public Task<IReadOnlyList<Vehicle>> ListAsync(int skip, int take, CancellationToken cancellationToken)
         => Task.FromResult<IReadOnlyList<Vehicle>>(
-            _vehicles.OrderBy(v => v.LicensePlate.Value).Skip(skip).Take(take).ToList());
+            _vehicles.OrderBy(v => v.LicensePlate.Value, StringComparer.Ordinal).Skip(skip).Take(take).ToList());
 
     public Task<int> CountAsync(CancellationToken cancellationToken) => Task.FromResult(_vehicles.Count);
 }
