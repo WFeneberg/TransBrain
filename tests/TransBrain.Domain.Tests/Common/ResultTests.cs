@@ -42,4 +42,20 @@ public class ResultTests
         result.Error!.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("X.Conflict");
     }
+
+    [Fact]
+    public void Error_DefaultInstance_ThrowsInvalidOperationException()
+    {
+        Result<int> result = default;
+
+        FluentActions.Invoking(() => result.Error).Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Value_DefaultInstance_ThrowsInvalidOperationException()
+    {
+        Result<int> result = default;
+
+        FluentActions.Invoking(() => result.Value).Should().Throw<InvalidOperationException>();
+    }
 }
