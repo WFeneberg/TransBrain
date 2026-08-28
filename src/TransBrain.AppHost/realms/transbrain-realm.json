@@ -56,6 +56,7 @@
     {
       "username": "admin.user",
       "enabled": true,
+      "email": "admin.user@transbrain.local",
       "emailVerified": true,
       "firstName": "Anna",
       "lastName": "Admin",
@@ -65,6 +66,7 @@
     {
       "username": "dispo.user",
       "enabled": true,
+      "email": "dispo.user@transbrain.local",
       "emailVerified": true,
       "firstName": "Dirk",
       "lastName": "Disponent",
@@ -74,6 +76,7 @@
     {
       "username": "fahrer.user",
       "enabled": true,
+      "email": "fahrer.user@transbrain.local",
       "emailVerified": true,
       "firstName": "Frank",
       "lastName": "Fahrer",
@@ -83,6 +86,7 @@
     {
       "username": "viewer.user",
       "enabled": true,
+      "email": "viewer.user@transbrain.local",
       "emailVerified": true,
       "firstName": "Vera",
       "lastName": "Viewer",

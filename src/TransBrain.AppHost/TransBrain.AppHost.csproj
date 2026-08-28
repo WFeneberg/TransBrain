@@ -7,6 +7,12 @@
     <Nullable>enable</Nullable>
     <AspireUseCliBundle>true</AspireUseCliBundle>
     <IsPackable>false</IsPackable>
+    <!-- Required so the auto-generated postgres password (see AppHost.cs) persists across runs
+         in user secrets instead of being regenerated randomly every launch. Without this, a
+         restart against the existing postgres data volume authenticates with a brand-new
+         password the already-initialized database doesn't know, and Postgres's health check
+         (and therefore the api resource's WaitFor) never succeeds. -->
+    <UserSecretsId>0b6b6c57-f480-4886-9be9-3069aae98109</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
