@@ -6,7 +6,7 @@
 
 **Architecture:** Clean Architecture in four layers (`Domain → Application → Infrastructure → Api`) with vertical feature slices inside Application, a hand-rolled CQRS mediator, and the Result pattern instead of exceptions for control flow. .NET Aspire orchestrates PostgreSQL, Redis, Keycloak, the API and both frontends. Only the `Vehicles` aggregate is built here, with `Create` and `List`; every later domain repeats this proven shape.
 
-**Tech Stack:** .NET 10 / C# 14, ASP.NET Minimal APIs, EF Core 10 + Npgsql, FluentValidation, Aspire 13.5.3, Keycloak, Redis, xUnit + FluentAssertions + Testcontainers, Angular 22 + Material, Vue 3 + Vuetify, Playwright.
+**Tech Stack:** .NET 10 / C# 14, ASP.NET Minimal APIs, EF Core 10 + Npgsql, FluentValidation, Aspire 13.5.3, Keycloak, Redis, xUnit v2 + AwesomeAssertions + Testcontainers, Angular 22 + Material, Vue 3 + Vuetify, Playwright.
 
 **Spec:** `docs/superpowers/specs/2026-08-28-transbrain-dispatch-design.md`
 
@@ -20,7 +20,7 @@
   - `Aspire.Npgsql.EntityFrameworkCore.PostgreSQL` `13.5.3`, `Aspire.StackExchange.Redis.DistributedCaching` `13.5.3`
   - `Microsoft.EntityFrameworkCore.Design` `10.0.11`, `Npgsql.EntityFrameworkCore.PostgreSQL` `10.0.3`
   - `FluentValidation` `12.1.1`, `FluentValidation.DependencyInjectionExtensions` `12.1.1`
-  - `Testcontainers.PostgreSql` `4.14.0`, `FluentAssertions` (latest 8.x), `xunit.v3`, `Microsoft.NET.Test.Sdk`
+  - `Testcontainers.PostgreSql` `4.14.0`, `AwesomeAssertions` `9.6.0`, `xunit` `2.9.3`, `Microsoft.NET.Test.Sdk`
 - **Aspire package names verified 2026-08-28:** the Node.js hosting package is `Aspire.Hosting.JavaScript` — `Aspire.Hosting.NodeJs` stopped at 9.5.2 and does NOT work with Aspire 13. The API is `AddViteApp(name, appDirectory, runScriptName)` plus `.WithNpm()`; there is no `AddNpmApp` in Aspire 13.
 - **Naming:** English for code and identifiers. Test names follow `Method_Scenario_ExpectedResult`.
 - **Result pattern:** no exceptions for business outcomes. Handlers return `Result<T>`.
@@ -35,13 +35,15 @@
 Creates the solution, all project shells, and version pinning. Nothing here is testable behaviour, so the deliverable is "everything builds".
 
 **Files:**
-- Create: `TransBrain.slnx`, `Directory.Build.props`, `Directory.Packages.props`, `nuget.config`
+- Create: `TransBrain.slnx`, `Directory.Build.props`, `Directory.Packages.props`
 - Create: `src/TransBrain.Domain/TransBrain.Domain.csproj`, `src/TransBrain.Application/TransBrain.Application.csproj`, `src/TransBrain.Infrastructure/TransBrain.Infrastructure.csproj`, `src/TransBrain.Api/TransBrain.Api.csproj`
 - Create: `tests/TransBrain.Domain.Tests/`, `tests/TransBrain.Application.Tests/`, `tests/TransBrain.Api.IntegrationTests/`
 
 **Interfaces:**
 - Consumes: nothing.
 - Produces: project layout and `Directory.Packages.props` that every later task adds `PackageVersion` entries to.
+
+**Note on `nuget.config`:** this task deliberately does not create one — Task 10 Step 1 generates it from the Aspire template at the repository root, and two creators would conflict. The machine's default NuGet configuration restores everything Tasks 1-9 need.
 
 - [ ] **Step 1: Create the solution and library projects**
 
@@ -122,7 +124,9 @@ Central Package Management: projects reference packages without versions; versio
 </Project>
 ```
 
-Note: the xUnit and FluentAssertions `PackageVersion` entries are added by moving whatever versions `dotnet new xunit` generated in the test `.csproj` files into this file, then stripping the `Version` attributes from the `PackageReference` elements. Central Package Management fails the build if any `PackageReference` still carries a version.
+Note: the xUnit `PackageVersion` entries are added by moving whatever versions `dotnet new xunit` generated in the test `.csproj` files into this file, then stripping the `Version` attributes from the `PackageReference` elements. Central Package Management fails the build if any `PackageReference` still carries a version.
+
+**Resolved during execution (2026-08-28):** `dotnet new xunit` on this SDK produces **xUnit v2 (`xunit` 2.9.3)**, and emits no assertion-library reference at all. The assertion library is therefore added deliberately in Task 2, not inherited from the template — see Task 2 Step 0.
 
 - [ ] **Step 6: Verify the whole solution builds**
 
@@ -150,12 +154,24 @@ The spine of every handler in the codebase. Built first because everything else 
 - Consumes: nothing.
 - Produces: `ErrorType` enum (`Validation`, `NotFound`, `Conflict`, `Forbidden`); `sealed record Error(string Code, string Message, ErrorType Type)` with static factories `Error.Validation/NotFound/Conflict/Forbidden(string code, string message)`; `readonly record struct Result<T>` with `IsSuccess`, `Value`, `Error`, `Result<T>.Success(T)`, `Result<T>.Failure(Error)`, and implicit conversions from `T` and from `Error`.
 
+- [ ] **Step 0: Add the assertion library to all three test projects**
+
+`dotnet new xunit` emits no assertion library. **AwesomeAssertions** is used rather than FluentAssertions: FluentAssertions 8.x is proprietary (Xceed Software Inc.) and this is commercial software, while AwesomeAssertions is an Apache-2.0 fork of FluentAssertions 7 with an identical API — every assertion in this plan compiles unchanged, only the `using` differs.
+
+```bash
+dotnet add tests/TransBrain.Domain.Tests package AwesomeAssertions --version 9.6.0
+dotnet add tests/TransBrain.Application.Tests package AwesomeAssertions --version 9.6.0
+dotnet add tests/TransBrain.Api.IntegrationTests package AwesomeAssertions --version 9.6.0
+```
+
+Then move the version into `Directory.Packages.props` as `<PackageVersion Include="AwesomeAssertions" Version="9.6.0" />` and strip the `Version` attributes from the three `PackageReference` elements — Central Package Management fails the build otherwise.
+
 - [ ] **Step 1: Write the failing tests**
 
 `tests/TransBrain.Domain.Tests/Common/ResultTests.cs`:
 
 ```csharp
-using FluentAssertions;
+using AwesomeAssertions;
 using TransBrain.Domain.Common;
 
 namespace TransBrain.Domain.Tests.Common;
@@ -306,7 +322,7 @@ First value object; establishes the `Create` → `Result<T>` factory shape every
 - [ ] **Step 1: Write the failing tests**
 
 ```csharp
-using FluentAssertions;
+using AwesomeAssertions;
 using TransBrain.Domain.Common;
 using TransBrain.Domain.Vehicles;
 
@@ -424,7 +440,7 @@ git commit -m "feat(domain): add LicensePlate value object"
 - [ ] **Step 1: Write the failing tests**
 
 ```csharp
-using FluentAssertions;
+using AwesomeAssertions;
 using TransBrain.Domain.Common;
 using TransBrain.Domain.Vehicles;
 
@@ -629,7 +645,7 @@ The hand-rolled mediator. Deliberately not MediatR (commercially licensed from v
 The fake handler and behaviour in this test also document how production slices are shaped.
 
 ```csharp
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using TransBrain.Application.Common.Messaging;
 using TransBrain.Domain.Common;
@@ -877,7 +893,7 @@ git commit -m "feat(application): add hand-rolled CQRS sender with pipeline beha
 Validation failures must surface as `Result` failures with `ErrorType.Validation`, never as thrown `ValidationException`s.
 
 ```csharp
-using FluentAssertions;
+using AwesomeAssertions;
 using FluentValidation;
 using TransBrain.Application.Common.Behaviors;
 using TransBrain.Application.Common.Messaging;
@@ -1161,7 +1177,7 @@ public sealed class InMemoryVehicleRepository : IVehicleRepository
 - [ ] **Step 2: Write the failing handler tests**
 
 ```csharp
-using FluentAssertions;
+using AwesomeAssertions;
 using TransBrain.Application.Features.Vehicles.CreateVehicle;
 using TransBrain.Application.Tests.Fakes;
 using TransBrain.Domain.Common;
@@ -1425,7 +1441,7 @@ git commit -m "feat(application): add CreateVehicle slice with duplicate plate d
 - [ ] **Step 1: Write the failing tests**
 
 ```csharp
-using FluentAssertions;
+using AwesomeAssertions;
 using TransBrain.Application.Common.Pagination;
 using TransBrain.Application.Features.Vehicles;
 using TransBrain.Application.Features.Vehicles.ListVehicles;
@@ -2325,7 +2341,7 @@ git commit -m "feat(api): add keycloak jwt authentication with role-based polici
 ```bash
 dotnet add tests/TransBrain.Api.IntegrationTests package Testcontainers.PostgreSql
 dotnet add tests/TransBrain.Api.IntegrationTests package Microsoft.AspNetCore.Mvc.Testing
-dotnet add tests/TransBrain.Api.IntegrationTests package FluentAssertions
+dotnet add tests/TransBrain.Api.IntegrationTests package AwesomeAssertions
 dotnet add tests/TransBrain.Api.IntegrationTests reference src/TransBrain.Infrastructure
 ```
 
@@ -2373,7 +2389,7 @@ public sealed class TestAuthHandler(
 
 - [ ] **Step 3: Write the factory**
 
-**Check the xUnit version first.** The factory below implements `IAsyncLifetime` with the **xUnit v3** signature (`ValueTask InitializeAsync()` and an overridden `ValueTask DisposeAsync()`). If `dotnet new xunit` produced xUnit **v2** in Task 1, that interface instead requires `Task InitializeAsync()` and `Task DisposeAsync()` — adjust both signatures accordingly, or upgrade the test projects to `xunit.v3` and keep the code as written. Verify with `grep -r "xunit" Directory.Packages.props` before writing this file.
+**xUnit version — resolved during execution.** Task 1 pinned **xUnit v2 (`xunit` 2.9.3)**, so `Xunit.IAsyncLifetime` requires `Task InitializeAsync()` and `Task DisposeAsync()` — **not** the `ValueTask` signatures of xUnit v3. Write the factory as shown below, which already uses the v2 shape. Under v2, `IAsyncLifetime.DisposeAsync()` returns `Task` and is a plain interface implementation, so it does not override `WebApplicationFactory.DisposeAsync()`; dispose the container there and let the base class clean itself up via `Dispose(bool)`.
 
 ```csharp
 using Microsoft.AspNetCore.Authentication;
@@ -2392,13 +2408,9 @@ public sealed class TransBrainApiFactory : WebApplicationFactory<Program>, IAsyn
         .WithImage("postgres:17-alpine")
         .Build();
 
-    public async ValueTask InitializeAsync() => await _postgres.StartAsync();
+    public async Task InitializeAsync() => await _postgres.StartAsync();
 
-    public override async ValueTask DisposeAsync()
-    {
-        await _postgres.DisposeAsync();
-        await base.DisposeAsync();
-    }
+    async Task IAsyncLifetime.DisposeAsync() => await _postgres.DisposeAsync();
 
     public HttpClient CreateClientAs(params string[] roles)
     {
@@ -2431,7 +2443,7 @@ This works because Task 10's `Program.cs` guards the Redis registration on the p
 ```csharp
 using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
+using AwesomeAssertions;
 using TransBrain.Application.Common.Pagination;
 using TransBrain.Application.Features.Vehicles;
 
