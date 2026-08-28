@@ -106,7 +106,9 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    // The duplicate-plate handling has two branches: CreateVehicleCommandHandler's own
+    // ---
+    // Extra test beyond the Task 13 brief (which specifies only the six tests above). The
+    // duplicate-plate handling has two branches: CreateVehicleCommandHandler's own
     // ExistsByLicensePlateAsync pre-check, and VehicleRepository.AddAsync's catch of PostgreSQL's
     // 23505 unique-violation. PostVehicle_DuplicateLicensePlate_ReturnsConflict above only ever
     // exercises the first, because by the time the second POST runs, the first request has already
@@ -145,17 +147,18 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
             nextInspectionDue = "2027-03-31"
         };
 
-        HttpResponseMessage? response = null;
-
-        // Aspire's AddNpgsqlDbContext enables a retrying execution strategy, which refuses to run a
-        // manually-started transaction unless the whole begin/use/commit unit executes through that
-        // strategy (otherwise a retried operation could replay part of the transaction twice). The
-        // held-open transaction, the wait for the API's insert to block on it, and the eventual
-        // commit all happen inside this single delegate for that reason.
+        // Aspire's AddNpgsqlDbContext enables a retrying execution strategy, which refuses to run
+        // SaveChangesAsync under a manually-started transaction unless that begin+operation unit
+        // executes through CreateExecutionStrategy().ExecuteAsync (otherwise a retried operation
+        // could replay part of the transaction). Only the begin+insert step is wrapped in the
+        // ExecuteAsync call below: the HTTP POST, the lock-wait poll, and the eventual commit all
+        // run outside it, so a transient retry of the insert can never re-issue the POST or double
+        // it - see the comment above the CommitAsync call below for why commit does not need (and
+        // in fact cannot use) its own wrapping.
         IExecutionStrategy strategy = context.Database.CreateExecutionStrategy();
-        await strategy.ExecuteAsync(async () =>
+        IDbContextTransaction transaction = await strategy.ExecuteAsync(async () =>
         {
-            await using IDbContextTransaction transaction = await context.Database.BeginTransactionAsync();
+            IDbContextTransaction tx = await context.Database.BeginTransactionAsync();
 
             Vehicle existing = Vehicle.Create(
                 LicensePlate.Create(plate).Value,
@@ -166,10 +169,15 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
             context.Vehicles.Add(existing);
             await context.SaveChangesAsync();
 
+            return tx;
+        });
+
+        try
+        {
             Task<HttpResponseMessage> postTask = client.PostAsJsonAsync("/api/vehicles", vehicle);
 
             DateTime deadline = DateTime.UtcNow.AddSeconds(5);
-            while (await CountBlockedOnVehiclesAsync(pollContext) == 0)
+            while (await CountBlockedOnVehicleInsertAsync(pollContext) == 0)
             {
                 if (DateTime.UtcNow > deadline)
                 {
@@ -181,21 +189,42 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
                 await Task.Delay(25);
             }
 
+            // Not wrapped in the execution strategy: CommitAsync talks directly to the ADO
+            // transaction and never routes through DbContext.SaveChangesAsync's own
+            // ExecutionStrategy.ExecuteAsync call, so it does not trip the "does not support
+            // user-initiated transactions" guard the way a second, separate ExecuteAsync(...)
+            // call around it would (verified: wrapping it that way throws, because that guard
+            // fires at the start of every top-level ExecuteAsync call whenever a user transaction
+            // is already open, regardless of which call originally started it).
             await transaction.CommitAsync();
 
-            response = await postTask;
-        });
+            HttpResponseMessage response = await postTask;
 
-        response!.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        }
+        finally
+        {
+            await transaction.DisposeAsync();
+        }
     }
 
-    private static async Task<int> CountBlockedOnVehiclesAsync(TransBrainDbContext context)
+    // Matches specifically a blocked INSERT into vehicles, not any blocked statement touching the
+    // table (a plain SELECT never blocks on another transaction's uncommitted write under
+    // read-committed isolation, so this only catches writers). It cannot narrow further to this
+    // test's specific license plate: Npgsql submits parameterized SQL over the PostgreSQL extended
+    // query protocol, so pg_stat_activity.query shows the placeholder text ("VALUES (@p0, ...)"),
+    // never the bound parameter values. The remaining assumption is that no other test in this
+    // fixture is concurrently blocked on an INSERT into vehicles when this poll runs - true today
+    // because IClassFixture tests in this class execute sequentially and this is the only test
+    // here that holds a transaction open, but not something a future test added to this class
+    // should assume without checking.
+    private static async Task<int> CountBlockedOnVehicleInsertAsync(TransBrainDbContext context)
         => await context.Database
             .SqlQuery<int>(
                 $"""
                  SELECT count(*)::int AS "Value"
                  FROM pg_stat_activity
-                 WHERE wait_event_type = 'Lock' AND query ILIKE '%vehicles%'
+                 WHERE wait_event_type = 'Lock' AND query ILIKE '%INSERT INTO vehicles%'
                  """)
             .SingleAsync();
 }
