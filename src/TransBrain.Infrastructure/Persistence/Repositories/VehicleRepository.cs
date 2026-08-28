@@ -32,8 +32,8 @@ internal sealed class VehicleRepository(TransBrainDbContext context) : IVehicleR
         }
     }
 
-    // The column is ordered ordinally so this repository and InMemoryVehicleRepository, which
-    // uses StringComparer.Ordinal, cannot disagree about what "sorted by license plate" means.
+    // Ordering agreement with InMemoryVehicleRepository (StringComparer.Ordinal) rests on the "C"
+    // collation configured on the LicensePlate column in VehicleConfiguration, not on convention.
     public async Task<IReadOnlyList<Vehicle>> ListAsync(int skip, int take, CancellationToken cancellationToken)
         => await context.Vehicles
             .OrderBy(v => v.LicensePlate)
