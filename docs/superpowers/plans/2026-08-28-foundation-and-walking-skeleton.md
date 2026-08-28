@@ -1147,7 +1147,7 @@ git commit -m "feat(application): add validation and logging behaviors with DI r
 **Files:**
 - Create: `src/TransBrain.Application/Abstractions/IVehicleRepository.cs`
 - Create: `src/TransBrain.Application/Features/Vehicles/VehicleResponse.cs`
-- Create: `src/TransBrain.Application/Features/Vehicles/CreateVehicle/CreateVehicleCommand.cs`, `CreateVehicleCommandValidator.cs`, `CreateVehicleCommandHandler.cs`
+- Create: `src/TransBrain.Application/Features/Vehicles/CreateVehicle/CreateVehicleCommand.cs`, `CreateVehicleCommandHandler.cs`
 - Test: `tests/TransBrain.Application.Tests/Features/Vehicles/CreateVehicleCommandHandlerTests.cs`
 - Test: `tests/TransBrain.Application.Tests/Fakes/InMemoryVehicleRepository.cs`
 
@@ -1187,7 +1187,7 @@ public sealed class InMemoryVehicleRepository : IVehicleRepository
 
     public Task<IReadOnlyList<Vehicle>> ListAsync(int skip, int take, CancellationToken cancellationToken)
         => Task.FromResult<IReadOnlyList<Vehicle>>(
-            _vehicles.OrderBy(v => v.LicensePlate.Value).Skip(skip).Take(take).ToList());
+            _vehicles.OrderBy(v => v.LicensePlate.Value, StringComparer.Ordinal).Skip(skip).Take(take).ToList());
 
     public Task<int> CountAsync(CancellationToken cancellationToken) => Task.FromResult(_vehicles.Count);
 }
@@ -1350,25 +1350,22 @@ public sealed record CreateVehicleCommand(
     DateOnly NextInspectionDue) : ICommand<VehicleResponse>;
 ```
 
-`CreateVehicleCommandValidator.cs` — shape checks only; business invariants stay in the domain:
+**No validator for this command — corrected during execution.** An earlier draft of this plan
+specified a `CreateVehicleCommandValidator` whose every rule (`NotEmpty`/`MaximumLength(15)` on
+the plate, `GreaterThan(0)` on payload and load meters) duplicated an invariant the domain
+already enforces. That is not a harmless redundancy: `ValidationBehavior` short-circuits before
+the handler runs, so through `ISender` — the only path an endpoint uses — the FluentValidation
+message always won and the domain error codes `LicensePlate.Empty`,
+`Vehicle.PayloadKgNotPositive` and `Vehicle.LoadMetersNotPositive` were unreachable in
+production. Handler tests did not catch it because they call `handler.Handle` directly and
+bypass the pipeline entirely.
 
-```csharp
-using FluentValidation;
-
-namespace TransBrain.Application.Features.Vehicles.CreateVehicle;
-
-public sealed class CreateVehicleCommandValidator : AbstractValidator<CreateVehicleCommand>
-{
-    public CreateVehicleCommandValidator()
-    {
-        RuleFor(c => c.LicensePlate).NotEmpty().MaximumLength(15);
-        RuleFor(c => c.Type).NotEmpty();
-        RuleFor(c => c.PayloadKg).GreaterThan(0);
-        RuleFor(c => c.LoadMeters).GreaterThan(0m);
-        RuleFor(c => c.NextInspectionDue).NotEmpty();
-    }
-}
-```
+The rule this establishes for every later slice: **a validator may only carry rules the domain
+cannot express.** Request shape — paging bounds, a required field with no domain meaning —
+belongs to FluentValidation. Business invariants belong to the domain, and duplicating one into
+a validator silently overrides the layer that should decide. `ListVehiclesQueryValidator` in
+Task 8 is the legitimate case: `Page > 0` and `PageSize` within 1..100 have no domain
+equivalent.
 
 `CreateVehicleCommandHandler.cs`:
 
@@ -1432,10 +1429,20 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("TransBrain.Application.Tests")]
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [ ] **Step 6: Add a test that goes through the real pipeline**
 
-Run: `dotnet test tests/TransBrain.Application.Tests --filter FullyQualifiedName~CreateVehicleCommandHandlerTests`
-Expected: 5 passed.
+Handler tests call `handler.Handle` directly, which bypasses `ValidationBehavior` entirely. That blind spot is exactly what let a duplicated validator shadow the domain error codes undetected. One test per aggregate that dispatches through `ISender` with the real `AddApplication()` registrations closes it.
+
+`tests/TransBrain.Application.Tests/Features/Vehicles/CreateVehicleThroughSenderTests.cs` builds a `ServiceCollection`, calls `AddApplication()`, registers `InMemoryVehicleRepository` as `IVehicleRepository`, adds logging, resolves `ISender`, and asserts:
+
+- `Send_CreateVehicleWithNonPositivePayload_ReturnsDomainErrorCode` → `Error.Code == "Vehicle.PayloadKgNotPositive"`
+- `Send_CreateVehicleWithBlankLicensePlate_ReturnsDomainErrorCode` → `Error.Code == "LicensePlate.Empty"`
+- `Send_CreateVehicleWithValidCommand_ReturnsCreatedVehicle` → the success path
+
+- [ ] **Step 7: Run the tests to verify they pass**
+
+Run: `dotnet test tests/TransBrain.Application.Tests --filter FullyQualifiedName~CreateVehicle`
+Expected: the 5 handler tests and the 3 pipeline tests pass.
 
 - [ ] **Step 7: Commit**
 
@@ -1698,6 +1705,9 @@ namespace TransBrain.Infrastructure.Persistence.Repositories;
 
 internal sealed class VehicleRepository(TransBrainDbContext context) : IVehicleRepository
 {
+    // PostgreSQL error code for unique_violation.
+    private const string UniqueViolation = "23505";
+
     public Task<bool> ExistsByLicensePlateAsync(LicensePlate plate, CancellationToken cancellationToken)
         => context.Vehicles.AnyAsync(v => v.LicensePlate == plate, cancellationToken);
 
@@ -1707,6 +1717,8 @@ internal sealed class VehicleRepository(TransBrainDbContext context) : IVehicleR
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    // The column is ordered ordinally so this repository and InMemoryVehicleRepository, which
+    // uses StringComparer.Ordinal, cannot disagree about what "sorted by license plate" means.
     public async Task<IReadOnlyList<Vehicle>> ListAsync(int skip, int take, CancellationToken cancellationToken)
         => await context.Vehicles
             .OrderBy(v => v.LicensePlate)
@@ -1718,6 +1730,41 @@ internal sealed class VehicleRepository(TransBrainDbContext context) : IVehicleR
     public Task<int> CountAsync(CancellationToken cancellationToken)
         => context.Vehicles.CountAsync(cancellationToken);
 }
+```
+
+**The duplicate-plate race.** `CreateVehicleCommandHandler` checks `ExistsByLicensePlateAsync` and then calls `AddAsync`; the two are not atomic, so two concurrent requests can both pass the check. The unique index configured above is what actually stops the duplicate row — but it stops it by throwing, and this codebase's rule is that business failures never throw.
+
+Do NOT solve this with a custom exception travelling from Infrastructure to the handler; that is exceptions-as-control-flow wearing a different hat. Instead **change the abstraction so the failure is a value**. In `src/TransBrain.Application/Abstractions/IVehicleRepository.cs`, change:
+
+```csharp
+    Task<Result<Vehicle>> AddAsync(Vehicle vehicle, CancellationToken cancellationToken);
+```
+
+The EF implementation catches only the unique-violation and turns it into the very same error the pre-check produces, so a caller cannot tell which path rejected the request:
+
+```csharp
+    public async Task<Result<Vehicle>> AddAsync(Vehicle vehicle, CancellationToken cancellationToken)
+    {
+        await context.Vehicles.AddAsync(vehicle, cancellationToken);
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            return vehicle;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: UniqueViolation })
+        {
+            context.Entry(vehicle).State = EntityState.Detached;
+            return Error.Conflict(
+                "Vehicle.DuplicateLicensePlate",
+                $"A vehicle with license plate '{vehicle.LicensePlate.Value}' already exists.");
+        }
+    }
+```
+
+Every other `DbUpdateException` propagates as a genuine exception — a broken connection or a bug is not a business outcome and must not be swallowed.
+
+This changes an interface Task 7 established, so three call sites move together: `InMemoryVehicleRepository` returns `Result<Vehicle>.Success(vehicle)` after adding, and `CreateVehicleCommandHandler` propagates a failed `AddAsync` result instead of ignoring it. Keep the handler's existing pre-check — it gives the common case a clean answer without a database round-trip into an error path. Cover the race itself with an integration test in Task 13; only a real database can produce the violation.
 ```
 
 `DependencyInjection.cs`:
@@ -1752,7 +1799,9 @@ dotnet ef migrations add InitialCreate \
 
 Expected: a `Migrations/` folder containing `*_InitialCreate.cs` with a `vehicles` table and a unique index on `LicensePlate`.
 
-**Ordering note — read before running this step.** `dotnet ef` builds the startup project and needs the DbContext to be registered there, which happens in Task 10 Step 5 (`Program.cs`). Execute **Task 10 Steps 1 through 6 first**, then come back and run this step, then continue with Task 10 Step 7. The alternative — a design-time `IDesignTimeDbContextFactory` with a hard-coded connection string — is deliberately avoided: it duplicates connection configuration that Aspire already owns.
+**Moved to Task 10 — corrected during execution.** `dotnet ef` builds the startup project and needs the DbContext registered there, which does not happen until Task 10 writes `Program.cs`. Interleaving the two tasks (run Task 10 Steps 1-6, jump back here, then finish Task 10) is fragile and hard to review as a unit, so **migration generation now lives in Task 10**, immediately after the DbContext registration it depends on. Task 9 ends with the persistence code and no `Migrations/` folder; that is expected, not an omission.
+
+The alternative — a design-time `IDesignTimeDbContextFactory` with a hard-coded connection string — is deliberately avoided: it duplicates connection configuration Aspire already owns.
 
 - [ ] **Step 5: Verify the build**
 
