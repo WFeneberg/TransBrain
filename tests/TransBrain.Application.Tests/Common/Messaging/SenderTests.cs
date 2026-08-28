@@ -7,23 +7,23 @@ namespace TransBrain.Application.Tests.Common.Messaging;
 
 public class SenderTests
 {
-    internal sealed record EchoCommand(string Text) : ICommand<string>;
+    public sealed record EchoCommand(string Text) : ICommand<string>;
 
-    internal sealed class EchoCommandHandler : ICommandHandler<EchoCommand, string>
+    public sealed class EchoCommandHandler : ICommandHandler<EchoCommand, string>
     {
         public Task<Result<string>> Handle(EchoCommand command, CancellationToken cancellationToken)
             => Task.FromResult(Result<string>.Success(command.Text));
     }
 
-    internal sealed record FailingQuery : IQuery<string>;
+    public sealed record FailingQuery : IQuery<string>;
 
-    internal sealed class FailingQueryHandler : IQueryHandler<FailingQuery, string>
+    public sealed class FailingQueryHandler : IQueryHandler<FailingQuery, string>
     {
         public Task<Result<string>> Handle(FailingQuery query, CancellationToken cancellationToken)
             => Task.FromResult(Result<string>.Failure(Error.NotFound("Q.NotFound", "nothing here")));
     }
 
-    internal sealed class SuffixBehavior : IPipelineBehavior<EchoCommand, string>
+    public sealed class SuffixBehavior : IPipelineBehavior<EchoCommand, string>
     {
         public async Task<Result<string>> Handle(
             EchoCommand request,
@@ -32,6 +32,34 @@ public class SenderTests
         {
             Result<string> result = await next();
             return result.IsSuccess ? Result<string>.Success(result.Value + "!") : result;
+        }
+    }
+
+    public sealed class RecordingBehaviorA(List<string> log) : IPipelineBehavior<EchoCommand, string>
+    {
+        public async Task<Result<string>> Handle(
+            EchoCommand request,
+            RequestHandlerDelegate<string> next,
+            CancellationToken cancellationToken)
+        {
+            log.Add("A-enter");
+            Result<string> result = await next();
+            log.Add("A-exit");
+            return result;
+        }
+    }
+
+    public sealed class RecordingBehaviorB(List<string> log) : IPipelineBehavior<EchoCommand, string>
+    {
+        public async Task<Result<string>> Handle(
+            EchoCommand request,
+            RequestHandlerDelegate<string> next,
+            CancellationToken cancellationToken)
+        {
+            log.Add("B-enter");
+            Result<string> result = await next();
+            log.Add("B-exit");
+            return result;
         }
     }
 
@@ -76,6 +104,22 @@ public class SenderTests
         Result<string> result = await sender.Send(new EchoCommand("hello"), CancellationToken.None);
 
         result.Value.Should().Be("hello!");
+    }
+
+    [Fact]
+    public async Task Send_CommandWithTwoBehaviors_RunsFirstRegisteredOutermost()
+    {
+        List<string> log = [];
+        ISender sender = BuildSender(services =>
+        {
+            services.AddSingleton(log);
+            services.AddScoped<IPipelineBehavior<EchoCommand, string>, RecordingBehaviorA>();
+            services.AddScoped<IPipelineBehavior<EchoCommand, string>, RecordingBehaviorB>();
+        });
+
+        await sender.Send(new EchoCommand("hello"), CancellationToken.None);
+
+        log.Should().Equal("A-enter", "B-enter", "B-exit", "A-exit");
     }
 
     [Fact]

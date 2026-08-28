@@ -25,6 +25,10 @@ internal sealed class Sender(IServiceProvider serviceProvider) : ISender
             throw new InvalidOperationException($"No handler registered for {requestType.Name}.");
         }
 
+        // dynamic binds against the handler's accessible runtime-type members, not the ICommandHandler/IQueryHandler
+        // interface it satisfies. A handler that implements Handle explicitly (`Task<...> ICommandHandler<T, R>.Handle(...)`)
+        // has no public/internal instance method named Handle, so this throws an opaque
+        // RuntimeBinderException ("'HandlerType' does not contain a definition for 'Handle'") instead of dispatching.
         RequestHandlerDelegate<TResponse> pipeline = () =>
             (Task<Result<TResponse>>)((dynamic)handler).Handle((dynamic)request, cancellationToken);
 
@@ -35,6 +39,8 @@ internal sealed class Sender(IServiceProvider serviceProvider) : ISender
         {
             object behavior = behaviors[i]!;
             RequestHandlerDelegate<TResponse> next = pipeline;
+            // Same dynamic-dispatch caveat as above: an explicit IPipelineBehavior<T, R>.Handle implementation
+            // is invisible to this dynamic call and fails with the same class of RuntimeBinderException.
             pipeline = () => (Task<Result<TResponse>>)((dynamic)behavior).Handle((dynamic)request, next, cancellationToken);
         }
 
