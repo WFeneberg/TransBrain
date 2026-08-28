@@ -4,6 +4,7 @@
     <Project Path="src/TransBrain.Application/TransBrain.Application.csproj" />
     <Project Path="src/TransBrain.Domain/TransBrain.Domain.csproj" />
     <Project Path="src/TransBrain.Infrastructure/TransBrain.Infrastructure.csproj" />
+    <Project Path="src/TransBrain.ServiceDefaults/TransBrain.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TransBrain.Api.IntegrationTests/TransBrain.Api.IntegrationTests.csproj" />

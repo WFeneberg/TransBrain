@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TransBrain.Infrastructure\TransBrain.Infrastructure.csproj" />
+    <ProjectReference Include="..\TransBrain.ServiceDefaults\TransBrain.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -9,5 +10,23 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- TransBrain.ServiceDefaults.Extensions lives in the TransBrain.ServiceDefaults namespace;
+         this makes AddServiceDefaults()/MapDefaultEndpoints() available in Program.cs without an explicit using. -->
+    <Using Include="TransBrain.ServiceDefaults" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Keycloak.Authentication" />
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Scalar.AspNetCore" />
+  </ItemGroup>
 
 </Project>
