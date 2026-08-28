@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TransBrain.Api/TransBrain.Api.csproj" />
+    <Project Path="src/TransBrain.Application/TransBrain.Application.csproj" />
+    <Project Path="src/TransBrain.Domain/TransBrain.Domain.csproj" />
+    <Project Path="src/TransBrain.Infrastructure/TransBrain.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TransBrain.Api.IntegrationTests/TransBrain.Api.IntegrationTests.csproj" />
+    <Project Path="tests/TransBrain.Application.Tests/TransBrain.Application.Tests.csproj" />
+    <Project Path="tests/TransBrain.Domain.Tests/TransBrain.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
