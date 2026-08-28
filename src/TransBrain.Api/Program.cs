@@ -57,24 +57,46 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     return Task.CompletedTask;
                 }
 
+                ILogger logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("TransBrain.Api.Authentication");
+
                 string? realmAccess = context.Principal.FindFirst("realm_access")?.Value;
                 if (string.IsNullOrWhiteSpace(realmAccess))
                 {
+                    logger.LogWarning("Token validated with no 'realm_access' claim present; no realm roles were mapped.");
                     return Task.CompletedTask;
                 }
 
-                using JsonDocument document = JsonDocument.Parse(realmAccess);
-                if (document.RootElement.TryGetProperty("roles", out JsonElement roles))
+                // A malformed claim (bad JSON, or "roles" not shaped as an array) must not throw here:
+                // OnAuthenticationFailed is not overridden, so an exception would escape token validation
+                // and surface as a raw 500. Falling back to "no roles mapped" instead lets the request
+                // continue to authorization, which then fails cleanly with 403.
+                List<string> mappedRoles = [];
+                try
                 {
-                    foreach (JsonElement role in roles.EnumerateArray())
+                    using JsonDocument document = JsonDocument.Parse(realmAccess);
+                    if (document.RootElement.TryGetProperty("roles", out JsonElement roles) &&
+                        roles.ValueKind == JsonValueKind.Array)
                     {
-                        string? value = role.GetString();
-                        if (!string.IsNullOrWhiteSpace(value))
+                        foreach (JsonElement role in roles.EnumerateArray())
                         {
-                            identity.AddClaim(new Claim(ClaimTypes.Role, value));
+                            string? value = role.GetString();
+                            if (!string.IsNullOrWhiteSpace(value))
+                            {
+                                identity.AddClaim(new Claim(ClaimTypes.Role, value));
+                                mappedRoles.Add(value);
+                            }
                         }
                     }
                 }
+                catch (JsonException)
+                {
+                    logger.LogWarning("Token validated with an unreadable 'realm_access' claim; no realm roles were mapped.");
+                    return Task.CompletedTask;
+                }
+
+                logger.LogDebug("Mapped realm roles from token: {Roles}", string.Join(", ", mappedRoles));
 
                 return Task.CompletedTask;
             }
@@ -90,10 +112,10 @@ builder.Services.AddAuthorizationBuilder()
 WebApplication app = builder.Build();
 
 app.MapDefaultEndpoints();
+app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
