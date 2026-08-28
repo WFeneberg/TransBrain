@@ -1,0 +1,43 @@
+name: CI
+
+# NOTE: Playwright end-to-end tests (src/TransBrain.Web/e2e, src/TransBrain.VueWeb/e2e) are
+# deliberately NOT run here. They need the full Aspire stack up — API, Postgres, Redis and,
+# critically, Keycloak for the OIDC login flow — and there is no headless startup path for
+# that stack yet. This is a known gap, not an oversight: e2e tests are run locally against
+# `dotnet run --project src/TransBrain.AppHost` for now, and get a CI job once a headless
+# Aspire startup exists.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore TransBrain.slnx
+      - run: dotnet build TransBrain.slnx --no-restore
+      - run: dotnet test tests/TransBrain.Domain.Tests --no-build
+      - run: dotnet test tests/TransBrain.Application.Tests --no-build
+      # Testcontainers-backed; ubuntu-latest runners provide a Docker daemon out of the box.
+      - run: dotnet test tests/TransBrain.Api.IntegrationTests --no-build
+
+  frontends:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [TransBrain.Web, TransBrain.VueWeb]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - run: npm ci
+        working-directory: src/${{ matrix.project }}
+      - run: npm run build
+        working-directory: src/${{ matrix.project }}
