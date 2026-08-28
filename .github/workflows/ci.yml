@@ -36,8 +36,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '26'
+          node-version: '26.4'
       - run: npm ci
         working-directory: src/${{ matrix.project }}
       - run: npm run build
+        working-directory: src/${{ matrix.project }}
+      # TransBrain.Web (Angular) has a unit-test script (`npm run test`, vitest-backed via the
+      # @angular/build:unit-test builder) and runs headlessly with --watch=false. TransBrain.VueWeb
+      # has no unit-test script today - only its Playwright e2e suite, which needs the full stack
+      # and is out of scope for this job (see the note at the top of this file). Deliberately not
+      # inventing a Vue unit-test script here; this asymmetry is real, not an oversight.
+      - if: matrix.project == 'TransBrain.Web'
+        run: npm run test -- --watch=false
         working-directory: src/${{ matrix.project }}

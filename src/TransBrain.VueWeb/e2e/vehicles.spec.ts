@@ -30,11 +30,11 @@ test('adminUser_afterKeycloakLogin_seesVehicleList', async ({ page }) => {
     // oidc-client-ts stores the signed-in user under `user:<authority>:<client_id>`, further
     // prefixed with "oidc." by WebStorageStateStore's default `prefix` option (undocumented in
     // userManager.ts since it is left at its default), in whichever store userManager.ts
-    // configures - here window.localStorage (Angular's equivalent client defaults to
-    // sessionStorage instead; the two libraries just differ). Verified during execution: reading
-    // the unprefixed key returned null even though login had genuinely succeeded.
+    // configures - here window.sessionStorage, matching the Angular app's storage choice.
+    // Verified during execution: reading the unprefixed key returned null even though login
+    // had genuinely succeeded.
     const accessToken = await page.evaluate(() => {
-        const raw = localStorage.getItem('oidc.user:https://localhost:8080/realms/transbrain:transbrain-spa');
+        const raw = sessionStorage.getItem('oidc.user:https://localhost:8080/realms/transbrain:transbrain-spa');
         return raw ? JSON.parse(raw).access_token : null;
     });
     expect(accessToken).toBeTruthy();
@@ -52,9 +52,10 @@ test('adminUser_afterKeycloakLogin_seesVehicleList', async ({ page }) => {
     });
     expect(createResponse.status()).toBe(201);
 
-    // The component fetches the list once, on mount - reload to observe the seeded row. The
-    // stored refresh token/session lets userManager.getUser() re-establish the session
-    // silently, with no second trip through the Keycloak login form.
+    // The component fetches the list once, on mount - reload to observe the seeded row. There
+    // is no refresh token in play here; what re-establishes the session across the reload is
+    // simply that the signed-in user oidc-client-ts wrote to sessionStorage survives it, so
+    // userManager.getUser() finds it again with no second trip through the Keycloak login form.
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
     await expect(page.getByTestId('vehicle-plate').filter({ hasText: licensePlate })).toBeVisible();

@@ -43,7 +43,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddKeycloakJwtBearer("keycloak", realm: "transbrain", options =>
     {
         options.Audience = "transbrain-api";
-        options.RequireHttpsMetadata = builder.Environment.IsProduction();
+        // Written against Development, not Production: any other environment name (Staging, QA,
+        // a customer pilot, ...) must still require HTTPS for the OIDC discovery document and
+        // signing keys. Gating on IsProduction() instead would relax every non-Production
+        // environment, leaving realistic pre-production environments open to a signing-key
+        // substitution over plain HTTP.
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.Events = new JwtBearerEvents
         {
             // Keycloak nests realm roles under a "realm_access.roles" claim, which ASP.NET

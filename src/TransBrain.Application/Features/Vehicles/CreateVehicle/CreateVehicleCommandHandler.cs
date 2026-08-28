@@ -18,7 +18,10 @@ internal sealed class CreateVehicleCommandHandler(IVehicleRepository repository)
             return plate.Error!;
         }
 
-        if (!Enum.TryParse(command.Type, ignoreCase: true, out VehicleType type))
+        // Enum.TryParse alone accepts any numeric string (e.g. "99") and maps it to the
+        // underlying integer value even when no member defines it, silently persisting an
+        // undefined VehicleType via HasConversion<string>(). Enum.IsDefined closes that gap.
+        if (!Enum.TryParse(command.Type, ignoreCase: true, out VehicleType type) || !Enum.IsDefined(type))
         {
             return Error.Validation("Vehicle.UnknownType", $"'{command.Type}' is not a known vehicle type.");
         }

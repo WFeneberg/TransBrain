@@ -63,6 +63,16 @@ file (rather than whatever accumulated in a volume) the authoritative source of 
 configuration. Do not expect vehicles you created, or realm edits you made through the
 Keycloak admin console, to still be there after a restart.
 
+### Database migrations are only applied automatically in Development
+
+`Program.cs` calls `Database.MigrateAsync()` only when `IsDevelopment()` is true. Any other
+environment (Staging, QA, production, ...) starts against whatever schema is already there —
+an empty database on first deploy — and every request will fail once it reaches EF Core,
+with nothing in the error naming a missing migration as the cause. A deployed environment
+needs an explicit migration step (for example `dotnet ef database update`, or running
+migrations as part of the deployment pipeline) before the API is started. This is not wired
+up yet; it is a known gap for the next phase, not an oversight.
+
 ## Test users
 
 The imported realm defines four users, one per realm role:

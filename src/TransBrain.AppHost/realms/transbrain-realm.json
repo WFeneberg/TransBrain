@@ -3,6 +3,9 @@
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": false,
+  "attributes": {
+    "_comment": "DEVELOPMENT ONLY - never use this realm for a deployed environment. It sets sslRequired to 'none' (tokens can be minted and accepted over plain HTTP) and defines trivial, well-known user passwords (see README.md, 'Test users'). Both must be replaced for anything beyond local development."
+  },
   "roles": {
     "realm": [
       { "name": "admin", "description": "Full access including master data" },

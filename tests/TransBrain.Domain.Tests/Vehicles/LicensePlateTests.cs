@@ -38,6 +38,20 @@ public class LicensePlateTests
     }
 
     [Fact]
+    public void Create_PlateExactly15Characters_IsAccepted()
+    {
+        // Only the 16-character (rejected) side of the MaxLength boundary was covered before -
+        // this pins the exact-length (accepted) side, so a `>` vs `>=` slip at MaxLength would
+        // actually be caught.
+        string plate = new('A', 15);
+
+        Result<LicensePlate> result = LicensePlate.Create(plate);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Value.Should().Be(plate);
+    }
+
+    [Fact]
     public void Equals_SamePlateDifferentCasing_ReturnsTrue()
     {
         LicensePlate first = LicensePlate.Create("m-ab 1234").Value;

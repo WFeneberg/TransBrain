@@ -33,6 +33,9 @@ import { Vehicle, VehicleService } from './vehicle.service';
                 </table>
             }
         } @else {
+            @if (errorMessage(); as message) {
+                <p data-testid="vehicle-list-error">{{ message }}</p>
+            }
             <button mat-raised-button data-testid="login" (click)="login()">Sign in</button>
         }
     `,
@@ -47,14 +50,20 @@ export class VehicleListComponent {
     protected readonly errorMessage = signal<string | null>(null);
 
     constructor() {
-        this.oidc.checkAuth().subscribe(({ isAuthenticated }) => {
-            this.isAuthenticated.set(isAuthenticated);
-            if (isAuthenticated) {
-                this.service.list().subscribe({
-                    next: (page) => this.vehicles.set(page.items),
-                    error: (error: HttpErrorResponse) => this.errorMessage.set(this.describe(error)),
-                });
-            }
+        this.oidc.checkAuth().subscribe({
+            next: ({ isAuthenticated }) => {
+                this.isAuthenticated.set(isAuthenticated);
+                if (isAuthenticated) {
+                    this.service.list().subscribe({
+                        next: (page) => this.vehicles.set(page.items),
+                        error: (error: HttpErrorResponse) => this.errorMessage.set(this.describe(error)),
+                    });
+                }
+            },
+            // Without this, a checkAuth failure (e.g. Keycloak unreachable) escaped unhandled and
+            // the user was bounced to the Sign in button with no explanation of why. Same scope as
+            // the existing HTTP error handling above: set the message, no retry, no toast.
+            error: () => this.errorMessage.set('Could not verify your sign-in status. Please try signing in again.'),
         });
     }
 

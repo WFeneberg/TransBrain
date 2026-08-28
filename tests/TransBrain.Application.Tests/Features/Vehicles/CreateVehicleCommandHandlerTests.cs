@@ -55,6 +55,24 @@ public class CreateVehicleCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_NumericUndefinedVehicleType_ReturnsValidationError()
+    {
+        // Enum.TryParse alone happily parses a numeric string into the underlying integer
+        // value even when no VehicleType member defines it (e.g. (VehicleType)99), which would
+        // then pass Vehicle.Create and be persisted as the literal string "99". This guards the
+        // fix (Enum.TryParse combined with Enum.IsDefined) that rejects it before it gets there.
+        InMemoryVehicleRepository repository = new();
+        CreateVehicleCommandHandler handler = new(repository);
+
+        Result<VehicleResponse> result = await handler.Handle(
+            ValidCommand with { Type = "99" }, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Vehicle.UnknownType");
+        repository.Vehicles.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Handle_InvalidLicensePlate_ReturnsDomainValidationError()
     {
         InMemoryVehicleRepository repository = new();
