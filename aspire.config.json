@@ -1,0 +1,6 @@
+{
+  "appHost": {
+    "path": "src/TransBrain.AppHost/TransBrain.AppHost.csproj"
+  },
+  "channel": "stable"
+}
