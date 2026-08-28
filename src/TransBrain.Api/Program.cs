@@ -1,6 +1,10 @@
 using System.Reflection;
+using System.Security.Claims;
+using System.Text.Json;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
+using TransBrain.Api.Authorization;
 using TransBrain.Api.Endpoints;
 using TransBrain.Application;
 using TransBrain.Infrastructure;
@@ -35,10 +39,60 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
     .AllowAnyHeader()
     .AllowAnyMethod()));
 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddKeycloakJwtBearer("keycloak", realm: "transbrain", options =>
+    {
+        options.Audience = "transbrain-api";
+        options.RequireHttpsMetadata = builder.Environment.IsProduction();
+        options.Events = new JwtBearerEvents
+        {
+            // Keycloak nests realm roles under a "realm_access.roles" claim, which ASP.NET
+            // Core does not map to ClaimTypes.Role on its own. Without this mapping, every
+            // RequireRole policy check silently fails, which looks like a permissions bug
+            // rather than a missing claims-mapping bug.
+            OnTokenValidated = context =>
+            {
+                if (context.Principal?.Identity is not ClaimsIdentity identity)
+                {
+                    return Task.CompletedTask;
+                }
+
+                string? realmAccess = context.Principal.FindFirst("realm_access")?.Value;
+                if (string.IsNullOrWhiteSpace(realmAccess))
+                {
+                    return Task.CompletedTask;
+                }
+
+                using JsonDocument document = JsonDocument.Parse(realmAccess);
+                if (document.RootElement.TryGetProperty("roles", out JsonElement roles))
+                {
+                    foreach (JsonElement role in roles.EnumerateArray())
+                    {
+                        string? value = role.GetString();
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            identity.AddClaim(new Claim(ClaimTypes.Role, value));
+                        }
+                    }
+                }
+
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(Policies.MasterDataWrite, policy => policy.RequireRole("admin"))
+    .AddPolicy(Policies.DispatchWrite, policy => policy.RequireRole("admin", "disponent"))
+    .AddPolicy(Policies.TourStatusWrite, policy => policy.RequireRole("admin", "disponent", "fahrer"))
+    .AddPolicy(Policies.Read, policy => policy.RequireRole("admin", "disponent", "fahrer", "viewer"));
+
 WebApplication app = builder.Build();
 
 app.MapDefaultEndpoints();
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

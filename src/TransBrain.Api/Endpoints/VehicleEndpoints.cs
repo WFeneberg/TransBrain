@@ -1,3 +1,4 @@
+using TransBrain.Api.Authorization;
 using TransBrain.Api.Common;
 using TransBrain.Application.Common.Messaging;
 using TransBrain.Application.Common.Pagination;
@@ -25,7 +26,8 @@ public sealed class VehicleEndpoints : IEndpointGroup
             .WithName("CreateVehicle")
             .Produces<VehicleResponse>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
-            .ProducesProblem(StatusCodes.Status409Conflict);
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequireAuthorization(Policies.MasterDataWrite);
 
         group.MapGet("/", async (
                 ISender sender,
@@ -39,6 +41,7 @@ public sealed class VehicleEndpoints : IEndpointGroup
             })
             .WithName("ListVehicles")
             .Produces<PagedResult<VehicleResponse>>()
-            .ProducesValidationProblem();
+            .ProducesValidationProblem()
+            .RequireAuthorization(Policies.Read);
     }
 }
