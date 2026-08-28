@@ -10,5 +10,7 @@ export const routes: Routes = [
     // then discard a valid authorization code because the path no longer matches. '/vehicles'
     // is kept reachable as a second route pointing at the same component, not the primary one.
     { path: '', loadComponent: loadVehicleList },
+    // Two canonical URLs for one screen is a stopgap, not a design choice: once real routing
+    // exists (more screens, navigation), consolidate this to a single path.
     { path: 'vehicles', loadComponent: loadVehicleList },
 ];
