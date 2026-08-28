@@ -2078,6 +2078,12 @@ Replace `src/TransBrain.AppHost/TransBrain.AppHost.csproj` with:
     <Nullable>enable</Nullable>
     <AspireUseCliBundle>true</AspireUseCliBundle>
     <IsPackable>false</IsPackable>
+    <!-- Required, not optional. Without a stable UserSecretsId, Aspire regenerates the
+         Postgres password on every run while the persisted data volume keeps the original,
+         so authentication fails and every resource that WaitFor's the database hangs in
+         `Waiting` forever. The symptom is the API never starting, with no error naming the
+         cause. Cost one full debugging round in execution. -->
+    <UserSecretsId>0b6b6c57-f480-4886-9be9-3069aae98109</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -2209,8 +2215,17 @@ var database = postgres.AddDatabase("transbraindb");
 
 var cache = builder.AddRedis("cache");
 
+// Deliberately NO data volume. Keycloak's directory import only CREATES a realm that does
+// not yet exist — it never updates one — so a persisted volume would make this file a
+// fiction after the first run: edits would be ignored while the log still says
+// "Import finished successfully". Verified in execution; the log line to look for is
+// "Realm 'transbrain' already exists. Import skipped".
+// KC_HOSTNAME pins the issuer so the `iss` claim in tokens is byte-identical to the
+// authority both SPAs configure. Without it the issuer is the container-internal
+// http://keycloak:8080, which no browser can resolve and which fails issuer validation
+// even when the network path works.
 var keycloak = builder.AddKeycloak("keycloak", 8080)
-    .WithDataVolume()
+    .WithEnvironment("KC_HOSTNAME", "https://localhost:8080")
     .WithRealmImport("./realms");
 
 var api = builder.AddProject<Projects.TransBrain_Api>("api")
@@ -2249,7 +2264,7 @@ builder.Build().Run();
 - [ ] **Step 5: Run the AppHost and verify all resources start**
 
 Run: `aspire run`
-Expected: the dashboard lists `postgres`, `pgadmin`, `transbraindb`, `cache`, `keycloak`, `api` — all healthy. Open the Keycloak admin console at `http://localhost:8080`, confirm the `transbrain` realm exists with four roles and four users. Open the API's Scalar page and confirm `GET /api/vehicles` returns an empty page and `POST /api/vehicles` creates one.
+Expected: the dashboard lists `postgres`, `pgadmin`, `transbraindb`, `cache`, `keycloak`, `api` — all healthy. Open the Keycloak admin console at `https://localhost:8080`, confirm the `transbrain` realm exists with four roles and four users. Open the API's Scalar page and confirm `GET /api/vehicles` returns an empty page and `POST /api/vehicles` creates one.
 
 - [ ] **Step 6: Commit**
 
@@ -2286,7 +2301,9 @@ public static class Policies
 
 - [ ] **Step 2: Add authentication and authorization to `Program.cs`**
 
-Two Keycloak specifics drive this code. First, Keycloak puts realm roles in a nested `realm_access.roles` claim, which ASP.NET does not map to role claims on its own — the token-validated event below does that, otherwise every role check silently fails. Second, `options.Audience` is `transbrain-api`, which only validates because Task 11's realm gives the `transbrain-spa` client an `oidc-audience-mapper` that writes `transbrain-api` into the access token's `aud` claim. If you see `401` with an audience-validation failure, that mapper is missing or misspelled — fix the realm, do not weaken the audience check to `account`, which would accept any token the realm ever issued.
+**The authority is HTTPS with a development certificate.** Task 11 pins `KC_HOSTNAME` to `https://localhost:8080` so the `iss` claim matches what clients configure. Aspire supplies a self-signed dev certificate for it, so the API's backchannel call to the discovery document will fail certificate validation unless the machine trusts it. Run `dotnet dev-certs https --trust` once, or configure `options.BackchannelHttpHandler` to accept it in development only — never unconditionally, and never in production. If you see a discovery or metadata failure rather than an audience or role failure, this is the cause.
+
+Two further Keycloak specifics drive this code. First, Keycloak puts realm roles in a nested `realm_access.roles` claim, which ASP.NET does not map to role claims on its own — the token-validated event below does that, otherwise every role check silently fails. Second, `options.Audience` is `transbrain-api`, which only validates because Task 11's realm gives the `transbrain-spa` client an `oidc-audience-mapper` that writes `transbrain-api` into the access token's `aud` claim. If you see `401` with an audience-validation failure, that mapper is missing or misspelled — fix the realm, do not weaken the audience check to `account`, which would accept any token the realm ever issued.
 
 Insert before `WebApplication app = builder.Build();`:
 
@@ -2374,7 +2391,7 @@ Expected: `401 Unauthorized`.
 Obtain a token for `dispo.user` and repeat:
 
 ```bash
-curl -s -X POST "http://localhost:8080/realms/transbrain/protocol/openid-connect/token" \
+curl -sk -X POST "https://localhost:8080/realms/transbrain/protocol/openid-connect/token" \
   -d "client_id=transbrain-spa" -d "grant_type=password" \
   -d "username=dispo.user" -d "password=dispo"
 ```
@@ -2651,6 +2668,18 @@ cd src/TransBrain.Web && npx --yes ng add @angular/material --skip-confirmation 
 
 In `src/TransBrain.Web/angular.json`, under `projects.TransBrain.Web.architect.serve.options`, add `"port": 4200`. This is what lets the AppHost use a fixed, non-proxied endpoint.
 
+
+**Certificate note.** The Keycloak authority is `https://localhost:8080` with a self-signed
+development certificate (Task 11 pins `KC_HOSTNAME` so the `iss` claim matches). The browser
+must trust it or the OIDC discovery call fails silently before any login screen appears. Run
+`dotnet dev-certs https --trust` once on the machine. Do not disable certificate checking in
+the SPA to work around it.
+
+**Do not bind to the ProblemDetails `errors` dictionary keys.** The API currently keys that
+dictionary by error code (for example `Vehicle.PayloadKgNotPositive`), not by field name — a
+known defect recorded for a dedicated follow-up task. Display `title` and `detail` instead, so
+no frontend hard-codes a shape that is already known to be changing.
+
 - [ ] **Step 3: Configure OIDC**
 
 `src/app/auth/auth.config.ts`:
@@ -2660,7 +2689,7 @@ import { PassedInitialConfig } from 'angular-auth-oidc-client';
 
 export const authConfig: PassedInitialConfig = {
     config: {
-        authority: 'http://localhost:8080/realms/transbrain',
+        authority: 'https://localhost:8080/realms/transbrain',
         redirectUrl: window.location.origin,
         postLogoutRedirectUri: window.location.origin,
         clientId: 'transbrain-spa',
@@ -2903,6 +2932,18 @@ export default defineConfig({
 });
 ```
 
+
+**Certificate note.** The Keycloak authority is `https://localhost:8080` with a self-signed
+development certificate (Task 11 pins `KC_HOSTNAME` so the `iss` claim matches). The browser
+must trust it or the OIDC discovery call fails silently before any login screen appears. Run
+`dotnet dev-certs https --trust` once on the machine. Do not disable certificate checking in
+the SPA to work around it.
+
+**Do not bind to the ProblemDetails `errors` dictionary keys.** The API currently keys that
+dictionary by error code (for example `Vehicle.PayloadKgNotPositive`), not by field name — a
+known defect recorded for a dedicated follow-up task. Display `title` and `detail` instead, so
+no frontend hard-codes a shape that is already known to be changing.
+
 - [ ] **Step 3: Configure OIDC and the auth store**
 
 `src/auth/userManager.ts`:
@@ -2911,7 +2952,7 @@ export default defineConfig({
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts';
 
 export const userManager = new UserManager({
-    authority: 'http://localhost:8080/realms/transbrain',
+    authority: 'https://localhost:8080/realms/transbrain',
     client_id: 'transbrain-spa',
     redirect_uri: `${window.location.origin}/callback`,
     post_logout_redirect_uri: window.location.origin,
