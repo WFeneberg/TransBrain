@@ -1885,7 +1885,17 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 builder.AddNpgsqlDbContext<TransBrainDbContext>("transbraindb");
-builder.AddRedisDistributedCache("cache");
+
+// Redis is registered only when Aspire supplied a connection string. The integration
+// tests run without a Redis container and fall through to the in-memory cache.
+if (!string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("cache")))
+{
+    builder.AddRedisDistributedCache("cache");
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
@@ -2044,7 +2054,20 @@ Replace `src/TransBrain.AppHost/TransBrain.AppHost.csproj` with:
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "http://localhost:4200/*##http://localhost:4300/*"
-      }
+      },
+      "protocolMappers": [
+        {
+          "name": "transbrain-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "transbrain-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "users": [
@@ -2180,7 +2203,7 @@ public static class Policies
 
 - [ ] **Step 2: Add authentication and authorization to `Program.cs`**
 
-Keycloak puts realm roles in a nested `realm_access.roles` claim, which ASP.NET does not map to role claims on its own — the token-validated event below does that, otherwise every role check silently fails.
+Two Keycloak specifics drive this code. First, Keycloak puts realm roles in a nested `realm_access.roles` claim, which ASP.NET does not map to role claims on its own — the token-validated event below does that, otherwise every role check silently fails. Second, `options.Audience` is `transbrain-api`, which only validates because Task 11's realm gives the `transbrain-spa` client an `oidc-audience-mapper` that writes `transbrain-api` into the access token's `aud` claim. If you see `401` with an audience-validation failure, that mapper is missing or misspelled — fix the realm, do not weaken the audience check to `account`, which would accept any token the realm ever issued.
 
 Insert before `WebApplication app = builder.Build();`:
 
@@ -2188,7 +2211,7 @@ Insert before `WebApplication app = builder.Build();`:
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddKeycloakJwtBearer("keycloak", realm: "transbrain", options =>
     {
-        options.Audience = "account";
+        options.Audience = "transbrain-api";
         options.RequireHttpsMetadata = builder.Environment.IsProduction();
         options.Events = new JwtBearerEvents
         {
@@ -2388,20 +2411,20 @@ public sealed class TransBrainApiFactory : WebApplicationFactory<Program>, IAsyn
     {
         builder.UseEnvironment(Environments.Development);
         builder.UseSetting("ConnectionStrings:transbraindb", _postgres.GetConnectionString());
-        builder.UseSetting("ConnectionStrings:cache", "localhost:6379");
+
+        // No `cache` connection string on purpose: Program.cs falls back to the
+        // in-memory distributed cache when Aspire has not supplied one.
 
         builder.ConfigureTestServices(services =>
         {
             services.AddAuthentication(TestAuthHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
-
-            services.AddDistributedMemoryCache();
         });
     }
 }
 ```
 
-If the Redis client registration refuses to start without a reachable server, replace `builder.AddRedisDistributedCache("cache")` in `Program.cs` with a guarded registration that falls back to the in-memory cache when the connection string is absent, and drop the `cache` setting here.
+This works because Task 10's `Program.cs` guards the Redis registration on the presence of a `cache` connection string. If that guard is missing, add it there rather than pointing the tests at an unreachable `localhost:6379` — test startup must depend on configuration, not on connection timing.
 
 - [ ] **Step 4: Write the failing endpoint tests**
 
