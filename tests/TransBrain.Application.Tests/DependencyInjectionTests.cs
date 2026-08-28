@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using TransBrain.Application.Common.Behaviors;
 using TransBrain.Application.Common.Messaging;
+using TransBrain.Application.Features.Vehicles;
+using TransBrain.Application.Features.Vehicles.CreateVehicle;
 
 namespace TransBrain.Application.Tests;
 
@@ -31,19 +33,16 @@ public class DependencyInjectionTests
     [Fact]
     public void AddApplication_WhenResolved_RegistersHandlersFoundByAssemblyScan()
     {
-        // The Application assembly currently defines no real ICommandHandler/IQueryHandler
-        // implementation (Task 7 owns the first feature slice), so there is nothing for the
-        // assembly scan in AddApplication to find yet. This test instead pins that the scan
-        // registers no spurious handler entries, and that the core ISender registration
-        // AddApplication is responsible for still resolves correctly.
+        // CreateVehicleCommandHandler (Task 7) is the first real ICommandHandler in the
+        // Application assembly, so it pins that the reflection-based scan in AddApplication
+        // actually discovers and registers `internal` handler implementations.
         ServiceCollection services = new();
         services.AddApplication();
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
 
-        services.Should().NotContain(descriptor =>
-            descriptor.ServiceType.IsGenericType &&
-            (descriptor.ServiceType.GetGenericTypeDefinition() == typeof(ICommandHandler<,>) ||
-             descriptor.ServiceType.GetGenericTypeDefinition() == typeof(IQueryHandler<,>)));
+        services.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(ICommandHandler<CreateVehicleCommand, VehicleResponse>) &&
+            descriptor.ImplementationType == typeof(CreateVehicleCommandHandler));
 
         ServiceProvider provider = services.BuildServiceProvider();
 
