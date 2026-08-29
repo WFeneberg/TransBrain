@@ -98,6 +98,28 @@ public class DriverTests
     }
 
     [Fact]
+    public void MarkAbsent_WhenInactive_LeavesDriverInactive()
+    {
+        Driver driver = Driver.Create("Frank", "Fahrer", Classes, ValidUntil, null).Value;
+        driver.Deactivate();
+
+        driver.MarkAbsent();
+
+        driver.Status.Should().Be(DriverStatus.Inactive);
+    }
+
+    [Fact]
+    public void MarkAbsent_WhenAlreadyAbsent_LeavesDriverAbsent()
+    {
+        Driver driver = Driver.Create("Frank", "Fahrer", Classes, ValidUntil, null).Value;
+        driver.MarkAbsent();
+
+        driver.MarkAbsent();
+
+        driver.Status.Should().Be(DriverStatus.Absent);
+    }
+
+    [Fact]
     public void MarkAvailable_AfterBeingAbsent_RestoresAvailability()
     {
         Driver driver = Driver.Create("Frank", "Fahrer", Classes, ValidUntil, null).Value;
@@ -143,5 +165,7 @@ public class DriverTests
         result.IsSuccess.Should().BeFalse();
         driver.FirstName.Should().Be("Frank");
         driver.LicenseClasses.Should().BeEquivalentTo(Classes);
+        driver.LicenseValidUntil.Should().Be(ValidUntil);
+        driver.ExternalUserId.Should().BeNull();
     }
 }

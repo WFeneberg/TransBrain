@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using TransBrain.Domain.Common;
 
 namespace TransBrain.Domain.Drivers;
@@ -5,12 +6,14 @@ namespace TransBrain.Domain.Drivers;
 public sealed class Driver
 {
     private readonly HashSet<LicenseClass> _licenseClasses = [];
+    private readonly ReadOnlySet<LicenseClass> _licenseClassesView;
 
     // EF Core materialization only. Every other construction goes through Create.
     private Driver()
     {
         FirstName = null!;
         LastName = null!;
+        _licenseClassesView = new ReadOnlySet<LicenseClass>(_licenseClasses);
     }
 
     private Driver(
@@ -24,7 +27,8 @@ public sealed class Driver
         Id = id;
         FirstName = firstName;
         LastName = lastName;
-        _licenseClasses = [.. licenseClasses];
+        _licenseClasses.UnionWith(licenseClasses);
+        _licenseClassesView = new ReadOnlySet<LicenseClass>(_licenseClasses);
         LicenseValidUntil = licenseValidUntil;
         ExternalUserId = externalUserId;
         Status = DriverStatus.Available;
@@ -36,7 +40,7 @@ public sealed class Driver
 
     public string LastName { get; private set; }
 
-    public IReadOnlyCollection<LicenseClass> LicenseClasses => _licenseClasses;
+    public IReadOnlyCollection<LicenseClass> LicenseClasses => _licenseClassesView;
 
     public DateOnly LicenseValidUntil { get; private set; }
 
@@ -94,6 +98,11 @@ public sealed class Driver
         return this;
     }
 
+    /// <remarks>
+    /// Deliberately acts only on an available driver: leaving an already-absent or a
+    /// deactivated driver untouched is intentional, not a forgotten branch — mirrors
+    /// <see cref="MarkAvailable"/>.
+    /// </remarks>
     public void MarkAbsent()
     {
         if (Status == DriverStatus.Available)
