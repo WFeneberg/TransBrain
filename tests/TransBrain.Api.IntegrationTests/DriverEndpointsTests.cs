@@ -58,6 +58,39 @@ public class DriverEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     }
 
     [Fact]
+    public async Task GetDrivers_WithoutToken_ReturnsUnauthorized()
+    {
+        HttpResponseMessage response = await factory.CreateClient().GetAsync("/api/drivers");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task PutDriver_AsDisponent_ReturnsForbidden()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("disponent")
+            .PutAsJsonAsync($"/api/drivers/{Guid.CreateVersion7()}", new
+            {
+                firstName = "Franz",
+                lastName = "Forbidden",
+                licenseClasses = new[] { "B" },
+                licenseValidUntil = "2030-01-01",
+                externalUserId = (string?)null
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task DeleteDriver_AsDisponent_ReturnsForbidden()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("disponent")
+            .DeleteAsync($"/api/drivers/{Guid.CreateVersion7()}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task PutDriver_AsAdmin_UpdatesAndReturnsNewValues()
     {
         HttpClient admin = factory.CreateClientAs("admin");
