@@ -46,4 +46,46 @@ public class OrderNumberTests
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be("OrderNumber.Malformed");
     }
+
+    [Fact]
+    public void From_NegativeSequence_Throws()
+    {
+        Action act = () => OrderNumber.From(2027, -1);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void From_ZeroSequence_Throws()
+    {
+        Action act = () => OrderNumber.From(2027, 0);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Theory]
+    [InlineData(999)]
+    [InlineData(10_000)]
+    public void From_YearOutsideFourDigits_Throws(int year)
+    {
+        Action act = () => OrderNumber.From(year, 1);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Theory]
+    [InlineData(2027, 1)]
+    [InlineData(2027, 42)]
+    [InlineData(1000, 1)]
+    [InlineData(9999, 99_999)]
+    [InlineData(2027, 123_456)]
+    public void From_AnyValidInput_ProducesSomethingParseAccepts(int year, int sequence)
+    {
+        OrderNumber number = OrderNumber.From(year, sequence);
+
+        Result<OrderNumber> parsed = OrderNumber.Parse(number.Value);
+
+        parsed.IsSuccess.Should().BeTrue();
+        parsed.Value.Value.Should().Be(number.Value);
+    }
 }

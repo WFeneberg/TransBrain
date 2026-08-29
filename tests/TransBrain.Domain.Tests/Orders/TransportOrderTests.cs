@@ -213,6 +213,59 @@ public class TransportOrderTests
     }
 
     [Fact]
+    public void MarkPlanned_DeliveredOrder_ReturnsConflictAndLeavesStatusUnchanged()
+    {
+        TransportOrder order = AnOrder();
+        order.MarkPlanned();
+        order.MarkInTransit();
+        order.MarkDelivered();
+
+        Result<Unit> result = order.MarkPlanned();
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Conflict);
+        order.Status.Should().Be(OrderStatus.Delivered);
+    }
+
+    [Fact]
+    public void MarkInTransit_CancelledOrder_ReturnsConflictAndLeavesStatusUnchanged()
+    {
+        TransportOrder order = AnOrder();
+        order.Cancel();
+
+        Result<Unit> result = order.MarkInTransit();
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Conflict);
+        order.Status.Should().Be(OrderStatus.Cancelled);
+    }
+
+    [Fact]
+    public void MarkDelivered_DraftOrder_ReturnsConflictAndLeavesStatusUnchanged()
+    {
+        TransportOrder order = AnOrder();
+
+        Result<Unit> result = order.MarkDelivered();
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Conflict);
+        order.Status.Should().Be(OrderStatus.Draft);
+    }
+
+    [Fact]
+    public void Cancel_CancelledOrder_ReturnsConflictAndLeavesStatusUnchanged()
+    {
+        TransportOrder order = AnOrder();
+        order.Cancel();
+
+        Result<Unit> result = order.Cancel();
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Conflict);
+        order.Status.Should().Be(OrderStatus.Cancelled);
+    }
+
+    [Fact]
     public void Update_DraftOrder_ReplacesEveryEditableField()
     {
         TransportOrder order = AnOrder();
