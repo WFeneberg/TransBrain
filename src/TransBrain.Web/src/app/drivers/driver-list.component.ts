@@ -6,6 +6,14 @@ import { RouterLink } from '@angular/router';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { Driver, DriverService } from './driver.service';
 
+/**
+ * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
+ * request returns is all a user can ever see - and lists come back sorted ascending, meaning a
+ * default page of 20 shows the twenty OLDEST records and hides everything added since. Asking
+ * for the cap is a stopgap, not a fix: real paging controls are still needed above 100 rows.
+ */
+const LIST_PAGE_SIZE = 100;
+
 @Component({
     selector: 'app-driver-list',
     standalone: true,
@@ -100,7 +108,7 @@ export class DriverListComponent {
     }
 
     private refresh(): void {
-        this.service.list().subscribe({
+        this.service.list(LIST_PAGE_SIZE).subscribe({
             next: (page) => this.drivers.set(page.items),
             error: (error: HttpErrorResponse) =>
                 this.errorMessage.set(this.describe(error, 'The driver list could not be loaded.')),

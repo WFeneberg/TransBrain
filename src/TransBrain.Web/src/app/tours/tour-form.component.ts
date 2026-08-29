@@ -12,6 +12,9 @@ import { Driver, DriverService } from '../drivers/driver.service';
 import { Vehicle, VehicleService } from '../vehicles/vehicle.service';
 import { TourService } from './tour.service';
 
+/** The API's maximum page size. A picker must offer every choice, not the first twenty. */
+const PICKER_PAGE_SIZE = 100;
+
 interface ProblemDetailsBody {
     errors?: Record<string, string[]>;
     detail?: string;
@@ -89,13 +92,13 @@ export class TourFormComponent {
     });
 
     constructor() {
-        this.session.pipe(switchMap(() => this.vehicleService.list())).subscribe({
+        this.session.pipe(switchMap(() => this.vehicleService.list(PICKER_PAGE_SIZE))).subscribe({
             next: (page) => this.vehicles.set(page.items),
             error: (error: HttpErrorResponse) =>
                 this.formError.set(this.describeFailure(error, 'The vehicle list could not be loaded.')),
         });
 
-        this.session.pipe(switchMap(() => this.driverService.list())).subscribe({
+        this.session.pipe(switchMap(() => this.driverService.list(PICKER_PAGE_SIZE))).subscribe({
             next: (page) => this.drivers.set(page.items),
             error: (error: HttpErrorResponse) =>
                 this.formError.set(this.describeFailure(error, 'The driver list could not be loaded.')),

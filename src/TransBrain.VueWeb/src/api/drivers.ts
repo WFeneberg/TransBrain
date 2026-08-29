@@ -37,8 +37,15 @@ client.interceptors.request.use(async (config) => {
     return config;
 });
 
-export async function listDrivers(): Promise<PagedResult<Driver>> {
-    const response = await client.get<PagedResult<Driver>>('/drivers');
+/**
+ * @param pageSize The API defaults to 20 rows. A picker that must offer EVERY driver to choose
+ * from - the tour form - has to ask for more, or a recently added one simply is not in the list
+ * and cannot be chosen. Capped at 100 by the API.
+ */
+export async function listDrivers(pageSize?: number): Promise<PagedResult<Driver>> {
+    const response = await client.get<PagedResult<Driver>>('/drivers', {
+        params: pageSize ? { pageSize: String(pageSize) } : undefined,
+    });
     return response.data;
 }
 

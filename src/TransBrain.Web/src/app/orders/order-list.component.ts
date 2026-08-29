@@ -9,6 +9,14 @@ import { RouterLink } from '@angular/router';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { Order, OrderService } from './order.service';
 
+/**
+ * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
+ * request returns is all a user can ever see - and lists come back sorted ascending, meaning a
+ * default page of 20 shows the twenty OLDEST records and hides everything added since. Asking
+ * for the cap is a stopgap, not a fix: real paging controls are still needed above 100 rows.
+ */
+const LIST_PAGE_SIZE = 100;
+
 @Component({
     selector: 'app-order-list',
     standalone: true,
@@ -166,7 +174,7 @@ export class OrderListComponent {
     }
 
     private refresh(): void {
-        this.service.list(this.statusFilter()).subscribe({
+        this.service.list(this.statusFilter(), LIST_PAGE_SIZE).subscribe({
             next: (page) => this.orders.set(page.items),
             error: (error: HttpErrorResponse) =>
                 this.errorMessage.set(this.describe(error, 'The order list could not be loaded.')),

@@ -5,6 +5,14 @@ import { useRouter } from 'vue-router';
 import { cancelOrder, listOrders, type Order } from '../api/orders';
 import { useAuthStore } from '../stores/auth';
 
+/**
+ * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
+ * request returns is all a user can ever see - and lists come back sorted ascending, meaning a
+ * default page of 20 shows the twenty OLDEST records and hides everything added since. Asking
+ * for the cap is a stopgap, not a fix: real paging controls are still needed above 100 rows.
+ */
+const LIST_PAGE_SIZE = 100;
+
 const auth = useAuthStore();
 const router = useRouter();
 const orders = ref<Order[]>([]);
@@ -36,7 +44,7 @@ onMounted(async () => {
 
 async function refresh(): Promise<void> {
     try {
-        orders.value = (await listOrders(statusFilter.value)).items;
+        orders.value = (await listOrders(statusFilter.value, LIST_PAGE_SIZE)).items;
     } catch (error) {
         errorMessage.value = describe(error, 'The order list could not be loaded.');
     }
@@ -113,7 +121,18 @@ function describe(error: unknown, fallback: string): string {
             </div>
             <p v-if="actionError" data-testid="order-action-error">{{ actionError }}</p>
             <p v-if="errorMessage" data-testid="order-list-error">{{ errorMessage }}</p>
-            <v-data-table v-else :headers="headers" :items="orders" item-value="id" data-testid="order-table">
+            <!-- items-per-page="-1": the API already returned one page, and Vuetify would
+                 paginate that page AGAIN at ten rows, so a record the server did return could
+                 still be invisible. One pagination - the server's - is enough, and it is what
+                 the Angular app does. -->
+            <v-data-table
+                v-else
+                :headers="headers"
+                :items="orders"
+                :items-per-page="-1"
+                item-value="id"
+                data-testid="order-table"
+            >
                 <template #item.orderNumber="{ item }">
                     <span data-testid="order-number">{{ item.orderNumber }}</span>
                 </template>

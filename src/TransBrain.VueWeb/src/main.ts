@@ -12,6 +12,9 @@ import DriverList from './views/DriverList.vue';
 import DriverForm from './views/DriverForm.vue';
 import OrderList from './views/OrderList.vue';
 import OrderForm from './views/OrderForm.vue';
+import TourList from './views/TourList.vue';
+import TourForm from './views/TourForm.vue';
+import TourDetail from './views/TourDetail.vue';
 import AuthCallback from './views/AuthCallback.vue';
 
 const router = createRouter({
@@ -34,6 +37,9 @@ const router = createRouter({
         { path: '/orders', component: OrderList },
         { path: '/orders/new', component: OrderForm },
         { path: '/orders/:id', component: OrderForm },
+        { path: '/tours', component: TourList },
+        { path: '/tours/new', component: TourForm },
+        { path: '/tours/:id', component: TourDetail },
         { path: '/callback', component: AuthCallback },
     ],
 });

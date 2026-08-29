@@ -5,6 +5,14 @@ import { useRouter } from 'vue-router';
 import { deleteVehicle, listVehicles, type Vehicle } from '../api/vehicles';
 import { useAuthStore } from '../stores/auth';
 
+/**
+ * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
+ * request returns is all a user can ever see - and lists come back sorted ascending, meaning a
+ * default page of 20 shows the twenty OLDEST records and hides everything added since. Asking
+ * for the cap is a stopgap, not a fix: real paging controls are still needed above 100 rows.
+ */
+const LIST_PAGE_SIZE = 100;
+
 const auth = useAuthStore();
 const router = useRouter();
 const vehicles = ref<Vehicle[]>([]);
@@ -29,7 +37,7 @@ onMounted(async () => {
 
 async function refresh(): Promise<void> {
     try {
-        vehicles.value = (await listVehicles()).items;
+        vehicles.value = (await listVehicles(LIST_PAGE_SIZE)).items;
     } catch (error) {
         errorMessage.value = describe(error, 'The vehicle list could not be loaded.');
     }
@@ -74,7 +82,18 @@ function describe(error: unknown, fallback: string): string {
             <v-btn data-testid="vehicle-add" @click="router.push('/vehicles/new')">Add vehicle</v-btn>
             <p v-if="actionError" data-testid="vehicle-action-error">{{ actionError }}</p>
             <p v-if="errorMessage" data-testid="vehicle-list-error">{{ errorMessage }}</p>
-            <v-data-table v-else :headers="headers" :items="vehicles" item-value="id" data-testid="vehicle-table">
+            <!-- items-per-page="-1": the API already returned one page, and Vuetify would
+                 paginate that page AGAIN at ten rows, so a record the server did return could
+                 still be invisible. One pagination - the server's - is enough, and it is what
+                 the Angular app does. -->
+            <v-data-table
+                v-else
+                :headers="headers"
+                :items="vehicles"
+                :items-per-page="-1"
+                item-value="id"
+                data-testid="vehicle-table"
+            >
                 <template #item.licensePlate="{ item }">
                     <span data-testid="vehicle-plate">{{ item.licensePlate }}</span>
                 </template>

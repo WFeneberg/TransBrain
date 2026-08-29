@@ -5,6 +5,14 @@ import { useRouter } from 'vue-router';
 import { deleteDriver, listDrivers, type Driver } from '../api/drivers';
 import { useAuthStore } from '../stores/auth';
 
+/**
+ * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
+ * request returns is all a user can ever see - and lists come back sorted ascending, meaning a
+ * default page of 20 shows the twenty OLDEST records and hides everything added since. Asking
+ * for the cap is a stopgap, not a fix: real paging controls are still needed above 100 rows.
+ */
+const LIST_PAGE_SIZE = 100;
+
 const auth = useAuthStore();
 const router = useRouter();
 const drivers = ref<Driver[]>([]);
@@ -30,7 +38,7 @@ onMounted(async () => {
 
 async function refresh(): Promise<void> {
     try {
-        drivers.value = (await listDrivers()).items;
+        drivers.value = (await listDrivers(LIST_PAGE_SIZE)).items;
     } catch (error) {
         errorMessage.value = describe(error, 'The driver list could not be loaded.');
     }
@@ -73,7 +81,18 @@ function describe(error: unknown, fallback: string): string {
             <v-btn data-testid="driver-add" @click="router.push('/drivers/new')">Add driver</v-btn>
             <p v-if="actionError" data-testid="driver-action-error">{{ actionError }}</p>
             <p v-if="errorMessage" data-testid="driver-list-error">{{ errorMessage }}</p>
-            <v-data-table v-else :headers="headers" :items="drivers" item-value="id" data-testid="driver-table">
+            <!-- items-per-page="-1": the API already returned one page, and Vuetify would
+                 paginate that page AGAIN at ten rows, so a record the server did return could
+                 still be invisible. One pagination - the server's - is enough, and it is what
+                 the Angular app does. -->
+            <v-data-table
+                v-else
+                :headers="headers"
+                :items="drivers"
+                :items-per-page="-1"
+                item-value="id"
+                data-testid="driver-table"
+            >
                 <template #item.lastName="{ item }">
                     <span data-testid="driver-lastname">{{ item.lastName }}</span>
                 </template>

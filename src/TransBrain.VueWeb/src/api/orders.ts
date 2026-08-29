@@ -55,12 +55,30 @@ client.interceptors.request.use(async (config) => {
     return config;
 });
 
-export async function listOrders(status?: string | null): Promise<PagedResult<Order>> {
+/**
+ * @param pageSize Orders come back sorted by order number ASCENDING, so the default page of 20
+ * is the twenty OLDEST matches. A caller choosing among current orders - TourDetail's
+ * assignable-order picker - must ask for more. The API caps this at 100.
+ */
+export async function listOrders(
+    status?: string | null,
+    pageSize?: number,
+    page?: number,
+): Promise<PagedResult<Order>> {
     // An omitted status must not become the string "null"/"undefined" in the query string:
     // the API rejects an unknown status with a 400 rather than ignoring it.
-    const response = await client.get<PagedResult<Order>>('/orders', {
-        params: status ? { status } : undefined,
-    });
+    const params: Record<string, string> = {};
+    if (status) {
+        params.status = status;
+    }
+    if (pageSize) {
+        params.pageSize = String(pageSize);
+    }
+    if (page) {
+        params.page = String(page);
+    }
+
+    const response = await client.get<PagedResult<Order>>('/orders', { params });
     return response.data;
 }
 

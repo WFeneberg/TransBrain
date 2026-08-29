@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
@@ -32,8 +32,15 @@ export interface PagedResult<T> {
 export class VehicleService {
     private readonly http = inject(HttpClient);
 
-    list(): Observable<PagedResult<Vehicle>> {
-        return this.http.get<PagedResult<Vehicle>>('/api/vehicles');
+    /**
+     * @param pageSize The API defaults to 20 rows. A picker that must offer EVERY vehicle to
+     * choose from - the tour form - has to ask for more, or a recently added one simply is not
+     * in the list and cannot be chosen. Capped at 100 by the API; a fleet larger than that
+     * needs a searchable picker, not a bigger page.
+     */
+    list(pageSize?: number): Observable<PagedResult<Vehicle>> {
+        const params = pageSize ? new HttpParams().set('pageSize', String(pageSize)) : new HttpParams();
+        return this.http.get<PagedResult<Vehicle>>('/api/vehicles', { params });
     }
 
     getById(id: string): Observable<Vehicle> {

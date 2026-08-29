@@ -11,6 +11,9 @@ import { Driver, DriverService } from '../drivers/driver.service';
 import { Vehicle, VehicleService } from '../vehicles/vehicle.service';
 import { Tour, TourService } from './tour.service';
 
+/** The API's maximum page size. A picker must offer every choice, not the first twenty. */
+const PICKER_PAGE_SIZE = 100;
+
 @Component({
     selector: 'app-tour-list',
     standalone: true,
@@ -150,8 +153,8 @@ export class TourListComponent {
     private loadFilterOptions(): void {
         // A failed option load leaves the filters empty but must not blank the table - the
         // tours themselves loaded fine, and an unusable filter is better than no list.
-        this.vehicleService.list().subscribe({ next: (page) => this.vehicles.set(page.items) });
-        this.driverService.list().subscribe({ next: (page) => this.drivers.set(page.items) });
+        this.vehicleService.list(PICKER_PAGE_SIZE).subscribe({ next: (page) => this.vehicles.set(page.items) });
+        this.driverService.list(PICKER_PAGE_SIZE).subscribe({ next: (page) => this.drivers.set(page.items) });
     }
 
     private refresh(): void {
