@@ -319,4 +319,41 @@ public class TransportOrderTests
         result.Error!.Code.Should().Be("TransportOrder.DeliveryBeforePickupEnds");
         order.Consignor.Name.Should().Be("Absender GmbH");
     }
+
+    [Fact]
+    public void ReturnToDraft_PlannedOrder_BecomesDraftAgain()
+    {
+        TransportOrder order = AnOrder();
+        order.MarkPlanned();
+
+        Result<Unit> result = order.ReturnToDraft();
+
+        result.IsSuccess.Should().BeTrue();
+        order.Status.Should().Be(OrderStatus.Draft);
+    }
+
+    [Fact]
+    public void ReturnToDraft_DraftOrder_ReturnsConflict()
+    {
+        TransportOrder order = AnOrder();
+
+        Result<Unit> result = order.ReturnToDraft();
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Conflict);
+    }
+
+    // Once the goods are moving, taking the order off a tour cannot un-move them.
+    [Fact]
+    public void ReturnToDraft_InTransitOrder_ReturnsConflict()
+    {
+        TransportOrder order = AnOrder();
+        order.MarkPlanned();
+        order.MarkInTransit();
+
+        Result<Unit> result = order.ReturnToDraft();
+
+        result.IsSuccess.Should().BeFalse();
+        order.Status.Should().Be(OrderStatus.InTransit);
+    }
 }

@@ -112,6 +112,15 @@ public sealed class TransportOrder
 
     public Result<Unit> MarkPlanned() => Transition(OrderStatus.Draft, OrderStatus.Planned);
 
+    /// <remarks>
+    /// The reverse of <see cref="MarkPlanned"/>, for an order taken off a tour before that tour
+    /// started. Spec §5.4's diagram does not draw this arrow, but §6.4 requires a RemoveOrder
+    /// slice: without a way back, a removed order would be stranded in Planned with no tour —
+    /// neither assignable to another tour nor editable. Deliberately NOT reachable from
+    /// InTransit: once the goods are moving, taking the order off a tour cannot un-move them.
+    /// </remarks>
+    public Result<Unit> ReturnToDraft() => Transition(OrderStatus.Planned, OrderStatus.Draft);
+
     public Result<Unit> MarkInTransit() => Transition(OrderStatus.Planned, OrderStatus.InTransit);
 
     public Result<Unit> MarkDelivered() => Transition(OrderStatus.InTransit, OrderStatus.Delivered);
