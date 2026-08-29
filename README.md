@@ -101,7 +101,7 @@ reach, a deployed environment.**
 
 ## API endpoints
 
-Both aggregates expose the same shape of CRUD endpoint group:
+The two master-data aggregates expose the same shape of CRUD endpoint group:
 
 | Method | Route                | Policy            | Notes                                              |
 |--------|----------------------|--------------------|-----------------------------------------------------|
@@ -123,6 +123,35 @@ show the Add/Edit/Delete controls to every signed-in user regardless of role (th
 role-decoding in either SPA yet) and rely on that `403` to refuse a non-admin's attempt,
 surfaced as an error message rather than a hidden button — see the operator guides for
 what that looks like.
+
+Transport orders are dispatch data rather than master data, so their writes sit behind a
+different policy:
+
+| Method | Route                       | Policy          | Notes                                                        |
+|--------|-----------------------------|-----------------|--------------------------------------------------------------|
+| POST   | `/api/orders`               | `DispatchWrite` | Per-field validation errors; the order number is server-assigned |
+| GET    | `/api/orders`               | `Read`          | Paged; filters: `page`, `pageSize`, `status`, `pickupFrom`, `pickupTo` |
+| GET    | `/api/orders/{id}`          | `Read`          | `404` if not found                                            |
+| PUT    | `/api/orders/{id}`          | `DispatchWrite` | `404` if not found, `409` if the order is no longer a `Draft` |
+| POST   | `/api/orders/{id}/cancel`   | `DispatchWrite` | `404` if not found, `409` from `InTransit`, `Delivered` or an already-cancelled order |
+
+`DispatchWrite` is satisfied by `admin` and `disponent` — a dispatcher who could not
+create an order could not do their job, which is exactly why these endpoints do **not**
+use `MasterDataWrite`.
+
+### There is no DELETE for an order
+
+Cancelling is `POST /api/orders/{id}/cancel`, not `DELETE /api/orders/{id}`, and that is
+deliberate: an order is never removed. A haulier keeps the record of an order that was
+placed and then withdrawn — for billing questions, for disputes, and because the order
+number was already quoted to a customer. Cancelling is therefore a state transition, and
+the endpoint returns the order's new state in the response body so a caller can refresh a
+list straight from it instead of re-fetching.
+
+The transition is also refused rather than forced. An order that is already `InTransit`
+describes goods that are physically moving, and a `Delivered` order is final, so both
+answer `409` with a message naming the current status. The same applies to editing: `PUT`
+is accepted only while the order is still a `Draft`.
 
 ### Authorization defaults to fail closed
 
@@ -147,6 +176,12 @@ the API integration tests, and would be the case for any environment Aspire didn
 Redis resource into) — cache writes are skipped outright rather than silently degrading to
 an unbounded, unindexed, never-invalidated cache. Caching without the ability to
 invalidate is a correctness hazard, not a performance win worth keeping.
+
+**Transport orders are deliberately not cached.** They change far more often than a
+vehicle or a driver does — every status transition rewrites one — so the invalidation
+traffic would cost more than the cached reads save, and a stale dispatch list is worse
+than a slightly slower one. No order handler injects `ICacheService`, and no order write
+invalidates anything.
 
 ## API response language
 

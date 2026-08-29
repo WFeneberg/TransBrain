@@ -121,17 +121,113 @@ Erreichbar über „Add driver“ (neu, `/drivers/new`) oder „Edit“ in der L
   serverseitige Fehler werden auf dieselbe Weise wie im Fahrzeugformular direkt am
   betroffenen Feld angezeigt.
 
+## Auftragsliste
+
+Erreichbar über `/orders`.
+
+![Auftragsliste](img/web/auftragsliste.png)
+
+- Angezeigte Spalten: Order number (Auftragsnummer), Consignor (Absender), Consignee
+  (Empfänger), Cargo (Ladung), Pickup (Beginn des Abholfensters), Status.
+- Die **Auftragsnummer wird vom Server vergeben**, im Format `TB-2027-00042` — Jahr und
+  eine fortlaufende Nummer innerhalb dieses Jahres. Sie kann nicht eingegeben oder
+  geändert werden, auch nicht beim Bearbeiten.
+- Schaltfläche **„Add order“** oberhalb der Tabelle legt einen neuen Auftrag an.
+- Das Auswahlfeld **„Status“** filtert die Liste. „All“ zeigt alle Aufträge; die übrigen
+  Einträge entsprechen den fünf Status `Draft`, `Planned`, `InTransit`, `Delivered` und
+  `Cancelled`.
+- Pro Zeile: **„Edit“** öffnet den Auftrag zum Bearbeiten, **„Cancel order“** storniert
+  ihn.
+
+**Stornieren ist kein Löschen.** Ein Auftrag wird nie entfernt. Nach dem Stornieren
+bleibt die Zeile in der Liste stehen, ihr Status wechselt lediglich auf `Cancelled`. Das
+ist beabsichtigt: Das Unternehmen behält den Nachweis über einen erteilten und wieder
+zurückgezogenen Auftrag — für Rückfragen zur Abrechnung und weil die Auftragsnummer dem
+Kunden gegenüber bereits genannt wurde.
+
+**Sicherheitsabfrage beim Stornieren:** Anders als beim Löschen von Fahrzeugen und
+Fahrern wird hier nachgefragt. Ein Klick auf „Cancel order“ ersetzt die Schaltfläche in
+derselben Zeile durch **„Confirm cancel“** und **„Keep order“**. Erst „Confirm cancel“
+storniert tatsächlich; „Keep order“ bricht ab und ändert nichts.
+
+## Auftragsformular (Anlegen / Bearbeiten)
+
+Erreichbar über „Add order“ (`/orders/new`) oder „Edit“ (`/orders/{id}`).
+
+![Auftragsformular](img/web/auftragsformular.png)
+
+Das Formular ist in fünf Abschnitte gegliedert:
+
+| Abschnitt       | Felder                                   | Pflicht | Hinweise                                                     |
+|-----------------|------------------------------------------|:-------:|---------------------------------------------------------------|
+| Consignor       | Name, Street, Postal code, City, Country | ja      | Country ist ein zweibuchstabiger Ländercode nach ISO 3166-1, z. B. `DE`. Vorbelegt mit `DE`. |
+| Consignee       | Name, Street, Postal code, City, Country | ja      | dieselben Regeln wie beim Absender                            |
+| Cargo           | Description, Weight (kg), Load meters    | ja      | Gewicht und Lademeter müssen größer als null sein. Lademeter dürfen Dezimalstellen haben (z. B. `8.4`). |
+| Pickup window   | From, To                                 | ja      | Datum **und** Uhrzeit; „From“ muss vor „To“ liegen            |
+| Delivery window | From, To                                 | ja      | Datum **und** Uhrzeit; „From“ muss vor „To“ liegen            |
+
+- Die Zeitfenster werden in Ihrer lokalen Zeit eingegeben und angezeigt, intern aber in
+  UTC gespeichert. Beim erneuten Öffnen zum Bearbeiten erscheinen wieder dieselben
+  Uhrzeiten, die Sie eingegeben haben.
+- **Das Lieferfenster darf nicht beginnen, bevor das Abholfenster endet.** Ist das doch
+  der Fall, lehnt der Server das Speichern ab und zeigt oberhalb des Formulars die
+  Meldung „The delivery window must not start before the pickup window ends.“
+- **„Save“** und **„Cancel“** verhalten sich wie im Fahrzeug- und Fahrerformular.
+- Validierungsfehler werden direkt am betroffenen Feld angezeigt, auch bei den
+  verschachtelten Adressfeldern (z. B. eine Meldung unter „Consignor → Name“).
+
+## Auftragsstatus: welche Schritte abgelehnt werden
+
+Dies ist der Teil, der im Alltag am ehesten für Verwirrung sorgt: Nicht jede Aktion ist in
+jedem Status erlaubt. Ein Auftrag durchläuft die Status
+`Draft` → `Planned` → `InTransit` → `Delivered`.
+
+| Status      | Bearbeiten („Edit“ → „Save“) | Stornieren („Cancel order“) |
+|-------------|:----------------------------:|:---------------------------:|
+| `Draft`     | ja                           | ja                          |
+| `Planned`   | **nein**                     | ja                          |
+| `InTransit` | **nein**                     | **nein**                    |
+| `Delivered` | **nein**                     | **nein**                    |
+| `Cancelled` | **nein**                     | **nein**                    |
+
+**Was Sie bei einer Ablehnung sehen:**
+
+- **Bearbeiten eines Auftrags, der kein Entwurf mehr ist:** Das Formular lässt sich
+  weiterhin öffnen und ausfüllen, aber beim Klick auf „Save“ erscheint oberhalb des
+  Formulars die Meldung „An order in status 'Planned' can no longer be edited. (HTTP
+  409)“ — mit dem jeweils tatsächlichen Status. Die Änderung wird **nicht** gespeichert,
+  und die Anwendung kehrt nicht zur Liste zurück.
+- **Stornieren eines Auftrags, der bereits unterwegs ist:** Nach „Confirm cancel“
+  erscheint oberhalb der Tabelle die Meldung „An order in status 'InTransit' cannot move
+  to 'Cancelled'. (HTTP 409)“. Die Tabelle bleibt sichtbar, der Auftrag unverändert.
+- **Erneutes Stornieren eines bereits stornierten Auftrags:** dieselbe Meldung, mit
+  `'Cancelled'` als aktuellem Status.
+
+Das ist jeweils kein Fehler der Anwendung, sondern die beabsichtigte Regel: Sobald die
+Ware physisch unterwegs ist, beschreibt der Auftrag einen realen Vorgang, der sich nicht
+mehr per Mausklick zurücknehmen lässt. Die Schaltflächen werden dabei bewusst **nicht**
+ausgeblendet — Sie erhalten stattdessen eine Meldung, die den Grund nennt.
+
+**Hinweis:** Die Übergänge nach `Planned`, `InTransit` und `Delivered` sind in dieser
+Phase noch nicht über die Oberfläche auslösbar; sie entstehen in einer späteren Phase
+durch die Tourenplanung. In der Praxis sehen Sie hier daher zunächst nur `Draft` und
+`Cancelled`.
+
 ## Rollen und Rechte
 
 Die Anmeldung erfolgt über Keycloak mit genau einer der vier Rollen `admin`,
 `disponent`, `fahrer` oder `viewer`.
 
-| Rolle        | Fahrzeuge/Fahrer ansehen | Fahrzeuge/Fahrer anlegen, bearbeiten, löschen |
-|--------------|:------------------------:|:-----------------------------------------------:|
-| `admin`      | ja                        | ja                                                |
-| `disponent`  | ja                        | **nein**                                          |
-| `fahrer`     | ja                        | **nein**                                          |
-| `viewer`     | ja                        | **nein**                                          |
+| Rolle       | Alles ansehen | Fahrzeuge/Fahrer anlegen, bearbeiten, löschen | Aufträge anlegen, bearbeiten, stornieren |
+|-------------|:-------------:|:---------------------------------------------:|:----------------------------------------:|
+| `admin`     | ja            | ja                                            | ja                                       |
+| `disponent` | ja            | **nein**                                      | **ja**                                   |
+| `fahrer`    | ja            | **nein**                                      | **nein**                                 |
+| `viewer`    | ja            | **nein**                                      | **nein**                                 |
+
+**Aufträge sind die Ausnahme von der Regel „nur `admin` darf schreiben“.** Ein Disponent
+darf Aufträge anlegen, bearbeiten und stornieren — das ist genau seine Aufgabe. Bei
+Fahrzeugen und Fahrern (Stammdaten) darf er weiterhin nur lesen.
 
 **Wichtig — dies ist keine offensichtliche Einschränkung der Oberfläche:** Die
 Schaltflächen „Add vehicle“/„Add driver“, „Edit“ und „Delete“ werden **jedem angemeldeten
@@ -151,4 +247,7 @@ sichtbar sind.
   Einträge) wird angezeigt.
 - Schreibschaltflächen sind für alle Rollen sichtbar, auch wenn nur `admin` sie tatsächlich
   nutzen kann.
-- Löschen erfolgt sofort, ohne Sicherheitsabfrage.
+- Löschen von Fahrzeugen und Fahrern erfolgt sofort, ohne Sicherheitsabfrage; das
+  Stornieren eines Auftrags fragt dagegen nach.
+- In der Auftragsliste lässt sich nur nach Status filtern; die Filter nach Abholzeitraum,
+  die die API anbietet, haben noch keine Bedienelemente.
