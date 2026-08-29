@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<IDriverRepository, DriverRepository>();
         services.AddScoped<ITransportOrderRepository, TransportOrderRepository>();
         services.AddScoped<IOrderNumberGenerator, SequentialOrderNumberGenerator>();
+        services.AddScoped<ITourRepository, TourRepository>();
         services.AddScoped<ICacheService, RedisCacheService>();
         return services;
     }

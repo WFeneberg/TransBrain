@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using TransBrain.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using TransBrain.Infrastructure.Persistence;
 namespace TransBrain.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TransBrainDbContext))]
-    partial class TransBrainDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260829130200_AddTours")]
+    partial class AddTours
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

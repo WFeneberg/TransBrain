@@ -193,4 +193,33 @@ public class OrderEndpointsTests(TransBrainApiFactory factory) : IClassFixture<T
         string body = await response.Content.ReadAsStringAsync();
         body.Should().Contain("Consignor.Name").And.Contain("CargoDescription");
     }
+
+    // A same-site shipment - one works to another - is a legitimate order, and the two owned
+    // Address values are then equal. Pinned because EF refuses two owned navigations backed by
+    // the SAME instance; the handler calls Address.Create twice and so produces two distinct
+    // instances, but nothing in the type system says it must, and this is what would break.
+    [Fact]
+    public async Task PostOrder_ConsignorAndConsigneeIdentical_ReturnsCreated()
+    {
+        object address = AnAddress("Werk Nord");
+
+        HttpResponseMessage response = await factory.CreateClientAs("disponent")
+            .PostAsJsonAsync("/api/orders", new
+            {
+                consignor = address,
+                consignee = address,
+                cargoDescription = "Werksverkehr",
+                cargoWeightKg = 1_000,
+                cargoLoadMeters = 1.5m,
+                pickupFrom = "2027-03-01T08:00:00+00:00",
+                pickupTo = "2027-03-01T10:00:00+00:00",
+                deliveryFrom = "2027-03-01T12:00:00+00:00",
+                deliveryTo = "2027-03-01T16:00:00+00:00"
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        OrderResponse? order = await response.Content.ReadFromJsonAsync<OrderResponse>();
+        order!.Consignor.Name.Should().Be("Werk Nord");
+        order.Consignee.Name.Should().Be("Werk Nord");
+    }
 }
