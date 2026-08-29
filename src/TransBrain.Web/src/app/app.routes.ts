@@ -4,6 +4,8 @@ const loadVehicleList = () => import('./vehicles/vehicle-list.component').then((
 const loadVehicleForm = () => import('./vehicles/vehicle-form.component').then((m) => m.VehicleFormComponent);
 const loadDriverList = () => import('./drivers/driver-list.component').then((m) => m.DriverListComponent);
 const loadDriverForm = () => import('./drivers/driver-form.component').then((m) => m.DriverFormComponent);
+const loadOrderList = () => import('./orders/order-list.component').then((m) => m.OrderListComponent);
+const loadOrderForm = () => import('./orders/order-form.component').then((m) => m.OrderFormComponent);
 
 export const routes: Routes = [
     // angular-auth-oidc-client's checkAuth() detects the OIDC callback by comparing the
@@ -23,4 +25,7 @@ export const routes: Routes = [
     { path: 'drivers', loadComponent: loadDriverList },
     { path: 'drivers/new', loadComponent: loadDriverForm },
     { path: 'drivers/:id', loadComponent: loadDriverForm },
+    { path: 'orders', loadComponent: loadOrderList },
+    { path: 'orders/new', loadComponent: loadOrderForm },
+    { path: 'orders/:id', loadComponent: loadOrderForm },
 ];
