@@ -207,21 +207,182 @@ Phase noch nicht über die Oberfläche auslösbar; sie entstehen in einer späte
 durch die Tourenplanung. In der Praxis sehen Sie hier daher zunächst nur `Draft` und
 `Cancelled`.
 
+## Tourenliste
+
+Erreichbar über `/tours`.
+
+![Tourenliste](img/vueweb/tourenliste.png)
+
+Eine **Tour** ist die Tagesarbeit eines Fahrzeugs mit einem Fahrer: eine geordnete Liste von
+Stopps, die eine Menge von Aufträgen bedient.
+
+- Angezeigte Spalten: Date (Tourdatum), Vehicle (Kennzeichen), Driver (Fahrer), Stops (Anzahl
+  der Stopps), Status.
+- Schaltfläche **„Add tour“** oberhalb der Tabelle plant eine neue Tour.
+- Drei Filter: **Date**, **Vehicle** und **Driver**. Sie wirken gemeinsam.
+- Pro Zeile öffnet **„Open“** die Detailseite — dort findet die eigentliche Arbeit statt.
+
+## Tourenformular (Anlegen)
+
+Erreichbar über „Add tour“ (`/tours/new`).
+
+![Tourenformular](img/vueweb/tourenformular.png)
+
+| Feld       | Bedeutung                          | Pflicht |
+|------------|------------------------------------|:-------:|
+| Tour date  | Datum, an dem die Tour gefahren wird | ja     |
+| Vehicle    | Fahrzeug aus dem Fahrzeugstamm      | ja      |
+| Driver     | Fahrer aus dem Fahrerstamm          | ja      |
+
+Nach dem Speichern landen Sie **direkt auf der Detailseite** der neuen Tour, nicht in der Liste —
+der nächste Schritt ist immer, Aufträge zuzuordnen.
+
+**Eine Tour lässt sich nachträglich nicht umplanen.** Es gibt bewusst kein Bearbeiten-Formular:
+Fahrzeug, Fahrer und Datum stehen mit dem Anlegen fest. Wurde falsch geplant, entfernen Sie die
+Aufträge wieder (sie werden dadurch erneut disponierbar) und legen eine neue Tour an.
+
+### Welche Kombinationen abgelehnt werden
+
+Beim Speichern prüft der Server vier Regeln. Jede Ablehnung erscheint als Meldung oberhalb des
+Formulars, und das Formular bleibt stehen — Ihre Eingaben gehen nicht verloren.
+
+| Situation                                                | Meldung (sinngemäß)                                                            |
+|----------------------------------------------------------|--------------------------------------------------------------------------------|
+| Fahrzeug steht in der Werkstatt oder ist ausgemustert     | „Vehicle 'M-AB 1234' is 'InWorkshop' and cannot be assigned to a tour. (HTTP 409)“ |
+| Fahrer ist abwesend oder inaktiv                          | „Driver 'Fahrer' is 'Absent' and cannot be assigned to a tour. (HTTP 409)“      |
+| Führerschein läuft **vor** dem Tourdatum ab               | „The driver's licence expires on 2027-02-28, before the tour date 2027-03-01. (HTTP 409)“ |
+| Fahrzeug hat an diesem Datum bereits eine Tour            | „That vehicle already has a tour on 2027-03-01. (HTTP 409)“                     |
+| Fahrer hat an diesem Datum bereits eine Tour              | „That driver already has a tour on 2027-03-01. (HTTP 409)“                      |
+
+**Zum Führerschein:** Ein Schein, der **genau am** Tourdatum abläuft, ist an diesem Tag noch
+gültig — die Tour wird angenommen. Erst ab dem Folgetag lehnt der Server ab.
+
+**Zur Doppelbuchung:** Sie gilt pro Kalendertag und ohne Ausnahme — auch eine bereits
+abgeschlossene Tour belegt Fahrzeug und Fahrer für diesen Tag.
+
+## Tourendetail
+
+Erreichbar über „Open“ in der Liste (`/tours/{id}`).
+
+![Tourendetail](img/vueweb/tourendetail.png)
+
+Die Seite gliedert sich in vier Bereiche:
+
+**1. Kopfdaten** — Datum, Fahrzeug, Fahrer und Status der Tour.
+
+**2. Capacity (Auslastung)** — zwei Anzeigen mit Balken:
+
+- `12000 / 18000 kg` — zugeladenes Gewicht gegen die Nutzlast des Fahrzeugs
+- `8.4 / 13.6 load meters` — belegte Lademeter gegen die verfügbaren
+
+Diese Zahlen sind der Grund, warum die Seite existiert: Sie sehen **vor** dem Zuordnen, wie viel
+Luft noch bleibt.
+
+**3. Stops** — die Stoppliste in Reihenfolge. Je zugeordnetem Auftrag entstehen **automatisch
+zwei** Stopps: ein `Pickup` (Abholung) und ein `Delivery` (Zustellung), wobei die Abholung immer
+die kleinere Nummer trägt. Die Schaltfläche **„Remove“** an der Abholzeile nimmt den ganzen
+Auftrag wieder von der Tour; die verbleibenden Stopps werden lückenlos neu nummeriert.
+
+**4. Assign an order (Auftrag zuordnen)** — ein Auswahlfeld mit den zuordenbaren Aufträgen und
+die Schaltfläche **„Assign“**.
+
+**Angeboten werden nur Aufträge im Status `Draft`.** Jeder andere Status würde vom Server
+abgelehnt, und eine Auswahl anzubieten, die anschließend abgelehnt wird, ist schlechter, als sie
+gar nicht anzubieten. Ein Auftrag, der bereits auf einer anderen Tour liegt, ist deshalb nicht in
+der Liste.
+
+Darunter erscheinen je nach Status die Schaltflächen **„Start tour“** (nur bei `Planned`) und
+**„Complete tour“** (nur bei `InProgress`). Schaltflächen, die im aktuellen Status ohnehin
+abgelehnt würden, werden hier ausgeblendet — anders als beim Stornieren eines Auftrags, wo die
+Ablehnung die Regel erklärt.
+
+### Was beim Zuordnen abgelehnt wird
+
+| Situation                                                     | Meldung (sinngemäß)                                                              |
+|---------------------------------------------------------------|----------------------------------------------------------------------------------|
+| Gewicht der Tour überschreitet die Nutzlast                    | „Adding this order would load 21000 kg onto a vehicle rated for 18000 kg. (HTTP 409)“ |
+| Lademeter überschreiten die verfügbaren                        | „Adding this order would need 15.0 load meters on a vehicle offering 13.6. (HTTP 409)“ |
+| Tour ist bereits gestartet oder abgeschlossen                  | „A tour in status 'InProgress' no longer accepts changes to its stops. (HTTP 409)“ |
+
+**Wichtig:** Die Kapazität wird gegen die **Summe der gesamten Tour** geprüft, nicht nur gegen
+den einzelnen Auftrag. Ein Auftrag, der allein passen würde, kann als dritter oder vierter
+trotzdem abgelehnt werden. Die Anzeige unter „Capacity“ zeigt Ihnen vorher, wie viel bleibt.
+
+## Tourstatus: welche Schritte abgelehnt werden
+
+Eine Tour durchläuft `Planned` → `InProgress` → `Completed`.
+
+| Status       | Aufträge zuordnen/entfernen | „Start tour“ | „Complete tour“ |
+|--------------|:---------------------------:|:------------:|:---------------:|
+| `Planned`    | ja                          | ja           | **nein**        |
+| `InProgress` | **nein**                    | **nein**     | ja              |
+| `Completed`  | **nein**                    | **nein**     | **nein**        |
+
+- **Eine Tour ohne Stopps lässt sich nicht starten.** Sie erhalten „A tour without stops cannot
+  be started. (HTTP 409)“. Das ist Absicht: Eine leere Tour würde Fahrzeug und Fahrer für den Tag
+  binden, ohne etwas zu transportieren.
+
+### Der wichtigste Zusammenhang: Tour und Auftrag hängen zusammen
+
+Das Starten und Abschließen einer Tour **verändert die Aufträge mit**, ohne dass jemand die
+Auftragsmaske öffnet:
+
+| Aktion an der Tour        | Was mit jedem zugeordneten Auftrag geschieht |
+|---------------------------|-----------------------------------------------|
+| Auftrag zuordnen          | `Draft` → `Planned`                           |
+| Auftrag entfernen         | `Planned` → `Draft` (wieder disponierbar)     |
+| **„Start tour“**          | `Planned` → `InTransit`                       |
+| **„Complete tour“**       | `InTransit` → `Delivered`                     |
+
+Wenn Sie sich also wundern, warum ein Auftrag in der Auftragsliste plötzlich `InTransit` zeigt,
+obwohl niemand ihn angefasst hat: Seine Tour wurde gestartet. Das ist der normale Weg — die
+Auftragsmaske selbst kennt diese Übergänge gar nicht.
+
+**Nebenwirkung, die überrascht:** Sobald eine Tour gestartet ist, sind ihre Aufträge `InTransit`
+und lassen sich **nicht mehr stornieren und nicht mehr bearbeiten**. Wollen Sie einen Auftrag
+noch ändern, tun Sie es vor dem Start der Tour — oder nehmen Sie ihn vorher von der Tour.
+
+## Touren als Fahrer (`fahrer`)
+
+Dies ist die erste Stelle im System, an der **zwei angemeldete Benutzer Unterschiedliches sehen**.
+
+Ein Benutzer mit der Rolle `fahrer` sieht in der Tourenliste **ausschließlich seine eigenen
+Touren** und kann auch nur diese starten und abschließen. Für Administratoren, Disponenten und
+Betrachter gilt das nicht — sie sehen alle Touren.
+
+- **Die Liste wird eingeschränkt, nicht verweigert.** Ein Fahrer, der `/tours` öffnet, sieht seine
+  Touren. Filtert er ausdrücklich auf einen Kollegen, bleibt die Liste **leer** — das ist die
+  wahrheitsgemäße Antwort auf „die Touren dieses Kollegen, unter meinen“.
+- **Eine fremde Tour direkt aufzurufen wird abgelehnt.** `/tours/{id}` einer fremden Tour meldet
+  „A driver may only see their own tours. (HTTP 403)“.
+- **Start und Abschluss einer fremden Tour werden abgelehnt** mit „A driver may only start or
+  complete their own tours. (HTTP 403)“.
+
+**Voraussetzung:** Die Zuordnung läuft über das Feld **External user id** im Fahrerstamm, in dem
+die Keycloak-Kennung (`sub`) des Fahrers hinterlegt wird. Ist dieses Feld leer, gehört der
+Fahrerdatensatz zu **niemandem, der sich anmelden kann** — dessen Touren kann dann auch kein
+Fahrer starten. Das ist Absicht: Ein leeres Feld als „passt zu jedem“ zu behandeln, würde die
+Tour dem erstbesten Fahrer überlassen.
+
 ## Rollen und Rechte
 
 Die Anmeldung erfolgt über Keycloak mit genau einer der vier Rollen `admin`,
 `disponent`, `fahrer` oder `viewer`.
 
-| Rolle       | Alles ansehen | Fahrzeuge/Fahrer anlegen, bearbeiten, löschen | Aufträge anlegen, bearbeiten, stornieren |
-|-------------|:-------------:|:---------------------------------------------:|:----------------------------------------:|
-| `admin`     | ja            | ja                                            | ja                                       |
-| `disponent` | ja            | **nein**                                      | **ja**                                   |
-| `fahrer`    | ja            | **nein**                                      | **nein**                                 |
-| `viewer`    | ja            | **nein**                                      | **nein**                                 |
+| Rolle       | Ansehen          | Fahrzeuge/Fahrer pflegen | Aufträge pflegen | Touren planen | Tour starten/abschließen |
+|-------------|------------------|:------------------------:|:----------------:|:-------------:|:------------------------:|
+| `admin`     | alles            | ja                       | ja               | ja            | ja                       |
+| `disponent` | alles            | **nein**                 | **ja**           | **ja**        | **ja**                   |
+| `fahrer`    | **nur eigene Touren** | **nein**            | **nein**         | **nein**      | **nur eigene**           |
+| `viewer`    | alles            | **nein**                 | **nein**         | **nein**      | **nein**                 |
 
-**Aufträge sind die Ausnahme von der Regel „nur `admin` darf schreiben“.** Ein Disponent
-darf Aufträge anlegen, bearbeiten und stornieren — das ist genau seine Aufgabe. Bei
-Fahrzeugen und Fahrern (Stammdaten) darf er weiterhin nur lesen.
+**Aufträge und Touren sind die Ausnahme von der Regel „nur `admin` darf schreiben“.** Ein
+Disponent darf beides anlegen, ändern und stornieren beziehungsweise planen — das ist genau seine
+Aufgabe. Bei Fahrzeugen und Fahrern (Stammdaten) darf er weiterhin nur lesen.
+
+**Der Fahrer ist die zweite Ausnahme:** Er darf nichts anlegen, aber seine eigenen Touren starten
+und abschließen — siehe Abschnitt „Touren als Fahrer“.
+
 
 **Wichtig — dies ist keine offensichtliche Einschränkung der Oberfläche:** Die
 Schaltflächen „Add vehicle“/„Add driver“, „Edit“ und „Delete“ werden **jedem angemeldeten
@@ -245,3 +406,8 @@ sichtbar sind.
   Stornieren eines Auftrags fragt dagegen nach.
 - In der Auftragsliste lässt sich nur nach Status filtern; die Filter nach Abholzeitraum,
   die die API anbietet, haben noch keine Bedienelemente.
+- Eine Tour lässt sich nach dem Anlegen weder umplanen noch löschen. Eine falsch geplante Tour
+  bleibt als leere Tour stehen, nachdem ihre Aufträge entfernt wurden — und belegt Fahrzeug und
+  Fahrer für diesen Tag weiter.
+- Die Listen zeigen bis zu 100 Einträge und haben keine Blätterfunktion; darüber hinaus sind
+  ältere Einträge nicht erreichbar.

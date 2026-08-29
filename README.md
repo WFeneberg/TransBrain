@@ -153,6 +153,48 @@ describes goods that are physically moving, and a `Delivered` order is final, so
 answer `409` with a message naming the current status. The same applies to editing: `PUT`
 is accepted only while the order is still a `Draft`.
 
+### Tours
+
+Tours are dispatch data as well, but starting and completing one is also open to the driver who
+is actually on the road:
+
+| Method | Route                                  | Policy            | Notes                                                            |
+|--------|----------------------------------------|-------------------|------------------------------------------------------------------|
+| POST   | `/api/tours`                           | `DispatchWrite`   | `409` if the vehicle or driver is unavailable, the licence has expired, or either is already booked that day |
+| GET    | `/api/tours`                           | `Read`            | Paged; filters: `page`, `pageSize`, `tourDate`, `vehicleId`, `driverId` |
+| GET    | `/api/tours/{id}`                      | `Read`            | `404` if not found, `403` for a driver asking about someone else's tour |
+| POST   | `/api/tours/{id}/orders`               | `DispatchWrite`   | Assigns an order; `409` on exceeded capacity or a tour already under way |
+| DELETE | `/api/tours/{id}/orders/{orderId}`     | `DispatchWrite`   | Removes it and returns the order to `Draft`                       |
+| POST   | `/api/tours/{id}/start`                | `TourStatusWrite` | Moves every assigned order to `InTransit`                         |
+| POST   | `/api/tours/{id}/complete`             | `TourStatusWrite` | Moves every assigned order to `Delivered`                         |
+
+`TourStatusWrite` is satisfied by `admin`, `disponent` and `fahrer` — but a `fahrer` may only
+start and complete **their own** tours, and sees only their own in the list. That half of the
+rule is enforced in the handlers rather than in the policy, because a policy sees the request
+and not which tour it addresses. The link is the driver's `externalUserId`, which stores the
+Keycloak `sub` claim; a driver record with no `externalUserId` belongs to nobody who can sign
+in, and no driver can start its tours.
+
+Removing an order from a tour is a `DELETE`, unlike cancelling an order. The two differ because
+the outcomes differ: a cancelled order is a fact the haulier keeps, whereas a stop that was
+planned and then unplanned leaves nothing worth recording — the order simply returns to `Draft`
+and can be planned onto another tour.
+
+### Double booking is refused by the database, not by a check
+
+A vehicle and a driver may each have at most one tour per day. That is enforced by unique
+indexes on `(tour_date, vehicle_id)` and `(tour_date, driver_id)`, not by a "is this vehicle
+free?" query before the insert. The query would be a read-then-write race: two dispatchers
+assigning the same lorry at the same moment would both read "free" and both insert. Only the
+index actually serialises them. The repository translates PostgreSQL's unique violation into a
+`409` naming which of the two is already booked.
+
+### Tours are deliberately not cached
+
+Like orders, and for the same reason: they change on every status transition, so the
+invalidation traffic would cost more than the cached reads save, and a stale dispatch board is
+worse than a slightly slower one. No tour handler injects `ICacheService`.
+
 ### Authorization defaults to fail closed
 
 Every endpoint requires an authenticated user unless it explicitly opts out
@@ -177,7 +219,7 @@ Redis resource into) — cache writes are skipped outright rather than silently 
 an unbounded, unindexed, never-invalidated cache. Caching without the ability to
 invalidate is a correctness hazard, not a performance win worth keeping.
 
-**Transport orders are deliberately not cached.** They change far more often than a
+**Transport orders and tours are deliberately not cached.** They change far more often than a
 vehicle or a driver does — every status transition rewrites one — so the invalidation
 traffic would cost more than the cached reads save, and a stale dispatch list is worse
 than a slightly slower one. No order handler injects `ICacheService`, and no order write

@@ -30,6 +30,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Collision-free order numbers in the form `TB-2027-00042`, handed out by an atomic per-year database counter (`INSERT ... ON CONFLICT DO UPDATE ... RETURNING`) rather than a `SELECT MAX(...) + 1`, so two concurrent creates cannot receive the same number; a unique index on the column stays as a second line of defence
 - Order status machine (`Draft` -> `Planned` -> `InTransit` -> `Delivered`, with `Cancel` allowed only from `Draft` or `Planned`), owned entirely by the entity and returning a `Conflict` for a refused transition rather than silently declining. Only `Cancel` has an endpoint in this phase; the other transitions are driven by tour operations in a later one
 - Order list filters: `status`, `pickupFrom` and `pickupTo`, in addition to `page`/`pageSize`
+- `Tour` aggregate end to end (domain, `Create`/`AssignOrder`/`RemoveOrder`/`Start`/`Complete`/`GetById`/`List` use cases, API endpoints, and both frontends' tour list, form and detail screens)
+- Tour capacity invariants: the sum of the assigned orders' weight and load meters must fit the vehicle, checked against the whole tour rather than the incoming order alone
+- Tour assignment invariants: the vehicle must be `Available`, the driver `Available`, and the driver's licence valid on the tour date (a licence expiring exactly on that date still counts)
+- Double-booking protection: unique indexes on `(tour_date, vehicle_id)` and `(tour_date, driver_id)` make a second tour for the same vehicle or driver on the same day impossible, including under concurrent requests — a pre-flight query could not
+- Stops are derived, not entered: assigning an order creates exactly one `Pickup` and one `Delivery` stop, the pickup always first; removing it drops both and renumbers the rest contiguously
+- The order status machine is now driven end to end by tour operations, as spec §5.4 draws it: assigning plans an order, starting a tour puts every assigned order `InTransit`, completing it marks them `Delivered`
+- `TransportOrder.ReturnToDraft`, so an order removed from a tour becomes assignable again instead of being stranded in `Planned` — a transition the spec's diagram omits but its `RemoveOrder` use case requires
+- `ICurrentUser` abstraction and driver-scoped authorization: a `fahrer` sees only their own tours and may start and complete only those, enforced in the handlers because a policy cannot see which tour a request addresses
 
 ### Changed
+- Both frontends' list screens and pickers now request the API's maximum page size instead of the default 20. Lists come back sorted ascending, so one default page showed the twenty *oldest* records and hid everything added since — with no pagination controls to reach the rest. This is a stopgap; real paging is still needed above 100 rows
+- Vuetify data tables in the Vue frontend no longer paginate a second time on top of the server's page, which could hide a record the server had returned
+- The vehicle and driver forms now hydrate the OIDC session before their first request, so a form opened by direct navigation (a bookmark, a page reload) no longer answers `401` to a signed-in user — the same fix the order form received earlier
 - The API's response language (FluentValidation's validation messages) is now pinned to English (invariant culture) at startup, rather than following the host machine's ambient culture; see README.md's "API response language" section for the two lines to change together to switch to German instead

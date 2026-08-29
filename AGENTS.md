@@ -48,8 +48,7 @@ This file provides guidance to KI Agent (claude.ai/code, Github Copilot, Jetbrai
 - Use Testcontainers for integration tests
 - WebApplicationFactory for API tests
 - Minimum 80% coverage in the Application layer, enforced by a CI gate (`.github/workflows/ci.yml`)
-- Playwright e2e tests live in `<project>/e2e/*.spec.ts` for all frontends, run via `npm run e2e`; they do **not** run in CI — `.github/workflows/ci.yml` says so explicitly, because there is no headless Aspire startup path yet (no Postgres/Redis/Keycloak available to a CI job). Run them locally against `dotnet run --project src/TransBrain.AppHost`
-- K6 load tests (`k6/`) run manually against a running environment (not in CI); see `k6/README.md`
+- Playwright e2e tests live in `<project>/e2e/*.spec.ts` for both frontends (vehicles, drivers, orders, tours), run via `npm run e2e`; they do **not** run in CI — `.github/workflows/ci.yml` says so explicitly, because there is no headless Aspire startup path yet (no Postgres/Redis/Keycloak available to a CI job). Run them locally against `dotnet run --project src/TransBrain.AppHost`
 
 ## Git
 - Conventional Commits (feat:, fix:, refactor:, etc.)
