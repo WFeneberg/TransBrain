@@ -170,6 +170,10 @@ public sealed class Driver
 
             foreach (string part in value.Split(',', StringSplitOptions.RemoveEmptyEntries))
             {
+                // A token that fails to parse (a hand-edited row, or a retired enum member) is
+                // deliberately dropped rather than logged or thrown: this runs during EF
+                // materialization, where logging is out of place and failing the load entirely
+                // would leave the driver unusable for something less severe than a missing class.
                 if (Enum.TryParse(part, out LicenseClass parsed) && Enum.IsDefined(parsed))
                 {
                     _licenseClasses.Add(parsed);
