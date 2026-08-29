@@ -253,8 +253,15 @@ test('directNavigationToTheTourDetail_canStillAssign', async ({ page, browser })
     await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
 
     // Straight to the detail page, with no list component in between to hydrate the session.
+    // Wait for the assignable-order request to settle before opening the picker: the page
+    // renders as soon as the TOUR arrives, and clicking the select before its options exist
+    // makes this test flaky rather than wrong.
+    const draftOrders = page.waitForResponse(
+        (response) => response.url().includes('/api/orders') && response.url().includes('status=Draft'),
+    );
     await page.goto(detailUrl);
     await expect(page.getByTestId('tour-detail-status')).toHaveText('Planned');
+    await draftOrders;
 
     await page.getByTestId('tour-assign-select').click();
     await page.getByRole('option', { name: new RegExp(consignor) }).click();
