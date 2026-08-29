@@ -106,6 +106,181 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    [Fact]
+    public async Task GetVehicleById_KnownId_ReturnsVehicle()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        HttpResponseMessage created = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-GV 1",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31"
+        });
+        VehicleResponse? vehicle = await created.Content.ReadFromJsonAsync<VehicleResponse>();
+
+        HttpResponseMessage response = await factory.CreateClientAs("viewer")
+            .GetAsync($"/api/vehicles/{vehicle!.Id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        VehicleResponse? fetched = await response.Content.ReadFromJsonAsync<VehicleResponse>();
+        fetched!.LicensePlate.Should().Be("M-GV 1");
+    }
+
+    [Fact]
+    public async Task GetVehicleById_UnknownId_ReturnsNotFound()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("viewer")
+            .GetAsync($"/api/vehicles/{Guid.CreateVersion7()}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task PutVehicle_AsAdmin_UpdatesAndReturnsNewValues()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        HttpResponseMessage created = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-PV 1",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31"
+        });
+        VehicleResponse? vehicle = await created.Content.ReadFromJsonAsync<VehicleResponse>();
+
+        HttpResponseMessage response = await admin.PutAsJsonAsync($"/api/vehicles/{vehicle!.Id}", new
+        {
+            licensePlate = "M-PV 2",
+            type = "Tractor",
+            payloadKg = 24_000,
+            loadMeters = 13.6m,
+            nextInspectionDue = "2029-01-01"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        VehicleResponse? updated = await response.Content.ReadFromJsonAsync<VehicleResponse>();
+        updated!.LicensePlate.Should().Be("M-PV 2");
+        updated.Type.Should().Be("Tractor");
+        updated.PayloadKg.Should().Be(24_000);
+    }
+
+    [Fact]
+    public async Task PutVehicle_AsDisponent_ReturnsForbidden()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("disponent")
+            .PutAsJsonAsync($"/api/vehicles/{Guid.CreateVersion7()}", new
+            {
+                licensePlate = "M-PD 1",
+                type = "Van",
+                payloadKg = 3_000,
+                loadMeters = 4.0m,
+                nextInspectionDue = "2027-03-31"
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task PutVehicle_PlateTakenByAnotherVehicle_ReturnsConflict()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        HttpResponseMessage firstCreated = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-PC 1",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31"
+        });
+        VehicleResponse? first = await firstCreated.Content.ReadFromJsonAsync<VehicleResponse>();
+
+        HttpResponseMessage secondCreated = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-PC 2",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31"
+        });
+        VehicleResponse? second = await secondCreated.Content.ReadFromJsonAsync<VehicleResponse>();
+
+        HttpResponseMessage response = await admin.PutAsJsonAsync($"/api/vehicles/{first!.Id}", new
+        {
+            licensePlate = second!.LicensePlate,
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    // The round-trip proof for excludingId: updating a vehicle without changing its own plate
+    // must not collide with itself in ExistsByLicensePlateAsync.
+    [Fact]
+    public async Task PutVehicle_UnchangedPlate_ReturnsOk()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        HttpResponseMessage created = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-UP 1",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31"
+        });
+        VehicleResponse? vehicle = await created.Content.ReadFromJsonAsync<VehicleResponse>();
+
+        HttpResponseMessage response = await admin.PutAsJsonAsync($"/api/vehicles/{vehicle!.Id}", new
+        {
+            licensePlate = "M-UP 1",
+            type = "Tractor",
+            payloadKg = 24_000,
+            loadMeters = 13.6m,
+            nextInspectionDue = "2029-01-01"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        VehicleResponse? updated = await response.Content.ReadFromJsonAsync<VehicleResponse>();
+        updated!.LicensePlate.Should().Be("M-UP 1");
+        updated.Type.Should().Be("Tractor");
+    }
+
+    [Fact]
+    public async Task DeleteVehicle_AsAdmin_RemovesIt()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        HttpResponseMessage created = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-DV 1",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31"
+        });
+        VehicleResponse? vehicle = await created.Content.ReadFromJsonAsync<VehicleResponse>();
+
+        HttpResponseMessage response = await admin.DeleteAsync($"/api/vehicles/{vehicle!.Id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        HttpResponseMessage after = await admin.GetAsync($"/api/vehicles/{vehicle.Id}");
+        after.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task DeleteVehicle_AsViewer_ReturnsForbidden()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("viewer")
+            .DeleteAsync($"/api/vehicles/{Guid.CreateVersion7()}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     // ---
     // Extra test beyond the Task 13 brief (which specifies only the six tests above). The
     // duplicate-plate handling has two branches: CreateVehicleCommandHandler's own

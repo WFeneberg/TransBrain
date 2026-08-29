@@ -56,4 +56,97 @@ public class ListVehiclesQueryHandlerTests
 
         result.Value.Items.Select(i => i.LicensePlate).Should().ContainInOrder("M-AA 1", "M-CC 3");
     }
+
+    [Fact]
+    public async Task Handle_StatusFilter_ReturnsOnlyMatchingVehiclesAndCountsOnlyThose()
+    {
+        InMemoryVehicleRepository repository = new();
+        Vehicle inWorkshop = VehicleWithPlate("M-WS 1");
+        inWorkshop.SendToWorkshop();
+        repository.Seed(VehicleWithPlate("M-AV 1"), inWorkshop);
+        ListVehiclesQueryHandler handler = new(repository);
+
+        Result<PagedResult<VehicleResponse>> result =
+            await handler.Handle(new ListVehiclesQuery(Status: "InWorkshop"), CancellationToken.None);
+
+        result.Value.Items.Should().ContainSingle();
+        result.Value.Items[0].Status.Should().Be("InWorkshop");
+        result.Value.TotalCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Handle_TypeFilter_ReturnsOnlyMatchingVehicles()
+    {
+        InMemoryVehicleRepository repository = new();
+        Vehicle tractor = Vehicle.Create(
+            LicensePlate.Create("M-TR 1").Value, VehicleType.Tractor, 24_000, 13.6m, new DateOnly(2027, 1, 1)).Value;
+        repository.Seed(VehicleWithPlate("M-VA 1"), tractor);
+        ListVehiclesQueryHandler handler = new(repository);
+
+        Result<PagedResult<VehicleResponse>> result =
+            await handler.Handle(new ListVehiclesQuery(Type: "Tractor"), CancellationToken.None);
+
+        result.Value.Items.Should().ContainSingle();
+        result.Value.Items[0].Type.Should().Be("Tractor");
+    }
+
+    [Fact]
+    public async Task Handle_StatusAndTypeFilter_AppliesBoth()
+    {
+        InMemoryVehicleRepository repository = new();
+        Vehicle matching = Vehicle.Create(
+            LicensePlate.Create("M-MA 1").Value, VehicleType.Tractor, 24_000, 13.6m, new DateOnly(2027, 1, 1)).Value;
+        matching.SendToWorkshop();
+        Vehicle wrongType = VehicleWithPlate("M-WT 1");
+        wrongType.SendToWorkshop();
+        Vehicle wrongStatus = Vehicle.Create(
+            LicensePlate.Create("M-WS 2").Value, VehicleType.Tractor, 24_000, 13.6m, new DateOnly(2027, 1, 1)).Value;
+        repository.Seed(matching, wrongType, wrongStatus);
+        ListVehiclesQueryHandler handler = new(repository);
+
+        Result<PagedResult<VehicleResponse>> result =
+            await handler.Handle(
+                new ListVehiclesQuery(Status: "InWorkshop", Type: "Tractor"), CancellationToken.None);
+
+        result.Value.Items.Should().ContainSingle();
+        result.Value.Items[0].LicensePlate.Should().Be("M-MA 1");
+    }
+
+    [Fact]
+    public async Task Handle_UnknownStatus_ReturnsValidationError()
+    {
+        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository());
+
+        Result<PagedResult<VehicleResponse>> result =
+            await handler.Handle(new ListVehiclesQuery(Status: "Sleeping"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Vehicle.UnknownStatus");
+    }
+
+    [Fact]
+    public async Task Handle_UnknownType_ReturnsValidationError()
+    {
+        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository());
+
+        Result<PagedResult<VehicleResponse>> result =
+            await handler.Handle(new ListVehiclesQuery(Type: "Rocket"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Vehicle.UnknownType");
+    }
+
+    [Fact]
+    public async Task Handle_NumericStatus_ReturnsValidationError()
+    {
+        // Without Enum.IsDefined, "99" would parse to an undefined VehicleStatus and silently
+        // filter on it rather than being rejected.
+        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository());
+
+        Result<PagedResult<VehicleResponse>> result =
+            await handler.Handle(new ListVehiclesQuery(Status: "99"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Vehicle.UnknownStatus");
+    }
 }
