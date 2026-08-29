@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Spec §11 sets an 80% line-coverage floor for the Application layer specifically. Without this
+  file, coverlet.collector instruments every assembly this test project touches, including
+  TransBrain.Domain (pulled in transitively through TransBrain.Application's own reference to
+  it). The cobertura report's root <coverage line-rate="..."> is then a blend across both
+  assemblies, not an Application-only figure - so the CI gate that greps that root value was
+  measuring something other than what it claimed to enforce, and a swing in Domain's own
+  coverage could move the reported number without a single Application-layer line changing.
+  The Include filter below restricts instrumentation to TransBrain.Application, so the root
+  line-rate coverlet reports is exactly this layer's own figure.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[TransBrain.Application]*</Include>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
