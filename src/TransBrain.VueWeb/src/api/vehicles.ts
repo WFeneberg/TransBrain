@@ -11,6 +11,15 @@ export interface Vehicle {
     status: string;
 }
 
+/** Body shared by create and update - the API takes the id from the route on update, not the payload. */
+export interface VehicleWriteRequest {
+    licensePlate: string;
+    type: string;
+    payloadKg: number;
+    loadMeters: number;
+    nextInspectionDue: string;
+}
+
 export interface PagedResult<T> {
     items: T[];
     page: number;
@@ -31,4 +40,23 @@ client.interceptors.request.use(async (config) => {
 export async function listVehicles(): Promise<PagedResult<Vehicle>> {
     const response = await client.get<PagedResult<Vehicle>>('/vehicles');
     return response.data;
+}
+
+export async function getVehicle(id: string): Promise<Vehicle> {
+    const response = await client.get<Vehicle>(`/vehicles/${id}`);
+    return response.data;
+}
+
+export async function createVehicle(request: VehicleWriteRequest): Promise<Vehicle> {
+    const response = await client.post<Vehicle>('/vehicles', request);
+    return response.data;
+}
+
+export async function updateVehicle(id: string, request: VehicleWriteRequest): Promise<Vehicle> {
+    const response = await client.put<Vehicle>(`/vehicles/${id}`, request);
+    return response.data;
+}
+
+export async function deleteVehicle(id: string): Promise<void> {
+    await client.delete(`/vehicles/${id}`);
 }
