@@ -5,6 +5,7 @@ namespace TransBrain.Application.Tests.Fakes;
 public sealed class InMemoryCacheService : ICacheService
 {
     private readonly Dictionary<string, object> _entries = [];
+    private readonly Dictionary<string, long> _generations = [];
 
     public int RemoveByPrefixCallCount { get; private set; }
 
@@ -21,6 +22,10 @@ public sealed class InMemoryCacheService : ICacheService
     {
         RemoveByPrefixCallCount++;
 
+        // Bumped unconditionally, mirroring RedisCacheService: the counter is what closes the
+        // read-then-set race, entry deletion below is only cleanup.
+        _generations[prefix] = _generations.GetValueOrDefault(prefix) + 1;
+
         foreach (string key in _entries.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).ToList())
         {
             _entries.Remove(key);
@@ -28,4 +33,7 @@ public sealed class InMemoryCacheService : ICacheService
 
         return Task.CompletedTask;
     }
+
+    public Task<long> GetGenerationAsync(string prefix, CancellationToken cancellationToken)
+        => Task.FromResult(_generations.GetValueOrDefault(prefix));
 }

@@ -48,7 +48,7 @@ internal sealed class UpdateVehicleCommandHandler(IVehicleRepository repository,
 
         await repository.SaveChangesAsync(cancellationToken);
 
-        await cache.RemoveByPrefixAsync("vehicles:", cancellationToken);
+        await cache.RemoveByPrefixAsync(VehicleCacheKeys.Prefix, cancellationToken);
 
         return VehicleResponse.From(updated.Value);
     }

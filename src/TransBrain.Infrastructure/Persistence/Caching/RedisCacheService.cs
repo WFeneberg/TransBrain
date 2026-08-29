@@ -50,6 +50,17 @@ internal sealed class RedisCacheService(IDistributedCache cache, IConnectionMult
         }
 
         IDatabase database = connection.GetDatabase();
+
+        // Bumped first, and unconditionally - even when there is nothing to delete below. A
+        // reader that already read the pre-bump generation and is mid-flight (past its own
+        // GetAsync miss, not yet at SetAsync) will finish writing under that stale generation
+        // once this returns. Nothing will ever compute that generation again, so the write is
+        // orphaned rather than served: see GetGenerationAsync's remarks on ICacheService for the
+        // full race this closes. Deleting entries below is still worth doing so stale-generation
+        // values do not linger in Redis for their full TTL, but the deletion alone was never
+        // enough to close the race - only the counter is.
+        await database.StringIncrementAsync(GenerationKey(prefix));
+
         RedisValue[] keys = await database.SetMembersAsync(IndexKey(prefix));
 
         if (keys.Length == 0)
@@ -72,7 +83,29 @@ internal sealed class RedisCacheService(IDistributedCache cache, IConnectionMult
         await database.SetRemoveAsync(IndexKey(prefix), keys);
     }
 
-    private static string Prefix(string key) => key[..(key.IndexOf(':') + 1)];
+    public async Task<long> GetGenerationAsync(string prefix, CancellationToken cancellationToken)
+    {
+        if (connection is null)
+        {
+            return 0;
+        }
+
+        RedisValue value = await connection.GetDatabase().StringGetAsync(GenerationKey(prefix));
+        return value.IsNullOrEmpty ? 0 : (long)value;
+    }
+
+    // Guarded against a key with no ':' at all: key.IndexOf(':') would then be -1, and
+    // key[..(-1 + 1)] is key[..0] - the empty string. Every such key would share one "" prefix,
+    // land in the same __index: bucket as every other colon-less key, and never be reachable by
+    // RemoveByPrefixAsync (which is always called with a real, non-empty prefix ending in ':').
+    // Falling back to the whole key keeps it out of that shared, permanently-unevictable bucket.
+    private static string Prefix(string key)
+    {
+        int separator = key.IndexOf(':');
+        return separator < 0 ? key : key[..(separator + 1)];
+    }
 
     private static string IndexKey(string prefix) => $"__index:{prefix}";
+
+    private static string GenerationKey(string prefix) => $"__gen:{prefix}";
 }

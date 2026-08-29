@@ -19,7 +19,7 @@ internal sealed class DeleteVehicleCommandHandler(IVehicleRepository repository,
         await repository.RemoveAsync(vehicle, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
 
-        await cache.RemoveByPrefixAsync("vehicles:", cancellationToken);
+        await cache.RemoveByPrefixAsync(VehicleCacheKeys.Prefix, cancellationToken);
 
         return Unit.Value;
     }

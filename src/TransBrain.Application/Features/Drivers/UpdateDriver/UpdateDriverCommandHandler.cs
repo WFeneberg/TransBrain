@@ -38,7 +38,7 @@ internal sealed class UpdateDriverCommandHandler(IDriverRepository repository, I
 
         await repository.SaveChangesAsync(cancellationToken);
 
-        await cache.RemoveByPrefixAsync("drivers:", cancellationToken);
+        await cache.RemoveByPrefixAsync(DriverCacheKeys.Prefix, cancellationToken);
 
         return DriverResponse.From(updated.Value);
     }

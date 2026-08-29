@@ -41,6 +41,13 @@ internal sealed class ListVehiclesQueryHandler(IVehicleRepository repository, IC
             type = parsedType;
         }
 
+        // Read before touching the database or the cache, and folded into the key below: this is
+        // what closes the cache-aside read-then-set race (see ICacheService.GetGenerationAsync).
+        // A write that commits and invalidates between this line and the SetAsync call at the
+        // bottom bumps the generation, so this handler's eventual write lands under a value
+        // nothing will look up again instead of serving a stale page.
+        long generation = await cache.GetGenerationAsync(VehicleCacheKeys.Prefix, cancellationToken);
+
         // Every query parameter must be part of the key: omitting one (e.g. a filter) would
         // serve one filter combination's cached page under another's request. Built from the
         // parsed enum values (or the "none" literal), not the raw query strings, so equivalent
@@ -48,7 +55,8 @@ internal sealed class ListVehiclesQueryHandler(IVehicleRepository repository, IC
         // whitespace-only filter means the same "no filter" as null - the raw strings would
         // otherwise scatter all of those across distinct, needlessly duplicated cache entries.
         string cacheKey =
-            $"vehicles:list:{query.Page}:{query.PageSize}:{status?.ToString() ?? "none"}:{type?.ToString() ?? "none"}";
+            $"{VehicleCacheKeys.Prefix}list:{generation}:{query.Page}:{query.PageSize}:" +
+            $"{status?.ToString() ?? "none"}:{type?.ToString() ?? "none"}";
 
         PagedResult<VehicleResponse>? cached =
             await cache.GetAsync<PagedResult<VehicleResponse>>(cacheKey, cancellationToken);

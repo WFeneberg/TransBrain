@@ -28,12 +28,20 @@ internal sealed class ListDriversQueryHandler(IDriverRepository repository, ICac
             status = parsed;
         }
 
+        // Read before touching the database or the cache, and folded into the key below: this is
+        // what closes the cache-aside read-then-set race (see ICacheService.GetGenerationAsync).
+        // A write that commits and invalidates between this line and the SetAsync call at the
+        // bottom bumps the generation, so this handler's eventual write lands under a value
+        // nothing will look up again instead of serving a stale page.
+        long generation = await cache.GetGenerationAsync(DriverCacheKeys.Prefix, cancellationToken);
+
         // Every query parameter must be part of the key: omitting one (e.g. the status filter)
         // would serve one filter combination's cached page under another's request. Built from
         // the parsed enum value (or the "none" literal), not the raw query string, so equivalent
         // requests share one entry: "Absent" and "absent" parse to the same status, and a
         // whitespace-only filter means the same "no filter" as null.
-        string cacheKey = $"drivers:list:{query.Page}:{query.PageSize}:{status?.ToString() ?? "none"}";
+        string cacheKey =
+            $"{DriverCacheKeys.Prefix}list:{generation}:{query.Page}:{query.PageSize}:{status?.ToString() ?? "none"}";
 
         PagedResult<DriverResponse>? cached =
             await cache.GetAsync<PagedResult<DriverResponse>>(cacheKey, cancellationToken);

@@ -19,7 +19,7 @@ internal sealed class DeleteDriverCommandHandler(IDriverRepository repository, I
         await repository.RemoveAsync(driver, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
 
-        await cache.RemoveByPrefixAsync("drivers:", cancellationToken);
+        await cache.RemoveByPrefixAsync(DriverCacheKeys.Prefix, cancellationToken);
 
         return Unit.Value;
     }

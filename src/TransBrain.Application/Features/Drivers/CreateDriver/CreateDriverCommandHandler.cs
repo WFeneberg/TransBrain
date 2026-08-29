@@ -36,7 +36,7 @@ internal sealed class CreateDriverCommandHandler(IDriverRepository repository, I
             return added.Error!;
         }
 
-        await cache.RemoveByPrefixAsync("drivers:", cancellationToken);
+        await cache.RemoveByPrefixAsync(DriverCacheKeys.Prefix, cancellationToken);
 
         return DriverResponse.From(added.Value);
     }

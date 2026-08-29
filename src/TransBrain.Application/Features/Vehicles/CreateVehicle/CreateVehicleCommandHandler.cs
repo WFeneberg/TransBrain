@@ -51,7 +51,7 @@ internal sealed class CreateVehicleCommandHandler(IVehicleRepository repository,
             return added.Error!;
         }
 
-        await cache.RemoveByPrefixAsync("vehicles:", cancellationToken);
+        await cache.RemoveByPrefixAsync(VehicleCacheKeys.Prefix, cancellationToken);
 
         return VehicleResponse.From(added.Value);
     }
