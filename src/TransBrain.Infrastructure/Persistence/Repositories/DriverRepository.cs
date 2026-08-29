@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using TransBrain.Application.Abstractions;
 using TransBrain.Domain.Common;
 using TransBrain.Domain.Drivers;
@@ -7,11 +8,25 @@ namespace TransBrain.Infrastructure.Persistence.Repositories;
 
 internal sealed class DriverRepository(TransBrainDbContext context) : IDriverRepository
 {
+    // PostgreSQL error code for unique_violation.
+    private const string UniqueViolation = "23505";
+
     public async Task<Result<Driver>> AddAsync(Driver driver, CancellationToken cancellationToken)
     {
         await context.Drivers.AddAsync(driver, cancellationToken);
-        await context.SaveChangesAsync(cancellationToken);
-        return driver;
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            return driver;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: UniqueViolation })
+        {
+            context.Entry(driver).State = EntityState.Detached;
+            return Error.Conflict(
+                "Driver.DuplicateExternalUserId",
+                $"A driver with external user id '{driver.ExternalUserId}' already exists.");
+        }
     }
 
     public Task<Driver?> GetByIdAsync(Guid id, CancellationToken cancellationToken)

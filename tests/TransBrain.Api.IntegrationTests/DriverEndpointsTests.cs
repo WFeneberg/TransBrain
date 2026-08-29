@@ -145,6 +145,47 @@ public class DriverEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     }
 
     [Fact]
+    public async Task PostDriver_DuplicateExternalUserId_ReturnsConflict()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        object firstDriver = new
+        {
+            firstName = "Frank",
+            lastName = "First",
+            licenseClasses = new[] { "C" },
+            licenseValidUntil = "2028-06-30",
+            externalUserId = "keycloak-sub-duplicate"
+        };
+        object secondDriver = new
+        {
+            firstName = "Frank",
+            lastName = "Second",
+            licenseClasses = new[] { "C" },
+            licenseValidUntil = "2028-06-30",
+            externalUserId = "keycloak-sub-duplicate"
+        };
+
+        await admin.PostAsJsonAsync("/api/drivers", firstDriver);
+        HttpResponseMessage response = await admin.PostAsJsonAsync("/api/drivers", secondDriver);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    // Two drivers with no login (externalUserId == null) must not collide with each other: the
+    // unique index on ExternalUserId is filtered to non-NULL values for exactly this reason.
+    [Fact]
+    public async Task PostDriver_TwoDriversWithNoExternalUserId_BothSucceed()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+
+        HttpResponseMessage first = await admin.PostAsJsonAsync("/api/drivers", NewDriver("NoLoginOne"));
+        HttpResponseMessage second = await admin.PostAsJsonAsync("/api/drivers", NewDriver("NoLoginTwo"));
+
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        second.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
     public async Task PutDriver_TwoInvalidFields_ReturnsBothKeyedByFieldName()
     {
         HttpClient admin = factory.CreateClientAs("admin");
