@@ -143,4 +143,25 @@ public class DriverEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
         string body = await response.Content.ReadAsStringAsync();
         body.Should().Contain("FirstName").And.Contain("LastName");
     }
+
+    [Fact]
+    public async Task PutDriver_TwoInvalidFields_ReturnsBothKeyedByFieldName()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        HttpResponseMessage created = await admin.PostAsJsonAsync("/api/drivers", NewDriver("ToInvalidate"));
+        DriverResponse? driver = await created.Content.ReadFromJsonAsync<DriverResponse>();
+
+        HttpResponseMessage response = await admin.PutAsJsonAsync($"/api/drivers/{driver!.Id}", new
+        {
+            firstName = "",
+            lastName = "",
+            licenseClasses = new[] { "C" },
+            licenseValidUntil = "2028-06-30",
+            externalUserId = (string?)null
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("FirstName").And.Contain("LastName");
+    }
 }

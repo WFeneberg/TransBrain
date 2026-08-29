@@ -99,6 +99,52 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
     }
 
     [Fact]
+    public async Task PostVehicle_TwoInvalidFields_ReturnsBothKeyedByFieldName()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("admin")
+            .PostAsJsonAsync("/api/vehicles", new
+            {
+                licensePlate = "M-2F 1",
+                type = "Van",
+                payloadKg = 0,
+                loadMeters = 0m,
+                nextInspectionDue = "2027-03-31"
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("PayloadKg").And.Contain("LoadMeters");
+    }
+
+    [Fact]
+    public async Task PutVehicle_TwoInvalidFields_ReturnsBothKeyedByFieldName()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        HttpResponseMessage created = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-2F 2",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31"
+        });
+        VehicleResponse? vehicle = await created.Content.ReadFromJsonAsync<VehicleResponse>();
+
+        HttpResponseMessage response = await admin.PutAsJsonAsync($"/api/vehicles/{vehicle!.Id}", new
+        {
+            licensePlate = "",
+            type = "Van",
+            payloadKg = 0,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("LicensePlate").And.Contain("PayloadKg");
+    }
+
+    [Fact]
     public async Task GetVehicles_WithoutToken_ReturnsUnauthorized()
     {
         HttpResponseMessage response = await factory.CreateClient().GetAsync("/api/vehicles");
