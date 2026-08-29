@@ -1678,7 +1678,7 @@ internal sealed class SequentialOrderNumberGenerator(TransBrainDbContext context
                 VALUES ({year}, 1)
                 ON CONFLICT (year) DO UPDATE
                     SET last_number = order_number_sequences.last_number + 1
-                RETURNING last_number
+                RETURNING last_number AS "Value"
                 """)
             .SingleAsync(cancellationToken);
 
@@ -1686,6 +1686,8 @@ internal sealed class SequentialOrderNumberGenerator(TransBrainDbContext context
     }
 }
 ```
+
+**The `AS "Value"` alias is required, not cosmetic.** `Database.SqlQuery<T>` for a scalar type maps a single column named exactly `Value`; returning `last_number` unaliased throws at runtime with a message about a missing column. Nothing else in this codebase uses `SqlQuery` yet, so there is no local precedent to copy — verify this query actually executes against the Testcontainers database in Step 5 rather than assuming it compiles into working SQL.
 
 - [ ] **Step 3: Implement the repository**
 
