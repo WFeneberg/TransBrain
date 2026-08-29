@@ -42,8 +42,13 @@ internal sealed class ListVehiclesQueryHandler(IVehicleRepository repository, IC
         }
 
         // Every query parameter must be part of the key: omitting one (e.g. a filter) would
-        // serve one filter combination's cached page under another's request.
-        string cacheKey = $"vehicles:list:{query.Page}:{query.PageSize}:{query.Status}:{query.Type}";
+        // serve one filter combination's cached page under another's request. Built from the
+        // parsed enum values (or the "none" literal), not the raw query strings, so equivalent
+        // requests share one entry: "Available" and "available" parse to the same status, and a
+        // whitespace-only filter means the same "no filter" as null - the raw strings would
+        // otherwise scatter all of those across distinct, needlessly duplicated cache entries.
+        string cacheKey =
+            $"vehicles:list:{query.Page}:{query.PageSize}:{status?.ToString() ?? "none"}:{type?.ToString() ?? "none"}";
 
         PagedResult<VehicleResponse>? cached =
             await cache.GetAsync<PagedResult<VehicleResponse>>(cacheKey, cancellationToken);

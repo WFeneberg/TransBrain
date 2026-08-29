@@ -29,8 +29,11 @@ internal sealed class ListDriversQueryHandler(IDriverRepository repository, ICac
         }
 
         // Every query parameter must be part of the key: omitting one (e.g. the status filter)
-        // would serve one filter combination's cached page under another's request.
-        string cacheKey = $"drivers:list:{query.Page}:{query.PageSize}:{query.Status}";
+        // would serve one filter combination's cached page under another's request. Built from
+        // the parsed enum value (or the "none" literal), not the raw query string, so equivalent
+        // requests share one entry: "Absent" and "absent" parse to the same status, and a
+        // whitespace-only filter means the same "no filter" as null.
+        string cacheKey = $"drivers:list:{query.Page}:{query.PageSize}:{status?.ToString() ?? "none"}";
 
         PagedResult<DriverResponse>? cached =
             await cache.GetAsync<PagedResult<DriverResponse>>(cacheKey, cancellationToken);
