@@ -20,7 +20,8 @@ public class ListVehiclesQueryHandlerTests
     [Fact]
     public async Task Handle_EmptyRepository_ReturnsEmptyPage()
     {
-        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository());
+        InMemoryCacheService cache = new();
+        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository(), cache);
 
         Result<PagedResult<VehicleResponse>> result = await handler.Handle(new ListVehiclesQuery(), CancellationToken.None);
 
@@ -34,7 +35,8 @@ public class ListVehiclesQueryHandlerTests
     {
         InMemoryVehicleRepository repository = new();
         repository.Seed(VehicleWithPlate("M-AA 1"), VehicleWithPlate("M-BB 2"), VehicleWithPlate("M-CC 3"));
-        ListVehiclesQueryHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        ListVehiclesQueryHandler handler = new(repository, cache);
 
         Result<PagedResult<VehicleResponse>> result = await handler.Handle(
             new ListVehiclesQuery(Page: 2, PageSize: 2), CancellationToken.None);
@@ -50,7 +52,8 @@ public class ListVehiclesQueryHandlerTests
     {
         InMemoryVehicleRepository repository = new();
         repository.Seed(VehicleWithPlate("M-CC 3"), VehicleWithPlate("M-AA 1"));
-        ListVehiclesQueryHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        ListVehiclesQueryHandler handler = new(repository, cache);
 
         Result<PagedResult<VehicleResponse>> result = await handler.Handle(new ListVehiclesQuery(), CancellationToken.None);
 
@@ -64,7 +67,8 @@ public class ListVehiclesQueryHandlerTests
         Vehicle inWorkshop = VehicleWithPlate("M-WS 1");
         inWorkshop.SendToWorkshop();
         repository.Seed(VehicleWithPlate("M-AV 1"), inWorkshop);
-        ListVehiclesQueryHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        ListVehiclesQueryHandler handler = new(repository, cache);
 
         Result<PagedResult<VehicleResponse>> result =
             await handler.Handle(new ListVehiclesQuery(Status: "InWorkshop"), CancellationToken.None);
@@ -81,7 +85,8 @@ public class ListVehiclesQueryHandlerTests
         Vehicle tractor = Vehicle.Create(
             LicensePlate.Create("M-TR 1").Value, VehicleType.Tractor, 24_000, 13.6m, new DateOnly(2027, 1, 1)).Value;
         repository.Seed(VehicleWithPlate("M-VA 1"), tractor);
-        ListVehiclesQueryHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        ListVehiclesQueryHandler handler = new(repository, cache);
 
         Result<PagedResult<VehicleResponse>> result =
             await handler.Handle(new ListVehiclesQuery(Type: "Tractor"), CancellationToken.None);
@@ -102,7 +107,8 @@ public class ListVehiclesQueryHandlerTests
         Vehicle wrongStatus = Vehicle.Create(
             LicensePlate.Create("M-WS 2").Value, VehicleType.Tractor, 24_000, 13.6m, new DateOnly(2027, 1, 1)).Value;
         repository.Seed(matching, wrongType, wrongStatus);
-        ListVehiclesQueryHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        ListVehiclesQueryHandler handler = new(repository, cache);
 
         Result<PagedResult<VehicleResponse>> result =
             await handler.Handle(
@@ -115,7 +121,8 @@ public class ListVehiclesQueryHandlerTests
     [Fact]
     public async Task Handle_UnknownStatus_ReturnsValidationError()
     {
-        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository());
+        InMemoryCacheService cache = new();
+        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository(), cache);
 
         Result<PagedResult<VehicleResponse>> result =
             await handler.Handle(new ListVehiclesQuery(Status: "Sleeping"), CancellationToken.None);
@@ -127,7 +134,8 @@ public class ListVehiclesQueryHandlerTests
     [Fact]
     public async Task Handle_UnknownType_ReturnsValidationError()
     {
-        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository());
+        InMemoryCacheService cache = new();
+        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository(), cache);
 
         Result<PagedResult<VehicleResponse>> result =
             await handler.Handle(new ListVehiclesQuery(Type: "Rocket"), CancellationToken.None);
@@ -141,7 +149,8 @@ public class ListVehiclesQueryHandlerTests
     {
         // Without Enum.IsDefined, "99" would parse to an undefined VehicleStatus and silently
         // filter on it rather than being rejected.
-        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository());
+        InMemoryCacheService cache = new();
+        ListVehiclesQueryHandler handler = new(new InMemoryVehicleRepository(), cache);
 
         Result<PagedResult<VehicleResponse>> result =
             await handler.Handle(new ListVehiclesQuery(Status: "99"), CancellationToken.None);

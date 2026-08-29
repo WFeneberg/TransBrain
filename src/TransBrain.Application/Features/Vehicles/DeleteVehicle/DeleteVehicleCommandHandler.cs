@@ -5,7 +5,7 @@ using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Features.Vehicles.DeleteVehicle;
 
-internal sealed class DeleteVehicleCommandHandler(IVehicleRepository repository)
+internal sealed class DeleteVehicleCommandHandler(IVehicleRepository repository, ICacheService cache)
     : ICommandHandler<DeleteVehicleCommand, Unit>
 {
     public async Task<Result<Unit>> Handle(DeleteVehicleCommand command, CancellationToken cancellationToken)
@@ -18,6 +18,8 @@ internal sealed class DeleteVehicleCommandHandler(IVehicleRepository repository)
 
         await repository.RemoveAsync(vehicle, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
+
+        await cache.RemoveByPrefixAsync("vehicles:", cancellationToken);
 
         return Unit.Value;
     }

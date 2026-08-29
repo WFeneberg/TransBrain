@@ -15,7 +15,8 @@ public class CreateVehicleCommandHandlerTests
     public async Task Handle_ValidCommand_PersistsVehicleAndReturnsResponse()
     {
         InMemoryVehicleRepository repository = new();
-        CreateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(ValidCommand, CancellationToken.None);
 
@@ -31,7 +32,8 @@ public class CreateVehicleCommandHandlerTests
         InMemoryVehicleRepository repository = new();
         repository.Seed(Vehicle.Create(
             LicensePlate.Create("M-AB 1234").Value, VehicleType.Tractor, 24_000, 13.6m, new DateOnly(2027, 3, 31)).Value);
-        CreateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(ValidCommand, CancellationToken.None);
 
@@ -45,7 +47,8 @@ public class CreateVehicleCommandHandlerTests
     public async Task Handle_UnknownVehicleType_ReturnsValidationError()
     {
         InMemoryVehicleRepository repository = new();
-        CreateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
             ValidCommand with { Type = "Spaceship" }, CancellationToken.None);
@@ -62,7 +65,8 @@ public class CreateVehicleCommandHandlerTests
         // then pass Vehicle.Create and be persisted as the literal string "99". This guards the
         // fix (Enum.TryParse combined with Enum.IsDefined) that rejects it before it gets there.
         InMemoryVehicleRepository repository = new();
-        CreateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
             ValidCommand with { Type = "99" }, CancellationToken.None);
@@ -76,7 +80,8 @@ public class CreateVehicleCommandHandlerTests
     public async Task Handle_InvalidLicensePlate_ReturnsDomainValidationError()
     {
         InMemoryVehicleRepository repository = new();
-        CreateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
             ValidCommand with { LicensePlate = "   " }, CancellationToken.None);
@@ -89,7 +94,8 @@ public class CreateVehicleCommandHandlerTests
     public async Task Handle_NonPositivePayload_ReturnsDomainValidationError()
     {
         InMemoryVehicleRepository repository = new();
-        CreateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
             ValidCommand with { PayloadKg = 0 }, CancellationToken.None);

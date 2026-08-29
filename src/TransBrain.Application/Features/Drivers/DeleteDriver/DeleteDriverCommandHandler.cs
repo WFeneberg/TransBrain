@@ -5,7 +5,7 @@ using TransBrain.Domain.Drivers;
 
 namespace TransBrain.Application.Features.Drivers.DeleteDriver;
 
-internal sealed class DeleteDriverCommandHandler(IDriverRepository repository)
+internal sealed class DeleteDriverCommandHandler(IDriverRepository repository, ICacheService cache)
     : ICommandHandler<DeleteDriverCommand, Unit>
 {
     public async Task<Result<Unit>> Handle(DeleteDriverCommand command, CancellationToken cancellationToken)
@@ -18,6 +18,8 @@ internal sealed class DeleteDriverCommandHandler(IDriverRepository repository)
 
         await repository.RemoveAsync(driver, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
+
+        await cache.RemoveByPrefixAsync("drivers:", cancellationToken);
 
         return Unit.Value;
     }

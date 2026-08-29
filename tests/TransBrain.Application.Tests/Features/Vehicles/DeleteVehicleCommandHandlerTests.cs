@@ -15,7 +15,8 @@ public class DeleteVehicleCommandHandlerTests
         Vehicle vehicle = Vehicle.Create(
             LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31)).Value;
         repository.Seed(vehicle);
-        DeleteVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        DeleteVehicleCommandHandler handler = new(repository, cache);
 
         Result<Unit> result = await handler.Handle(new DeleteVehicleCommand(vehicle.Id), CancellationToken.None);
 
@@ -28,7 +29,8 @@ public class DeleteVehicleCommandHandlerTests
     public async Task Handle_UnknownVehicle_ReturnsNotFoundAndDoesNotSave()
     {
         InMemoryVehicleRepository repository = new();
-        DeleteVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        DeleteVehicleCommandHandler handler = new(repository, cache);
 
         Result<Unit> result = await handler.Handle(
             new DeleteVehicleCommand(Guid.CreateVersion7()), CancellationToken.None);

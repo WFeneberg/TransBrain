@@ -6,7 +6,7 @@ using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Features.Vehicles.ListVehicles;
 
-internal sealed class ListVehiclesQueryHandler(IVehicleRepository repository)
+internal sealed class ListVehiclesQueryHandler(IVehicleRepository repository, ICacheService cache)
     : IQueryHandler<ListVehiclesQuery, PagedResult<VehicleResponse>>
 {
     public async Task<Result<PagedResult<VehicleResponse>>> Handle(
@@ -41,6 +41,17 @@ internal sealed class ListVehiclesQueryHandler(IVehicleRepository repository)
             type = parsedType;
         }
 
+        // Every query parameter must be part of the key: omitting one (e.g. a filter) would
+        // serve one filter combination's cached page under another's request.
+        string cacheKey = $"vehicles:list:{query.Page}:{query.PageSize}:{query.Status}:{query.Type}";
+
+        PagedResult<VehicleResponse>? cached =
+            await cache.GetAsync<PagedResult<VehicleResponse>>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
         int skip = (query.Page - 1) * query.PageSize;
 
         IReadOnlyList<Vehicle> vehicles =
@@ -49,6 +60,10 @@ internal sealed class ListVehiclesQueryHandler(IVehicleRepository repository)
 
         VehicleResponse[] items = vehicles.Select(VehicleResponse.From).ToArray();
 
-        return new PagedResult<VehicleResponse>(items, query.Page, query.PageSize, totalCount);
+        PagedResult<VehicleResponse> result = new(items, query.Page, query.PageSize, totalCount);
+
+        await cache.SetAsync(cacheKey, result, cancellationToken);
+
+        return result;
     }
 }

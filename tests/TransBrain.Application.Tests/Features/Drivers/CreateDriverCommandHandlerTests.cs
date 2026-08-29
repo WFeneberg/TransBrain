@@ -15,7 +15,8 @@ public class CreateDriverCommandHandlerTests
     public async Task Handle_ValidCommand_PersistsDriverAndReturnsResponse()
     {
         InMemoryDriverRepository repository = new();
-        CreateDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateDriverCommandHandler handler = new(repository, cache);
 
         Result<DriverResponse> result = await handler.Handle(ValidCommand, CancellationToken.None);
 
@@ -30,7 +31,8 @@ public class CreateDriverCommandHandlerTests
     public async Task Handle_UnknownLicenseClass_ReturnsValidationError()
     {
         InMemoryDriverRepository repository = new();
-        CreateDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateDriverCommandHandler handler = new(repository, cache);
 
         Result<DriverResponse> result = await handler.Handle(
             ValidCommand with { LicenseClasses = ["C", "Rocket"] }, CancellationToken.None);
@@ -44,7 +46,8 @@ public class CreateDriverCommandHandlerTests
     public async Task Handle_NumericLicenseClass_ReturnsValidationError()
     {
         InMemoryDriverRepository repository = new();
-        CreateDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateDriverCommandHandler handler = new(repository, cache);
 
         Result<DriverResponse> result = await handler.Handle(
             ValidCommand with { LicenseClasses = ["99"] }, CancellationToken.None);
@@ -57,7 +60,8 @@ public class CreateDriverCommandHandlerTests
     public async Task Handle_BlankFirstName_ReturnsDomainValidationError()
     {
         InMemoryDriverRepository repository = new();
-        CreateDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateDriverCommandHandler handler = new(repository, cache);
 
         Result<DriverResponse> result = await handler.Handle(
             ValidCommand with { FirstName = "   " }, CancellationToken.None);
@@ -70,7 +74,8 @@ public class CreateDriverCommandHandlerTests
     public async Task Handle_NoLicenseClasses_ReturnsDomainValidationError()
     {
         InMemoryDriverRepository repository = new();
-        CreateDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        CreateDriverCommandHandler handler = new(repository, cache);
 
         Result<DriverResponse> result = await handler.Handle(
             ValidCommand with { LicenseClasses = [] }, CancellationToken.None);

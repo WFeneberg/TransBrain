@@ -6,7 +6,7 @@ using TransBrain.Domain.Drivers;
 
 namespace TransBrain.Application.Features.Drivers.ListDrivers;
 
-internal sealed class ListDriversQueryHandler(IDriverRepository repository)
+internal sealed class ListDriversQueryHandler(IDriverRepository repository, ICacheService cache)
     : IQueryHandler<ListDriversQuery, PagedResult<DriverResponse>>
 {
     public async Task<Result<PagedResult<DriverResponse>>> Handle(
@@ -28,6 +28,17 @@ internal sealed class ListDriversQueryHandler(IDriverRepository repository)
             status = parsed;
         }
 
+        // Every query parameter must be part of the key: omitting one (e.g. the status filter)
+        // would serve one filter combination's cached page under another's request.
+        string cacheKey = $"drivers:list:{query.Page}:{query.PageSize}:{query.Status}";
+
+        PagedResult<DriverResponse>? cached =
+            await cache.GetAsync<PagedResult<DriverResponse>>(cacheKey, cancellationToken);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
         int skip = (query.Page - 1) * query.PageSize;
 
         IReadOnlyList<Driver> drivers = await repository.ListAsync(skip, query.PageSize, status, cancellationToken);
@@ -35,6 +46,10 @@ internal sealed class ListDriversQueryHandler(IDriverRepository repository)
 
         DriverResponse[] items = drivers.Select(DriverResponse.From).ToArray();
 
-        return new PagedResult<DriverResponse>(items, query.Page, query.PageSize, totalCount);
+        PagedResult<DriverResponse> result = new(items, query.Page, query.PageSize, totalCount);
+
+        await cache.SetAsync(cacheKey, result, cancellationToken);
+
+        return result;
     }
 }

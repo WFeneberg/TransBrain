@@ -16,7 +16,8 @@ public class ListDriversQueryHandlerTests
     [Fact]
     public async Task Handle_EmptyRepository_ReturnsEmptyPage()
     {
-        ListDriversQueryHandler handler = new(new InMemoryDriverRepository());
+        InMemoryCacheService cache = new();
+        ListDriversQueryHandler handler = new(new InMemoryDriverRepository(), cache);
 
         Result<PagedResult<DriverResponse>> result =
             await handler.Handle(new ListDriversQuery(), CancellationToken.None);
@@ -31,7 +32,8 @@ public class ListDriversQueryHandlerTests
     {
         InMemoryDriverRepository repository = new();
         repository.Seed(DriverNamed("Bea", "Zimmer"), DriverNamed("Anton", "Meier"), DriverNamed("Zoe", "Meier"));
-        ListDriversQueryHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        ListDriversQueryHandler handler = new(repository, cache);
 
         Result<PagedResult<DriverResponse>> result =
             await handler.Handle(new ListDriversQuery(), CancellationToken.None);
@@ -45,7 +47,8 @@ public class ListDriversQueryHandlerTests
     {
         InMemoryDriverRepository repository = new();
         repository.Seed(DriverNamed("A", "Aa"), DriverNamed("B", "Bb"), DriverNamed("C", "Cc"));
-        ListDriversQueryHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        ListDriversQueryHandler handler = new(repository, cache);
 
         Result<PagedResult<DriverResponse>> result =
             await handler.Handle(new ListDriversQuery(Page: 2, PageSize: 2), CancellationToken.None);
@@ -62,7 +65,8 @@ public class ListDriversQueryHandlerTests
         Driver absent = DriverNamed("Abs", "Ent");
         absent.MarkAbsent();
         repository.Seed(DriverNamed("Ava", "Ilable"), absent);
-        ListDriversQueryHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        ListDriversQueryHandler handler = new(repository, cache);
 
         Result<PagedResult<DriverResponse>> result =
             await handler.Handle(new ListDriversQuery(Status: "Absent"), CancellationToken.None);
@@ -75,7 +79,8 @@ public class ListDriversQueryHandlerTests
     [Fact]
     public async Task Handle_UnknownStatusFilter_ReturnsValidationError()
     {
-        ListDriversQueryHandler handler = new(new InMemoryDriverRepository());
+        InMemoryCacheService cache = new();
+        ListDriversQueryHandler handler = new(new InMemoryDriverRepository(), cache);
 
         Result<PagedResult<DriverResponse>> result =
             await handler.Handle(new ListDriversQuery(Status: "Sleeping"), CancellationToken.None);
@@ -87,7 +92,8 @@ public class ListDriversQueryHandlerTests
     [Fact]
     public async Task Handle_NumericStatusFilter_ReturnsValidationError()
     {
-        ListDriversQueryHandler handler = new(new InMemoryDriverRepository());
+        InMemoryCacheService cache = new();
+        ListDriversQueryHandler handler = new(new InMemoryDriverRepository(), cache);
 
         Result<PagedResult<DriverResponse>> result =
             await handler.Handle(new ListDriversQuery(Status: "99"), CancellationToken.None);

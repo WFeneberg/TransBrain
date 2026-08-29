@@ -18,7 +18,8 @@ public class UpdateDriverCommandHandlerTests
         InMemoryDriverRepository repository = new();
         Driver driver = ExistingDriver();
         repository.Seed(driver);
-        UpdateDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        UpdateDriverCommandHandler handler = new(repository, cache);
 
         Result<DriverResponse> result = await handler.Handle(
             new UpdateDriverCommand(driver.Id, "Franz", "Fahrer", ["B"], new DateOnly(2030, 1, 1), "sub-1"),
@@ -34,7 +35,8 @@ public class UpdateDriverCommandHandlerTests
     public async Task Handle_UnknownDriver_ReturnsNotFoundAndDoesNotSave()
     {
         InMemoryDriverRepository repository = new();
-        UpdateDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        UpdateDriverCommandHandler handler = new(repository, cache);
 
         Result<DriverResponse> result = await handler.Handle(
             new UpdateDriverCommand(Guid.CreateVersion7(), "A", "B", ["B"], new DateOnly(2030, 1, 1), null),
@@ -50,7 +52,8 @@ public class UpdateDriverCommandHandlerTests
         InMemoryDriverRepository repository = new();
         Driver driver = ExistingDriver();
         repository.Seed(driver);
-        UpdateDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        UpdateDriverCommandHandler handler = new(repository, cache);
 
         Result<DriverResponse> result = await handler.Handle(
             new UpdateDriverCommand(driver.Id, "   ", "Fahrer", ["B"], new DateOnly(2030, 1, 1), null),
@@ -68,7 +71,8 @@ public class UpdateDriverCommandHandlerTests
         InMemoryDriverRepository repository = new();
         Driver driver = ExistingDriver();
         repository.Seed(driver);
-        UpdateDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        UpdateDriverCommandHandler handler = new(repository, cache);
 
         Result<DriverResponse> result = await handler.Handle(
             new UpdateDriverCommand(driver.Id, "Franz", "Fahrer", ["Rocket"], new DateOnly(2030, 1, 1), null),

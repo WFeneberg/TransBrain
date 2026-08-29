@@ -5,7 +5,7 @@ using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Features.Vehicles.CreateVehicle;
 
-internal sealed class CreateVehicleCommandHandler(IVehicleRepository repository)
+internal sealed class CreateVehicleCommandHandler(IVehicleRepository repository, ICacheService cache)
     : ICommandHandler<CreateVehicleCommand, VehicleResponse>
 {
     public async Task<Result<VehicleResponse>> Handle(
@@ -50,6 +50,8 @@ internal sealed class CreateVehicleCommandHandler(IVehicleRepository repository)
         {
             return added.Error!;
         }
+
+        await cache.RemoveByPrefixAsync("vehicles:", cancellationToken);
 
         return VehicleResponse.From(added.Value);
     }

@@ -18,7 +18,8 @@ public class UpdateVehicleCommandHandlerTests
         InMemoryVehicleRepository repository = new();
         Vehicle vehicle = ExistingVehicle();
         repository.Seed(vehicle);
-        UpdateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        UpdateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(vehicle.Id, "M-ZZ 9999", "Tractor", 24_000, 13.6m, new DateOnly(2029, 1, 1)),
@@ -35,7 +36,8 @@ public class UpdateVehicleCommandHandlerTests
     public async Task Handle_UnknownVehicle_ReturnsNotFoundAndDoesNotSave()
     {
         InMemoryVehicleRepository repository = new();
-        UpdateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        UpdateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(Guid.CreateVersion7(), "M-ZZ 9999", "Tractor", 24_000, 13.6m, new DateOnly(2029, 1, 1)),
@@ -51,7 +53,8 @@ public class UpdateVehicleCommandHandlerTests
         InMemoryVehicleRepository repository = new();
         Vehicle vehicle = ExistingVehicle();
         repository.Seed(vehicle);
-        UpdateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        UpdateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(vehicle.Id, "M-AB 1234", "Van", 0, 4.0m, new DateOnly(2027, 3, 31)),
@@ -70,7 +73,8 @@ public class UpdateVehicleCommandHandlerTests
         Vehicle first = ExistingVehicle("M-AB 1234");
         Vehicle second = ExistingVehicle("M-CD 5678");
         repository.Seed(first, second);
-        UpdateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        UpdateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(first.Id, "M-CD 5678", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31)),
@@ -89,7 +93,8 @@ public class UpdateVehicleCommandHandlerTests
         InMemoryVehicleRepository repository = new();
         Vehicle vehicle = ExistingVehicle("M-AB 1234");
         repository.Seed(vehicle);
-        UpdateVehicleCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        UpdateVehicleCommandHandler handler = new(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(vehicle.Id, "M-AB 1234", "Tractor", 24_000, 13.6m, new DateOnly(2029, 1, 1)),

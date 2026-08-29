@@ -14,7 +14,8 @@ public class DeleteDriverCommandHandlerTests
         InMemoryDriverRepository repository = new();
         Driver driver = Driver.Create("Frank", "Fahrer", [LicenseClass.C], new DateOnly(2028, 1, 1), null).Value;
         repository.Seed(driver);
-        DeleteDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        DeleteDriverCommandHandler handler = new(repository, cache);
 
         Result<Unit> result = await handler.Handle(new DeleteDriverCommand(driver.Id), CancellationToken.None);
 
@@ -27,7 +28,8 @@ public class DeleteDriverCommandHandlerTests
     public async Task Handle_UnknownDriver_ReturnsNotFoundAndDoesNotSave()
     {
         InMemoryDriverRepository repository = new();
-        DeleteDriverCommandHandler handler = new(repository);
+        InMemoryCacheService cache = new();
+        DeleteDriverCommandHandler handler = new(repository, cache);
 
         Result<Unit> result = await handler.Handle(
             new DeleteDriverCommand(Guid.CreateVersion7()), CancellationToken.None);

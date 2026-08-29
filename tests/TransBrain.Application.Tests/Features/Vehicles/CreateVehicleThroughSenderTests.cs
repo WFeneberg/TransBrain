@@ -23,6 +23,7 @@ public class CreateVehicleThroughSenderTests
         ServiceCollection services = new();
         services.AddApplication();
         services.AddSingleton<IVehicleRepository>(createdRepository);
+        services.AddSingleton<ICacheService>(new InMemoryCacheService());
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
 
         return services.BuildServiceProvider().GetRequiredService<ISender>();

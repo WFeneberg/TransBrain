@@ -5,7 +5,7 @@ using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Features.Vehicles.UpdateVehicle;
 
-internal sealed class UpdateVehicleCommandHandler(IVehicleRepository repository)
+internal sealed class UpdateVehicleCommandHandler(IVehicleRepository repository, ICacheService cache)
     : ICommandHandler<UpdateVehicleCommand, VehicleResponse>
 {
     public async Task<Result<VehicleResponse>> Handle(
@@ -47,6 +47,8 @@ internal sealed class UpdateVehicleCommandHandler(IVehicleRepository repository)
         }
 
         await repository.SaveChangesAsync(cancellationToken);
+
+        await cache.RemoveByPrefixAsync("vehicles:", cancellationToken);
 
         return VehicleResponse.From(updated.Value);
     }

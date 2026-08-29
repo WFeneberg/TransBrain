@@ -5,7 +5,7 @@ using TransBrain.Domain.Drivers;
 
 namespace TransBrain.Application.Features.Drivers.UpdateDriver;
 
-internal sealed class UpdateDriverCommandHandler(IDriverRepository repository)
+internal sealed class UpdateDriverCommandHandler(IDriverRepository repository, ICacheService cache)
     : ICommandHandler<UpdateDriverCommand, DriverResponse>
 {
     public async Task<Result<DriverResponse>> Handle(
@@ -37,6 +37,8 @@ internal sealed class UpdateDriverCommandHandler(IDriverRepository repository)
         }
 
         await repository.SaveChangesAsync(cancellationToken);
+
+        await cache.RemoveByPrefixAsync("drivers:", cancellationToken);
 
         return DriverResponse.From(updated.Value);
     }
