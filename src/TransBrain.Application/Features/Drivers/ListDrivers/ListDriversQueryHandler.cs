@@ -17,6 +17,8 @@ internal sealed class ListDriversQueryHandler(IDriverRepository repository)
 
         if (!string.IsNullOrWhiteSpace(query.Status))
         {
+            // Enum.TryParse accepts numeric strings, so "99" would otherwise become an
+            // undefined enum member and reach the repository. IsDefined closes that gap.
             if (!Enum.TryParse(query.Status, ignoreCase: true, out DriverStatus parsed)
                 || !Enum.IsDefined(parsed))
             {

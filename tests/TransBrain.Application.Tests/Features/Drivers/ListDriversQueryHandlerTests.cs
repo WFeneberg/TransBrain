@@ -83,4 +83,16 @@ public class ListDriversQueryHandlerTests
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be("Driver.UnknownStatus");
     }
+
+    [Fact]
+    public async Task Handle_NumericStatusFilter_ReturnsValidationError()
+    {
+        ListDriversQueryHandler handler = new(new InMemoryDriverRepository());
+
+        Result<PagedResult<DriverResponse>> result =
+            await handler.Handle(new ListDriversQuery(Status: "99"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Driver.UnknownStatus");
+    }
 }
