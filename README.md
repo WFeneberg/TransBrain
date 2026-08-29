@@ -90,6 +90,10 @@ The imported realm defines four users, one per realm role:
 **These credentials are for local development only. They must never be used in, or
 reach, a deployed environment.**
 
+To sign in to the Keycloak admin console itself (a separate `master`-realm account whose
+password Aspire generates per machine), and for more on how the realm is wired, see
+[docs/KEYCLOAK.md](docs/KEYCLOAK.md).
+
 ## Ports
 
 | Resource         | Port                              |
