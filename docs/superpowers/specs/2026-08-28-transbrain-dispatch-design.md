@@ -250,6 +250,17 @@ kommt aus dem `sub`-Claim, der beim Anlegen eines Fahrers als `ExternalUserId` h
 wird. Passt der Claim nicht zum `DriverId` der Tour, liefert der Handler
 `ErrorType.Forbidden`.
 
+**Entschieden während der Umsetzung (Phase 2): nicht gefundene Routen antworten 401, nicht 404.**
+Eine Fallback-Policy verlangt für jeden Endpoint einen authentifizierten Benutzer, damit ein
+vergessenes `RequireAuthorization` fail-closed ist. ASP.NET wendet diese Policy auf jede Anfrage
+ohne Endpoint-Metadaten an — also auch auf Routen, die auf nichts passen. Ein `MapFallback` mit
+`AllowAnonymous` könnte das gewohnte 404 wiederherstellen; das wurde bewusst verworfen, weil ein
+404 einem nicht authentifizierten Aufrufer verrät, welche Routen existieren. Ein einheitliches
+401 verhindert dieses Abklopfen der API-Oberfläche. Der Preis: Ein Tippfehler in der URL
+beantwortet sich mit 401. Ausgenommen bleiben `/health`, `/alive`, das OpenAPI-Dokument und die
+Scalar-UI — Aspires Health-Probes tragen kein Token, und ein 401 dort würde die Ressource als
+ungesund melden und den gesamten Stack hängen lassen.
+
 Beide SPAs verwenden denselben Public Client mit Authorization Code + PKCE:
 Angular über `angular-auth-oidc-client`, Vue über `oidc-client-ts`. Das Access Token wird
 per HTTP-Interceptor an die Api gehängt.
