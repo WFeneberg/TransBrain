@@ -5,9 +5,12 @@ built with .NET 10 (Clean Architecture, a hand-rolled CQRS mediator, EF Core 10 
 PostgreSQL, Redis) behind Keycloak-issued OIDC tokens, with two frontends — Angular and
 Vue — talking to the same API.
 
-This is Phase 1 (foundation and walking skeleton): a `Vehicle` aggregate with `Create`
-and `List`, wired end to end through both frontends. See [CHANGELOG.md](CHANGELOG.md)
-for what exists today, and `.superpowers/sdd/` for the phase plans.
+Phase 1 (foundation and walking skeleton) delivered a `Vehicle` aggregate with `Create`
+and `List`, wired end to end through both frontends. Phase 2 (master data completion)
+added a full `Driver` aggregate, completed vehicle CRUD (`Update`, `Delete`, `GetById`),
+added list filters, Redis caching, per-field validation errors and a fallback
+authorization policy. See [CHANGELOG.md](CHANGELOG.md) for the detailed list of what
+exists today, and `.superpowers/sdd/` for the phase plans.
 
 ## Prerequisites
 
@@ -96,10 +99,79 @@ reach, a deployed environment.**
 | Keycloak         | 8080 (HTTPS)                       |
 | API              | dynamic — see the Aspire dashboard |
 
+## API endpoints
+
+Both aggregates expose the same shape of CRUD endpoint group:
+
+| Method | Route                | Policy            | Notes                                              |
+|--------|----------------------|--------------------|-----------------------------------------------------|
+| POST   | `/api/vehicles`      | `MasterDataWrite` | Per-field validation errors; `409` on a duplicate plate |
+| GET    | `/api/vehicles`      | `Read`             | Paged; filters: `page`, `pageSize`, `status`, `type` |
+| GET    | `/api/vehicles/{id}` | `Read`             | `404` if not found                                   |
+| PUT    | `/api/vehicles/{id}` | `MasterDataWrite` | `404` if not found, `409` on a duplicate plate       |
+| DELETE | `/api/vehicles/{id}` | `MasterDataWrite` | `404` if not found                                   |
+| POST   | `/api/drivers`       | `MasterDataWrite` | Per-field validation errors                          |
+| GET    | `/api/drivers`       | `Read`             | Paged; filters: `page`, `pageSize`, `status`         |
+| GET    | `/api/drivers/{id}`  | `Read`             | `404` if not found                                   |
+| PUT    | `/api/drivers/{id}`  | `MasterDataWrite` | `404` if not found                                   |
+| DELETE | `/api/drivers/{id}`  | `MasterDataWrite` | `404` if not found                                   |
+
+`Read` is satisfied by any of the four realm roles (`admin`, `disponent`, `fahrer`,
+`viewer`). `MasterDataWrite` is satisfied only by `admin` — a signed-in `disponent`,
+`fahrer` or `viewer` gets a `403` from these write endpoints. Both frontends currently
+show the Add/Edit/Delete controls to every signed-in user regardless of role (there is no
+role-decoding in either SPA yet) and rely on that `403` to refuse a non-admin's attempt,
+surfaced as an error message rather than a hidden button — see the operator guides for
+what that looks like.
+
+### Authorization defaults to fail closed
+
+Every endpoint requires an authenticated user unless it explicitly opts out
+(`/health`, `/alive`, the OpenAPI document and the Scalar UI, which run without a token
+so Aspire's health probes and local API exploration keep working). This is enforced by an
+ASP.NET fallback policy, which is applied to *any* request that carries no endpoint
+metadata — including a request that matches no route at all. **A consequence worth
+knowing as an API consumer: an unmatched route answers `401`, not `404`, for an
+unauthenticated caller.** This is deliberate (see the design spec, §9) — an
+unauthenticated `404` would let a caller probe which routes exist; a uniform `401` does
+not. The price is that a typo'd URL also comes back as `401` rather than the usually more
+informative `404`.
+
+## Caching
+
+List and get-by-id reads on both aggregates are cached in Redis; every write invalidates
+its aggregate's cache entries by key prefix (so a single write drops every cached page and
+filter combination for that aggregate, not just the one row it touched). **Caching is
+disabled entirely when no Redis connection string is configured** (this is the case for
+the API integration tests, and would be the case for any environment Aspire didn't wire a
+Redis resource into) — cache writes are skipped outright rather than silently degrading to
+an unbounded, unindexed, never-invalidated cache. Caching without the ability to
+invalidate is a correctness hazard, not a performance win worth keeping.
+
+## API response language
+
+FluentValidation's built-in validation messages follow the ambient culture of the machine
+running the API, which made responses non-deterministic: the same request answered in
+German on a German-locale development machine and in English in CI. `Program.cs` now pins
+this explicitly to English (invariant culture) at startup, so behaviour is identical
+everywhere:
+
+```csharp
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+```
+
+**This resolves a non-determinism, it is not a decision that English is the final
+product-facing language.** TransBrain is a German haulier, and validation messages in
+German may well be the eventual product decision — that question has been raised
+separately and is not settled by this change. To switch the API's validation messages to
+German, change both lines above (in `src/TransBrain.Api/Program.cs`) to
+`CultureInfo.GetCultureInfo("de-DE")`.
+
 ## Running the tests
 
-Domain, Application and the Testcontainers-backed API integration tests (47 tests at
-time of writing) all run with:
+Domain, Application and the Testcontainers-backed API integration tests (138 tests at
+time of writing: 42 Domain, 67 Application, 29 API integration) all run with:
 
 ```bash
 dotnet test TransBrain.slnx
@@ -107,7 +179,8 @@ dotnet test TransBrain.slnx
 
 This requires Docker to be running (for the integration tests).
 
-Each frontend additionally has Playwright end-to-end tests:
+Each frontend additionally has Playwright end-to-end tests (5 specs per frontend, covering
+login, the vehicle list/form and the driver list/form):
 
 ```bash
 npm run e2e
@@ -117,3 +190,19 @@ run from `src/TransBrain.Web` or `src/TransBrain.VueWeb`. These need the full st
 running (`dotnet run --project src/TransBrain.AppHost`, including a trusted dev
 certificate — see above) since they exercise the real OIDC login flow against Keycloak.
 They are not run in CI yet — see `.github/workflows/ci.yml` for why.
+
+Both frontends' `playwright.config.ts` pin `workers: 1` deliberately, not as an
+unoptimised default: every spec authenticates through the same Keycloak realm/container,
+and concurrent logins against that one container time out intermittently under the
+default parallel workers — observed directly during development, and the failure looks
+like a broken test rather than contention, which is worse than the slower serialised run.
+
+## Application-layer coverage gate
+
+Spec §11 sets an 80% line-coverage floor for the Application layer. The backend CI job
+enforces it: it runs `TransBrain.Application.Tests` with `--collect:"XPlat Code Coverage"`
+and fails if the resulting line coverage drops below 80%. Measured at the time this gate
+was added, the suite sits at 86.9% line coverage (84.7% branch) — comfortably above the
+floor. The threshold is intentionally left at the spec's 80%, not raised to the current
+number: a gate that fails the moment someone adds a single untested private helper trains
+people to disable gates rather than write tests.

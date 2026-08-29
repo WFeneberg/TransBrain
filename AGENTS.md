@@ -12,7 +12,7 @@ This file provides guidance to KI Agent (claude.ai/code, Github Copilot, Jetbrai
 - EF Core 10 with Postgresql
 - Custom, hand-rolled CQRS mediator (`TransBrain.Application/Common/Messaging/`) — not MediatR, which became commercially licensed at v13
 - FluentValidation for validation
-- xUnit + FluentAssertions for tests
+- xUnit + AwesomeAssertions for tests (not FluentAssertions, which became proprietary from v8)
 - OpenApi Support
 - Aspire Support
 - Redis cache
@@ -47,8 +47,8 @@ This file provides guidance to KI Agent (claude.ai/code, Github Copilot, Jetbrai
 - Naming: Method_Scenario_ExpectedResult
 - Use Testcontainers for integration tests
 - WebApplicationFactory for API tests
-- Minimum 80% coverage in the Application layer
-- Playwright e2e tests live in `<project>/e2e/*.spec.ts` for all frontends, run via `npm run e2e`; they run in CI (`.github/workflows/ci.yml`)
+- Minimum 80% coverage in the Application layer, enforced by a CI gate (`.github/workflows/ci.yml`)
+- Playwright e2e tests live in `<project>/e2e/*.spec.ts` for all frontends, run via `npm run e2e`; they do **not** run in CI — `.github/workflows/ci.yml` says so explicitly, because there is no headless Aspire startup path yet (no Postgres/Redis/Keycloak available to a CI job). Run them locally against `dotnet run --project src/TransBrain.AppHost`
 - K6 load tests (`k6/`) run manually against a running environment (not in CI); see `k6/README.md`
 
 ## Git
@@ -61,7 +61,7 @@ This file provides guidance to KI Agent (claude.ai/code, Github Copilot, Jetbrai
 - Document all public APIs
 - Use diagrams and examples where appropriate
 - Maintain a CHANGELOG.md (Keep a Changelog format) — add an entry under `[Unreleased]` for each notable change
-- User-facing UI changes (new field, new workflow, changed dialog, removed feature) in any of the three frontends must update the matching operator guide (`docs/BEDIENUNG_TRANSBRAIN_WEB.md`, `_VUEWEB.md`) and, if the change is visible, its screenshot under `docs/img/<web|vueweb>/` in the same change
+- User-facing UI changes (new field, new workflow, changed dialog, removed feature) in either of the two frontends must update the matching operator guide (`docs/BEDIENUNG_TRANSBRAIN_WEB.md`, `_VUEWEB.md`) and, if the change is visible, its screenshot under `docs/img/<web|vueweb>/` in the same change
 
 ## General
 - Use consistent indentation (4 spaces)
