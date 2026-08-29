@@ -69,6 +69,15 @@ public class AddressTests
     }
 
     [Fact]
+    public void Create_SingleSharpS_ReturnsValidationError()
+    {
+        Result<Address> result = Address.Create("Meier GmbH", "Hauptstr. 1", "80331", "München", "ß");
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Address.CountryInvalid");
+    }
+
+    [Fact]
     public void Equals_SameValuesDifferentCountryCasing_ReturnsTrue()
     {
         Address first = Address.Create("Meier GmbH", "Hauptstr. 1", "80331", "München", "de").Value;

@@ -2,6 +2,8 @@ namespace TransBrain.Domain.Common;
 
 public sealed record Address
 {
+    private const int CountryLength = 2;
+
     private Address(string name, string street, string postalCode, string city, string country)
     {
         Name = name;
@@ -49,17 +51,22 @@ public sealed record Address
             return Error.Validation("Address.CityRequired", "City must not be empty.");
         }
 
-        string normalisedCountry = country?.Trim().ToUpperInvariant() ?? string.Empty;
+        string trimmedCountry = country?.Trim() ?? string.Empty;
 
-        // Two ASCII letters. A full ISO 3166 table would be a data-maintenance burden this
-        // product does not need yet; the shape check catches the mistakes that actually happen
-        // (a three-letter code, a country name, an empty field).
-        if (normalisedCountry.Length != 2 || !normalisedCountry.All(char.IsAsciiLetterUpper))
+        // Two ASCII letters. Validate shape on the TRIMMED input, before any case conversion:
+        // ToUpperInvariant() can change a string's length on some platforms (e.g. "ß" -> "SS"
+        // under full Unicode case folding), which would let a single non-ASCII character slip
+        // past a length check performed after uppercasing. A full ISO 3166 table would be a
+        // data-maintenance burden this product does not need yet; the shape check catches the
+        // mistakes that actually happen (a three-letter code, a country name, an empty field).
+        if (trimmedCountry.Length != CountryLength || !trimmedCountry.All(char.IsAsciiLetter))
         {
             return Error.Validation(
                 "Address.CountryInvalid",
                 "Country must be an ISO 3166-1 alpha-2 code, for example 'DE'.");
         }
+
+        string normalisedCountry = trimmedCountry.ToUpperInvariant();
 
         return new Address(
             name.Trim(),
