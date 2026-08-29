@@ -143,3 +143,32 @@ test('blankRequiredFields_showVisibleFieldErrorsOnSave', async ({ page }) => {
     await expect(page.getByTestId('order-cargoDescription-error')).toBeVisible();
     await expect(page.getByTestId('order-cargoDescription-error')).toHaveText(/required/i);
 });
+
+test('directNavigationToTheForm_canStillSave', async ({ page }) => {
+    // The Angular suite's counterpart caught a real defect: angular-auth-oidc-client only
+    // hydrates its stored session when checkAuth() runs, so a form opened DIRECTLY (a
+    // bookmarked /orders/new, a reload while editing) sent its request without a token and
+    // answered 401. This app does not share that defect - its axios interceptor reads the
+    // token from userManager.getUser() on every request rather than from an in-memory session
+    // established elsewhere - but the two frontends must behave equivalently for a user, so
+    // the behaviour is pinned here too rather than left to hold by accident.
+    await signInAsDispatcher(page);
+
+    const consignor = `VUED${Date.now().toString(36).toUpperCase()}`;
+
+    await page.goto('/orders/new');
+    await expect(page.getByRole('heading', { name: 'New order' })).toBeVisible();
+    await fillAddress(page, 'consignor', consignor);
+    await fillAddress(page, 'consignee', 'Empfaenger AG');
+    await page.getByTestId('order-cargoDescription').fill('Direktaufruf');
+    await page.getByTestId('order-cargoWeightKg').fill('7000');
+    await page.getByTestId('order-cargoLoadMeters').fill('4.5');
+    await page.getByTestId('order-pickupFrom').fill('2027-06-01T08:00');
+    await page.getByTestId('order-pickupTo').fill('2027-06-01T10:00');
+    await page.getByTestId('order-deliveryFrom').fill('2027-06-01T12:00');
+    await page.getByTestId('order-deliveryTo').fill('2027-06-01T16:00');
+    await page.getByTestId('order-save').click();
+
+    await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
+    await expect(page.locator('tr').filter({ hasText: consignor })).toBeVisible();
+});
