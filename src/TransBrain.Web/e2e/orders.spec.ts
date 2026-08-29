@@ -146,3 +146,31 @@ test('blankRequiredFields_showVisibleFieldErrorsOnSave', async ({ page }) => {
     await expect(page.getByTestId('order-cargoDescription-error')).toBeVisible();
     await expect(page.getByTestId('order-cargoDescription-error')).toHaveText(/required/i);
 });
+
+test('directNavigationToTheForm_canStillSave', async ({ page }) => {
+    // A regression test for a real defect found while capturing the guide screenshots:
+    // angular-auth-oidc-client only hydrates its stored session when checkAuth() runs, which
+    // the list components do and a form reached by clicking through therefore inherits. Opened
+    // DIRECTLY - a bookmarked /orders/new, a reload while editing - the form had no token, and
+    // saving answered "The order could not be saved. (HTTP 401)" to a plainly signed-in user.
+    // Reverting OrderFormComponent's `session` pipe turns this red.
+    await signInAsDispatcher(page);
+
+    const consignor = `E2ED${Date.now().toString(36).toUpperCase()}`;
+
+    await page.goto('/orders/new');
+    await expect(page.getByRole('heading', { name: 'New order' })).toBeVisible();
+    await fillAddress(page, 'consignor', consignor);
+    await fillAddress(page, 'consignee', 'Empfaenger AG');
+    await page.getByTestId('order-cargoDescription').fill('Direktaufruf');
+    await page.getByTestId('order-cargoWeightKg').fill('7000');
+    await page.getByTestId('order-cargoLoadMeters').fill('4.5');
+    await page.getByTestId('order-pickupFrom').fill('2027-06-01T08:00');
+    await page.getByTestId('order-pickupTo').fill('2027-06-01T10:00');
+    await page.getByTestId('order-deliveryFrom').fill('2027-06-01T12:00');
+    await page.getByTestId('order-deliveryTo').fill('2027-06-01T16:00');
+    await page.getByTestId('order-save').click();
+
+    await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
+    await expect(page.locator('tr').filter({ hasText: consignor })).toBeVisible();
+});

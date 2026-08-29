@@ -5,6 +5,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Router } from '@angular/router';
+import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { Observable, shareReplay, switchMap } from 'rxjs';
 import { Order, OrderService, OrderWriteRequest } from './order.service';
 
 interface ProblemDetailsBody {
@@ -200,6 +202,16 @@ export class OrderFormComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
+    private readonly oidc = inject(OidcSecurityService);
+
+    // angular-auth-oidc-client only hydrates its stored session when checkAuth() runs, and
+    // until it has, the auth interceptor finds no access token and sends the request
+    // unauthenticated. The list components call it on construction; a form reached by a DIRECT
+    // navigation - a bookmarked /orders/new, a page reload while editing, browser back - has no
+    // list component in its lifetime, so every request from it would answer 401 and the user
+    // would be told "The order could not be saved. (HTTP 401)" while plainly signed in.
+    // shareReplay(1) so the check runs once and both the load and the save share its result.
+    private readonly session = this.oidc.checkAuth().pipe(shareReplay(1));
 
     protected readonly orderId = this.route.snapshot.paramMap.get('id');
     protected readonly isEditMode = this.orderId !== null;
@@ -219,7 +231,7 @@ export class OrderFormComponent {
 
     constructor() {
         if (this.isEditMode) {
-            this.service.getById(this.orderId!).subscribe({
+            this.session.pipe(switchMap(() => this.service.getById(this.orderId!))).subscribe({
                 next: (order: Order) => this.patchFrom(order),
                 // The load path gets its own message: "could not be saved" on a failed
                 // getById would be plainly wrong.
@@ -263,9 +275,11 @@ export class OrderFormComponent {
             deliveryTo: this.toIso(value.deliveryTo),
         };
 
-        const save$ = this.isEditMode
-            ? this.service.update(this.orderId!, request)
-            : this.service.create(request);
+        const save$: Observable<Order> = this.session.pipe(
+            switchMap(() => (this.isEditMode
+                ? this.service.update(this.orderId!, request)
+                : this.service.create(request))),
+        );
 
         save$.subscribe({
             next: () => this.router.navigateByUrl('/orders'),
