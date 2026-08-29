@@ -26,7 +26,7 @@ internal sealed class CreateVehicleCommandHandler(IVehicleRepository repository)
             return Error.Validation("Vehicle.UnknownType", $"'{command.Type}' is not a known vehicle type.");
         }
 
-        if (await repository.ExistsByLicensePlateAsync(plate.Value, cancellationToken))
+        if (await repository.ExistsByLicensePlateAsync(plate.Value, excludingId: null, cancellationToken))
         {
             return Error.Conflict(
                 "Vehicle.DuplicateLicensePlate",

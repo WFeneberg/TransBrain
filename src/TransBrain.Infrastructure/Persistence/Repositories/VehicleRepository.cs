@@ -11,8 +11,11 @@ internal sealed class VehicleRepository(TransBrainDbContext context) : IVehicleR
     // PostgreSQL error code for unique_violation.
     private const string UniqueViolation = "23505";
 
-    public Task<bool> ExistsByLicensePlateAsync(LicensePlate plate, CancellationToken cancellationToken)
-        => context.Vehicles.AnyAsync(v => v.LicensePlate == plate, cancellationToken);
+    public Task<bool> ExistsByLicensePlateAsync(
+        LicensePlate plate, Guid? excludingId, CancellationToken cancellationToken)
+        => context.Vehicles.AnyAsync(
+            v => v.LicensePlate == plate && (excludingId == null || v.Id != excludingId),
+            cancellationToken);
 
     public async Task<Result<Vehicle>> AddAsync(Vehicle vehicle, CancellationToken cancellationToken)
     {
@@ -32,16 +35,34 @@ internal sealed class VehicleRepository(TransBrainDbContext context) : IVehicleR
         }
     }
 
+    public Task<Vehicle?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+        => context.Vehicles.SingleOrDefaultAsync(v => v.Id == id, cancellationToken);
+
     // Ordering agreement with InMemoryVehicleRepository (StringComparer.Ordinal) rests on the "C"
     // collation configured on the LicensePlate column in VehicleConfiguration, not on convention.
-    public async Task<IReadOnlyList<Vehicle>> ListAsync(int skip, int take, CancellationToken cancellationToken)
-        => await context.Vehicles
+    public async Task<IReadOnlyList<Vehicle>> ListAsync(
+        int skip, int take, VehicleStatus? status, VehicleType? type, CancellationToken cancellationToken)
+        => await Filter(status, type)
             .OrderBy(v => v.LicensePlate)
             .Skip(skip)
             .Take(take)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-    public Task<int> CountAsync(CancellationToken cancellationToken)
-        => context.Vehicles.CountAsync(cancellationToken);
+    public Task<int> CountAsync(VehicleStatus? status, VehicleType? type, CancellationToken cancellationToken)
+        => Filter(status, type).CountAsync(cancellationToken);
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken)
+        => context.SaveChangesAsync(cancellationToken);
+
+    public Task RemoveAsync(Vehicle vehicle, CancellationToken cancellationToken)
+    {
+        context.Vehicles.Remove(vehicle);
+        return Task.CompletedTask;
+    }
+
+    private IQueryable<Vehicle> Filter(VehicleStatus? status, VehicleType? type)
+        => context.Vehicles
+            .Where(v => status == null || v.Status == status)
+            .Where(v => type == null || v.Type == type);
 }

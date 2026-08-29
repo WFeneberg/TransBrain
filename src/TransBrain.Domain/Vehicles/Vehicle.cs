@@ -67,4 +67,49 @@ public sealed class Vehicle
             nextInspectionDue,
             VehicleStatus.Available);
     }
+
+    public Result<Vehicle> Update(
+        LicensePlate licensePlate,
+        VehicleType type,
+        int payloadKg,
+        decimal loadMeters,
+        DateOnly nextInspectionDue)
+    {
+        if (payloadKg <= 0)
+        {
+            return Error.Validation("Vehicle.PayloadKgNotPositive", "Payload must be greater than zero.");
+        }
+
+        if (loadMeters <= 0m)
+        {
+            return Error.Validation("Vehicle.LoadMetersNotPositive", "Load meters must be greater than zero.");
+        }
+
+        LicensePlate = licensePlate;
+        Type = type;
+        PayloadKg = payloadKg;
+        LoadMeters = loadMeters;
+        NextInspectionDue = nextInspectionDue;
+
+        return this;
+    }
+
+    public void SendToWorkshop()
+    {
+        if (Status == VehicleStatus.Available)
+        {
+            Status = VehicleStatus.InWorkshop;
+        }
+    }
+
+    /// <remarks>Deliberately refuses to revive a decommissioned vehicle.</remarks>
+    public void ReturnToService()
+    {
+        if (Status == VehicleStatus.InWorkshop)
+        {
+            Status = VehicleStatus.Available;
+        }
+    }
+
+    public void Decommission() => Status = VehicleStatus.Decommissioned;
 }

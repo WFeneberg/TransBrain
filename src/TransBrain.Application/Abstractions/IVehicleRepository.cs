@@ -5,11 +5,22 @@ namespace TransBrain.Application.Abstractions;
 
 public interface IVehicleRepository
 {
-    Task<bool> ExistsByLicensePlateAsync(LicensePlate plate, CancellationToken cancellationToken);
+    /// <param name="excludingId">
+    /// Ignore this vehicle when checking uniqueness, so updating a vehicle without changing
+    /// its plate does not collide with itself.
+    /// </param>
+    Task<bool> ExistsByLicensePlateAsync(LicensePlate plate, Guid? excludingId, CancellationToken cancellationToken);
 
     Task<Result<Vehicle>> AddAsync(Vehicle vehicle, CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<Vehicle>> ListAsync(int skip, int take, CancellationToken cancellationToken);
+    Task<Vehicle?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
 
-    Task<int> CountAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<Vehicle>> ListAsync(
+        int skip, int take, VehicleStatus? status, VehicleType? type, CancellationToken cancellationToken);
+
+    Task<int> CountAsync(VehicleStatus? status, VehicleType? type, CancellationToken cancellationToken);
+
+    Task SaveChangesAsync(CancellationToken cancellationToken);
+
+    Task RemoveAsync(Vehicle vehicle, CancellationToken cancellationToken);
 }

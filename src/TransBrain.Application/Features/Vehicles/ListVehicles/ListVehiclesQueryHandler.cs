@@ -15,8 +15,9 @@ internal sealed class ListVehiclesQueryHandler(IVehicleRepository repository)
     {
         int skip = (query.Page - 1) * query.PageSize;
 
-        IReadOnlyList<Vehicle> vehicles = await repository.ListAsync(skip, query.PageSize, cancellationToken);
-        int totalCount = await repository.CountAsync(cancellationToken);
+        IReadOnlyList<Vehicle> vehicles =
+            await repository.ListAsync(skip, query.PageSize, null, null, cancellationToken);
+        int totalCount = await repository.CountAsync(null, null, cancellationToken);
 
         VehicleResponse[] items = vehicles.Select(VehicleResponse.From).ToArray();
 
