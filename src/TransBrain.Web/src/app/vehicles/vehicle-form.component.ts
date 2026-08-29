@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -28,6 +28,9 @@ interface ProblemDetailsBody {
             <mat-form-field>
                 <mat-label>License plate</mat-label>
                 <input matInput formControlName="licensePlate" data-testid="vehicle-licensePlate" />
+                @if (form.controls.licensePlate.errors; as errors) {
+                    <mat-error data-testid="vehicle-licensePlate-error">{{ fieldErrorText(errors) }}</mat-error>
+                }
             </mat-form-field>
             <mat-form-field>
                 <mat-label>Type</mat-label>
@@ -36,14 +39,23 @@ interface ProblemDetailsBody {
                         <mat-option [value]="option">{{ option }}</mat-option>
                     }
                 </mat-select>
+                @if (form.controls.type.errors; as errors) {
+                    <mat-error data-testid="vehicle-type-error">{{ fieldErrorText(errors) }}</mat-error>
+                }
             </mat-form-field>
             <mat-form-field>
                 <mat-label>Payload (kg)</mat-label>
                 <input matInput type="number" formControlName="payloadKg" data-testid="vehicle-payloadKg" />
+                @if (form.controls.payloadKg.errors; as errors) {
+                    <mat-error data-testid="vehicle-payloadKg-error">{{ fieldErrorText(errors) }}</mat-error>
+                }
             </mat-form-field>
             <mat-form-field>
                 <mat-label>Load meters</mat-label>
                 <input matInput type="number" formControlName="loadMeters" data-testid="vehicle-loadMeters" />
+                @if (form.controls.loadMeters.errors; as errors) {
+                    <mat-error data-testid="vehicle-loadMeters-error">{{ fieldErrorText(errors) }}</mat-error>
+                }
             </mat-form-field>
             <mat-form-field>
                 <mat-label>Next inspection due</mat-label>
@@ -53,6 +65,9 @@ interface ProblemDetailsBody {
                     formControlName="nextInspectionDue"
                     data-testid="vehicle-nextInspectionDue"
                 />
+                @if (form.controls.nextInspectionDue.errors; as errors) {
+                    <mat-error data-testid="vehicle-nextInspectionDue-error">{{ fieldErrorText(errors) }}</mat-error>
+                }
             </mat-form-field>
             <button mat-raised-button type="submit" data-testid="vehicle-save">Save</button>
             <button mat-button type="button" data-testid="vehicle-cancel" (click)="cancel()">Cancel</button>
@@ -89,9 +104,24 @@ export class VehicleFormComponent {
                         loadMeters: vehicle.loadMeters,
                         nextInspectionDue: vehicle.nextInspectionDue,
                     }),
-                error: (error: HttpErrorResponse) => this.formError.set(this.describeFailure(error)),
+                error: (error: HttpErrorResponse) =>
+                    this.formError.set(this.describeFailure(error, 'The vehicle could not be loaded.')),
             });
         }
+    }
+
+    // Renders whichever error is active on a control: a server-mapped message (set via
+    // `setErrors({ server })` in applyServerErrors below) takes priority since it is the more
+    // specific, API-sourced text; a bare client-side `required` falls back to a generic
+    // message, since Validators.required carries no message of its own.
+    protected fieldErrorText(errors: ValidationErrors): string {
+        if (errors['server']) {
+            return errors['server'] as string;
+        }
+        if (errors['required']) {
+            return 'This field is required.';
+        }
+        return 'This field is invalid.';
     }
 
     protected save(): void {
@@ -143,7 +173,7 @@ export class VehicleFormComponent {
             return;
         }
 
-        this.formError.set(this.describeFailure(error));
+        this.formError.set(this.describeFailure(error, 'The vehicle could not be saved.'));
     }
 
     // No `errors` dictionary means this was not a per-field validation failure but a
@@ -151,10 +181,13 @@ export class VehicleFormComponent {
     // invariant rejected before any field-level validator ran) - `detail` is the stable,
     // human-readable message for all of those. `errorCode` (present only on the domain-
     // invariant 400 case) is available for callers that want to branch on it; none of the
-    // vehicle failures need a friendlier message than `detail` already gives.
-    private describeFailure(error: HttpErrorResponse): string {
+    // vehicle failures need a friendlier message than `detail` already gives. `fallback` is
+    // supplied per call site (loading vs. saving) - a bodyless failure (e.g. a policy-rejected
+    // 403 with no ProblemDetails at all) must not report "could not be saved" for what was
+    // actually a failed load, or vice versa.
+    private describeFailure(error: HttpErrorResponse, fallback: string): string {
         const problem = error.error as ProblemDetailsBody | null;
-        const message = problem?.detail ?? problem?.title ?? 'The vehicle could not be saved.';
+        const message = problem?.detail ?? problem?.title ?? fallback;
         return `${message} (HTTP ${error.status})`;
     }
 }

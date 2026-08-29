@@ -53,3 +53,38 @@ test('adminUser_createEditAndDeleteDriver_throughTheUi', async ({ page }) => {
     await updatedRow.getByTestId('driver-delete').click();
     await expect(page.locator('tr').filter({ hasText: lastName })).toHaveCount(0);
 });
+
+test('blankRequiredNames_showVisibleFieldErrorsOnSave', async ({ page }) => {
+    // Coordinator's Fix round 1, Finding 1: applyServerErrors called `control.setErrors(...)`
+    // but no template ever rendered a control's error, so the message never reached the user -
+    // the exact defect Task 1 of this phase exists to fix. This proves the *rendered text*,
+    // not just that setErrors was invoked: before the <mat-error> elements were added to
+    // driver-form.component.ts, this assertion failed (mat-form-field renders nothing without
+    // a <mat-error> child to project, even though the control was already invalid and touched
+    // via markAllAsTouched()) - it is not a test that would have passed regardless of the fix.
+    await page.goto('/');
+    await page.getByTestId('login').click();
+    await page.locator('#username').fill('admin.user');
+    await page.locator('#password').fill('admin');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
+
+    await page.goto('/drivers/new');
+    await expect(page.getByRole('heading', { name: 'New driver' })).toBeVisible();
+
+    // Leave firstName and lastName blank; fill everything else so only the two name fields
+    // are invalid. Client-side Validators.required blocks the submit before any HTTP call -
+    // this exercises the same previously-invisible mat-error rendering, driven by the
+    // built-in `required` error rather than a `server` one, but the rendering mechanism
+    // (and the defect that hid it) is identical for both.
+    await page.getByTestId('driver-licenseClass-C').click();
+    await page.getByTestId('driver-licenseValidUntil').fill('2028-06-30');
+    await page.getByTestId('driver-save').click();
+
+    // The invalid submit must not navigate away.
+    await expect(page.getByRole('heading', { name: 'New driver' })).toBeVisible();
+    await expect(page.getByTestId('driver-firstName-error')).toBeVisible();
+    await expect(page.getByTestId('driver-firstName-error')).toHaveText(/required/i);
+    await expect(page.getByTestId('driver-lastName-error')).toBeVisible();
+    await expect(page.getByTestId('driver-lastName-error')).toHaveText(/required/i);
+});

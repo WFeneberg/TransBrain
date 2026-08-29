@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -27,10 +27,16 @@ interface ProblemDetailsBody {
             <mat-form-field>
                 <mat-label>First name</mat-label>
                 <input matInput formControlName="firstName" data-testid="driver-firstName" />
+                @if (form.controls.firstName.errors; as errors) {
+                    <mat-error data-testid="driver-firstName-error">{{ fieldErrorText(errors) }}</mat-error>
+                }
             </mat-form-field>
             <mat-form-field>
                 <mat-label>Last name</mat-label>
                 <input matInput formControlName="lastName" data-testid="driver-lastName" />
+                @if (form.controls.lastName.errors; as errors) {
+                    <mat-error data-testid="driver-lastName-error">{{ fieldErrorText(errors) }}</mat-error>
+                }
             </mat-form-field>
             <fieldset>
                 <legend>License classes</legend>
@@ -45,6 +51,15 @@ interface ProblemDetailsBody {
                         {{ licenseClass }}
                     </label>
                 }
+                @if (attemptedSubmit() && form.controls.licenseClasses.invalid) {
+                    <!-- Not a mat-form-field, so it has no built-in errorState gating (which
+                         hides mat-error until the control is touched or the form submitted) -
+                         attemptedSubmit reproduces that gating manually, so this doesn't show
+                         "required" before the user has done anything. -->
+                    <p data-testid="driver-licenseClasses-error">
+                        {{ fieldErrorText(form.controls.licenseClasses.errors!) }}
+                    </p>
+                }
             </fieldset>
             <mat-form-field>
                 <mat-label>License valid until</mat-label>
@@ -54,6 +69,9 @@ interface ProblemDetailsBody {
                     formControlName="licenseValidUntil"
                     data-testid="driver-licenseValidUntil"
                 />
+                @if (form.controls.licenseValidUntil.errors; as errors) {
+                    <mat-error data-testid="driver-licenseValidUntil-error">{{ fieldErrorText(errors) }}</mat-error>
+                }
             </mat-form-field>
             <button mat-raised-button type="submit" data-testid="driver-save">Save</button>
             <button mat-button type="button" data-testid="driver-cancel" (click)="cancel()">Cancel</button>
@@ -70,6 +88,9 @@ export class DriverFormComponent {
     protected readonly driverId = this.route.snapshot.paramMap.get('id');
     protected readonly isEditMode = this.driverId !== null;
     protected readonly formError = signal<string | null>(null);
+    // Gates the licenseClasses paragraph the same way Material's errorState gates mat-error
+    // for the other fields (hidden until touched/submitted) - see the template comment.
+    protected readonly attemptedSubmit = signal(false);
     private externalUserId: string | null = null;
 
     protected readonly form = this.fb.nonNullable.group({
@@ -91,9 +112,21 @@ export class DriverFormComponent {
                         licenseValidUntil: driver.licenseValidUntil,
                     });
                 },
-                error: (error: HttpErrorResponse) => this.formError.set(this.describeFailure(error)),
+                error: (error: HttpErrorResponse) =>
+                    this.formError.set(this.describeFailure(error, 'The driver could not be loaded.')),
             });
         }
+    }
+
+    // See VehicleFormComponent.fieldErrorText for the full reasoning.
+    protected fieldErrorText(errors: ValidationErrors): string {
+        if (errors['server']) {
+            return errors['server'] as string;
+        }
+        if (errors['required']) {
+            return 'This field is required.';
+        }
+        return 'This field is invalid.';
     }
 
     protected isLicenseClassSelected(licenseClass: string): boolean {
@@ -110,6 +143,7 @@ export class DriverFormComponent {
 
     protected save(): void {
         this.formError.set(null);
+        this.attemptedSubmit.set(true);
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             return;
@@ -152,15 +186,16 @@ export class DriverFormComponent {
             return;
         }
 
-        this.formError.set(this.describeFailure(error));
+        this.formError.set(this.describeFailure(error, 'The driver could not be saved.'));
     }
 
     // No `errors` dictionary means a domain-level failure (404, 409, or a rejected domain
     // invariant) rather than a per-field one - `detail` is the stable, human-readable message
-    // for all of those. See VehicleFormComponent.describeFailure for the full reasoning.
-    private describeFailure(error: HttpErrorResponse): string {
+    // for all of those. `fallback` is supplied per call site (loading vs. saving) - see
+    // VehicleFormComponent.describeFailure for why a shared fallback string is wrong.
+    private describeFailure(error: HttpErrorResponse, fallback: string): string {
         const problem = error.error as ProblemDetailsBody | null;
-        const message = problem?.detail ?? problem?.title ?? 'The driver could not be saved.';
+        const message = problem?.detail ?? problem?.title ?? fallback;
         return `${message} (HTTP ${error.status})`;
     }
 }
