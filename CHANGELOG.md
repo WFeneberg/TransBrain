@@ -27,4 +27,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - German-language operator guides for both frontends (`docs/BEDIENUNG_TRANSBRAIN_WEB.md`, `docs/BEDIENUNG_TRANSBRAIN_VUEWEB.md`)
 
 ### Changed
-- The API's response language (FluentValidation's validation messages) is now pinned to English (invariant culture) at startup, rather than following the host machine's ambient culture; see README.md's "API response language" section for the one line to change to switch to German instead
+- The API's response language (FluentValidation's validation messages) is now pinned to English (invariant culture) at startup, rather than following the host machine's ambient culture; see README.md's "API response language" section for the two lines to change together to switch to German instead

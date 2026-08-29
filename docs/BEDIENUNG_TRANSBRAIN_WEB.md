@@ -9,6 +9,17 @@ auf Englisch, da die Anwendung noch nicht lokalisiert ist. Diese Anleitung ist a
 verfasst, nennt aber die tatsächlichen englischen Beschriftungen, damit sie zu dem passt,
 was auf dem Bildschirm zu sehen ist.
 
+> **Achtung — Entwicklungsumgebung, keine Daten bleiben erhalten:** Bei jedem Neustart
+> von `dotnet run --project src/TransBrain.AppHost` beginnt die Anwendung mit einer
+> **leeren Datenbank**. Postgres und Keycloak haben in dieser Umgebung absichtlich kein
+> dauerhaftes Datenlaufwerk — Postgres führt bei jedem Start alle Migrationen neu von
+> Grund auf aus, und Keycloak importiert die Realm-Konfiguration erneut aus der Datei.
+> Das macht jeden Start reproduzierbar, bedeutet aber auch: **Jedes Fahrzeug, jeder
+> Fahrer und jede Änderung, die Sie über die Keycloak-Verwaltungskonsole vornehmen, geht
+> beim nächsten Neustart verloren.** Tragen Sie hier keine Daten ein, auf deren
+> Fortbestand Sie sich verlassen — das gilt auch für eine ganze Vormittagsarbeit an
+> Stammdaten.
+
 ## Voraussetzungen
 
 - Der gesamte Stack läuft (`dotnet run --project src/TransBrain.AppHost`), siehe

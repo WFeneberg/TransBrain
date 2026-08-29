@@ -14,13 +14,13 @@ using TransBrain.Infrastructure.Persistence;
 using TransBrain.ServiceDefaults;
 
 // FluentValidation resolves its built-in error messages from the ambient thread culture, so
-// without this line the same request answers in German on a German-locale developer machine
-// and in English in CI, which is non-determinism, not a language choice. Pinned to English
-// (invariant culture) here so behaviour is identical everywhere and matches this codebase's
-// English-for-code convention. This is NOT a final decision that the API's product-facing
-// language is English — TransBrain is a German haulier and that may change. See README.md,
-// section "API response language", for the one line to flip to switch validation messages to
-// German instead.
+// without these two lines the same request answers in German on a German-locale developer
+// machine and in English in CI, which is non-determinism, not a language choice. Pinned to
+// English (invariant culture) here so behaviour is identical everywhere and matches this
+// codebase's English-for-code convention. This is NOT a final decision that the API's
+// product-facing language is English — TransBrain is a German haulier and that may change.
+// See README.md, section "API response language", for the two lines below to flip together
+// to switch validation messages to German instead.
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 

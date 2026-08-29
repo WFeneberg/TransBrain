@@ -39,6 +39,10 @@ jobs:
             exit 1
           fi
           line_rate=$(grep -o 'line-rate="[0-9.]*"' "$report" | head -1 | grep -o '[0-9.]*')
+          if [ -z "$line_rate" ]; then
+            echo "Could not read a line-rate attribute from $report (malformed or unexpected cobertura XML)" >&2
+            exit 1
+          fi
           awk -v rate="$line_rate" 'BEGIN {
             pct = rate * 100
             printf "Application layer line coverage: %.2f%%\n", pct
