@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using TransBrain.Api.Authorization;
@@ -109,6 +110,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorizationBuilder()
+    // Fail closed: an endpoint that forgets RequireAuthorization is refused rather than
+    // silently public. The infrastructure endpoints below opt out explicitly.
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
     .AddPolicy(Policies.MasterDataWrite, policy => policy.RequireRole("admin"))
     .AddPolicy(Policies.DispatchWrite, policy => policy.RequireRole("admin", "disponent"))
     .AddPolicy(Policies.TourStatusWrite, policy => policy.RequireRole("admin", "disponent", "fahrer"))
@@ -124,8 +128,8 @@ app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapOpenApi().AllowAnonymous();
+    app.MapScalarApiReference().AllowAnonymous();
 
     // No retry here: this assumes PostgreSQL is already reachable. Aspire's WaitFor in the
     // AppHost (Task 11) is what guarantees the database is up before the Api starts, so a

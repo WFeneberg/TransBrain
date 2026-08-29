@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
@@ -113,14 +114,18 @@ public static class Extensions
         // See https://aka.ms/aspire/healthchecks for details before enabling these endpoints in non-development environments.
         if (app.Environment.IsDevelopment())
         {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks(HealthEndpointPath);
+            // All health checks must pass for app to be considered ready to accept traffic after starting.
+            // AllowAnonymous: consumers (Aspire, container orchestrators, uptime probes) call this
+            // without a token, and the API's fallback authorization policy requires an authenticated
+            // user by default. Without this, a fallback policy turns /health into a 401 and Aspire
+            // reads that as an unhealthy resource.
+            app.MapHealthChecks(HealthEndpointPath).AllowAnonymous();
 
             // Only health checks tagged with the "live" tag must pass for app to be considered alive
             app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
             {
                 Predicate = r => r.Tags.Contains("live")
-            });
+            }).AllowAnonymous();
         }
 
         return app;
