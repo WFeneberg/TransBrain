@@ -15,9 +15,15 @@ public static class ResultExtensions
 
         return error.Type switch
         {
-            ErrorType.Validation => Results.ValidationProblem(
-                new Dictionary<string, string[]> { [error.Code] = [error.Message] },
-                title: "Validation failed"),
+            ErrorType.Validation => error.Failures is { Count: > 0 }
+                ? Results.ValidationProblem(
+                    error.Failures.ToDictionary(kv => kv.Key, kv => kv.Value),
+                    title: "Validation failed")
+                : Results.Problem(
+                    title: "Validation failed",
+                    detail: error.Message,
+                    statusCode: StatusCodes.Status400BadRequest,
+                    extensions: new Dictionary<string, object?> { ["errorCode"] = error.Code }),
             ErrorType.NotFound => Results.Problem(title: error.Code, detail: error.Message, statusCode: 404),
             ErrorType.Conflict => Results.Problem(title: error.Code, detail: error.Message, statusCode: 409),
             ErrorType.Forbidden => Results.Problem(title: error.Code, detail: error.Message, statusCode: 403),

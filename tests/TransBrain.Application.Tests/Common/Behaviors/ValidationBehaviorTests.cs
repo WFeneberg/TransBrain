@@ -52,7 +52,8 @@ public class ValidationBehaviorTests
         nextCalled.Should().BeFalse();
         result.IsSuccess.Should().BeFalse();
         result.Error!.Type.Should().Be(ErrorType.Validation);
-        result.Error.Code.Should().Be("Name");
+        result.Error.Failures.Should().NotBeNull();
+        result.Error.Failures!.Should().ContainKey("Name");
     }
 
     [Fact]
@@ -66,5 +67,54 @@ public class ValidationBehaviorTests
             CancellationToken.None);
 
         result.Value.Should().Be("done");
+    }
+
+    public sealed record TwoFieldCommand(string Name, string City) : ICommand<string>;
+
+    public sealed class TwoFieldCommandValidator : AbstractValidator<TwoFieldCommand>
+    {
+        public TwoFieldCommandValidator()
+        {
+            RuleFor(c => c.Name).NotEmpty();
+            RuleFor(c => c.City).NotEmpty();
+        }
+    }
+
+    [Fact]
+    public async Task Handle_TwoInvalidFields_ReportsBothKeyedByFieldName()
+    {
+        ValidationBehavior<TwoFieldCommand, string> behavior = new([new TwoFieldCommandValidator()]);
+
+        Result<string> result = await behavior.Handle(
+            new TwoFieldCommand(string.Empty, string.Empty),
+            () => Task.FromResult(Result<string>.Success("done")),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Validation);
+        result.Error.Failures.Should().NotBeNull();
+        result.Error.Failures!.Keys.Should().BeEquivalentTo(["Name", "City"]);
+    }
+
+    [Fact]
+    public async Task Handle_OneFieldWithTwoRuleFailures_GroupsBothMessagesUnderThatField()
+    {
+        ValidationBehavior<TwoFieldCommand, string> behavior = new([new TwoRuleValidator()]);
+
+        Result<string> result = await behavior.Handle(
+            new TwoFieldCommand("x", "ok"),
+            () => Task.FromResult(Result<string>.Success("done")),
+            CancellationToken.None);
+
+        result.Error!.Failures!["Name"].Should().HaveCount(2);
+    }
+
+    public sealed class TwoRuleValidator : AbstractValidator<TwoFieldCommand>
+    {
+        public TwoRuleValidator()
+        {
+            RuleFor(c => c.Name).MinimumLength(3);
+            RuleFor(c => c.Name).Matches("^[A-Z]");
+        }
     }
 }

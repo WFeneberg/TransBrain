@@ -31,7 +31,13 @@ public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidat
             return await next();
         }
 
-        ValidationFailure first = failures[0];
-        return Error.Validation(first.PropertyName, first.ErrorMessage);
+        Dictionary<string, string[]> grouped = failures
+            .GroupBy(f => f.PropertyName, StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(f => f.ErrorMessage).ToArray(),
+                StringComparer.Ordinal);
+
+        return Error.ValidationFailures(grouped);
     }
 }
