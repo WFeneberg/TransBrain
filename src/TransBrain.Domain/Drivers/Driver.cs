@@ -153,4 +153,28 @@ public sealed class Driver
 
     private static string? NormalizeExternalUserId(string? externalUserId) =>
         string.IsNullOrWhiteSpace(externalUserId) ? null : externalUserId.Trim();
+
+    // EF Core maps this shadow-ish projection rather than the collection itself: the licence
+    // classes are a small fixed set, so a comma-separated column is cheaper than a child table.
+    // Sorted on write so an unchanged driver never produces a spurious UPDATE.
+    private string LicenseClassesRaw
+    {
+        get => string.Join(',', _licenseClasses.Select(c => c.ToString()).OrderBy(c => c, StringComparer.Ordinal));
+        set
+        {
+            _licenseClasses.Clear();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            foreach (string part in value.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (Enum.TryParse(part, out LicenseClass parsed) && Enum.IsDefined(parsed))
+                {
+                    _licenseClasses.Add(parsed);
+                }
+            }
+        }
+    }
 }
