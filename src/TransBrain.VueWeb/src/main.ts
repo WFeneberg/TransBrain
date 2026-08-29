@@ -10,6 +10,8 @@ import VehicleList from './views/VehicleList.vue';
 import VehicleForm from './views/VehicleForm.vue';
 import DriverList from './views/DriverList.vue';
 import DriverForm from './views/DriverForm.vue';
+import OrderList from './views/OrderList.vue';
+import OrderForm from './views/OrderForm.vue';
 import AuthCallback from './views/AuthCallback.vue';
 
 const router = createRouter({
@@ -29,6 +31,9 @@ const router = createRouter({
         { path: '/drivers', component: DriverList },
         { path: '/drivers/new', component: DriverForm },
         { path: '/drivers/:id', component: DriverForm },
+        { path: '/orders', component: OrderList },
+        { path: '/orders/new', component: OrderForm },
+        { path: '/orders/:id', component: OrderForm },
         { path: '/callback', component: AuthCallback },
     ],
 });
