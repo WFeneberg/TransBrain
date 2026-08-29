@@ -13,6 +13,7 @@ public sealed class TestAuthHandler(
 {
     public const string SchemeName = "TestScheme";
     public const string RolesHeader = "X-Test-Roles";
+    public const string SubjectHeader = "X-Test-Subject";
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -21,10 +22,22 @@ public sealed class TestAuthHandler(
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 
+        // Defaults to the old constant so every existing test keeps its current identity; only
+        // a test that sets the header gets a different subject.
+        string subject = Request.Headers.TryGetValue(
+                             SubjectHeader, out Microsoft.Extensions.Primitives.StringValues header)
+                         && !string.IsNullOrWhiteSpace(header)
+            ? header.ToString()
+            : "test-user";
+
         Claim[] claims =
         [
-            new(ClaimTypes.NameIdentifier, "test-user"),
-            new(ClaimTypes.Name, "test-user"),
+            new(ClaimTypes.NameIdentifier, subject),
+            new(ClaimTypes.Name, subject),
+            // The Api's HttpContextCurrentUser reads "sub" first and only falls back to
+            // NameIdentifier, so the driver-scoping path is exercised through the same claim
+            // Keycloak actually issues rather than through the fallback.
+            new("sub", subject),
             .. roles.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Select(role => new Claim(ClaimTypes.Role, role))
         ];

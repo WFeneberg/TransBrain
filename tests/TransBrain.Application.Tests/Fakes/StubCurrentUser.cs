@@ -12,5 +12,7 @@ public sealed class StubCurrentUser(string? userId, params string[] roles) : ICu
 
     public static StubCurrentUser Admin() => new("admin-sub", "admin");
 
+    public static StubCurrentUser Viewer() => new("viewer-sub", "viewer");
+
     public static StubCurrentUser DriverWith(string externalUserId) => new(externalUserId, "fahrer");
 }

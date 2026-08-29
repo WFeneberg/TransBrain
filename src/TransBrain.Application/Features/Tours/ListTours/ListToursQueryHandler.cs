@@ -32,7 +32,7 @@ internal sealed class ListToursQueryHandler(
         // Overwriting would answer a different question than the one asked: a driver who filters
         // on a colleague's id would get their own tours back, looking like the filter had worked.
         // An empty page is the truthful answer to "this colleague's tours, among mine".
-        if (!currentUser.IsInRole(TourAccess.AdminRole) && !currentUser.IsInRole(TourAccess.DispatcherRole))
+        if (TourAccess.IsDriverOnly(currentUser))
         {
             Driver? me = await FindDriverForCallerAsync(cancellationToken);
 

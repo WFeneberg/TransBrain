@@ -195,4 +195,23 @@ public class ListToursQueryHandlerTests
         result.Value.Items.Should().BeEmpty();
         result.Value.TotalCount.Should().Be(0);
     }
+
+    // Spec §9 narrows the fahrer row and only that row: a viewer reads everything. An earlier
+    // version of the handler scoped "anyone who is not admin or disponent", which silently gave
+    // every viewer an empty list.
+    [Fact]
+    public async Task Handle_AsViewer_SeesEveryTour()
+    {
+        Scene scene = EmptyScene();
+        Driver one = AddDriver(scene, "Eins", "sub-one");
+        Driver two = AddDriver(scene, "Zwei", "sub-two");
+        AddTour(scene, March1, AddVehicle(scene, "M-AA 9001"), one);
+        AddTour(scene, March1, AddVehicle(scene, "M-AA 9002"), two);
+
+        Result<PagedResult<TourResponse>> result = await scene.Handler(StubCurrentUser.Viewer())
+            .Handle(new ListToursQuery(), CancellationToken.None);
+
+        result.Value.Items.Should().HaveCount(2);
+        result.Value.TotalCount.Should().Be(2);
+    }
 }

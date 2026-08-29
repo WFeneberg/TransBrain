@@ -32,9 +32,20 @@ internal static class TourAccess
             "A driver may only start or complete their own tours.");
     }
 
+    /// <summary>
+    /// True when the caller is scoped to their own tours: spec §9 narrows the fahrer row and
+    /// ONLY that row. A viewer reads everything, which is why this asks for the driver role
+    /// rather than merely excluding admin and disponent — an early version excluded, and a
+    /// viewer listing tours then saw an empty page.
+    /// </summary>
+    public static bool IsDriverOnly(ICurrentUser currentUser) =>
+        currentUser.IsInRole(DriverRole)
+        && !currentUser.IsInRole(AdminRole)
+        && !currentUser.IsInRole(DispatcherRole);
+
     public static bool MaySee(Tour tour, Driver driver, ICurrentUser currentUser)
     {
-        if (currentUser.IsInRole(AdminRole) || currentUser.IsInRole(DispatcherRole))
+        if (!IsDriverOnly(currentUser))
         {
             return true;
         }

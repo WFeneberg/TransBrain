@@ -65,4 +65,17 @@ public class GetTourByIdQueryHandlerTests
         result.Error!.Type.Should().Be(ErrorType.Forbidden);
         result.Error.Code.Should().Be("Tour.NotYours");
     }
+
+    // A viewer may read any tour - the fahrer row is the only one spec §9 narrows.
+    [Fact]
+    public async Task Handle_AsViewer_ReturnsTour()
+    {
+        TourFixture f = TourFixture.Create(driverExternalUserId: "driver-sub");
+
+        Result<TourResponse> result = await Handler(f, StubCurrentUser.Viewer())
+            .Handle(new GetTourByIdQuery(f.Tour.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Id.Should().Be(f.Tour.Id);
+    }
 }

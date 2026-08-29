@@ -25,6 +25,22 @@ public sealed class TransBrainApiFactory : WebApplicationFactory<Program>, IAsyn
         return client;
     }
 
+    /// <summary>
+    /// A client that is a SPECIFIC user, not just some holder of a role — needed by the tour
+    /// tests, where a driver may only touch their own tours.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not an overload of <see cref="CreateClientAs"/>: a
+    /// <c>CreateClientAs(string, params string[])</c> would be ambiguous with the params-only
+    /// version at every single-string call site.
+    /// </remarks>
+    public HttpClient CreateClientAsSubject(string subject, params string[] roles)
+    {
+        HttpClient client = CreateClientAs(roles);
+        client.DefaultRequestHeaders.Add(TestAuthHandler.SubjectHeader, subject);
+        return client;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Environments.Development);
