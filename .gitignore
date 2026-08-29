@@ -430,3 +430,6 @@ FodyWeavers.xsd
 
 # Superpowers SDD scratch workspace
 .superpowers/
+
+.idea/
+.junie/
