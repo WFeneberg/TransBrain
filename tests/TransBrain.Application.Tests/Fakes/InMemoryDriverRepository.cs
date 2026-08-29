@@ -23,6 +23,9 @@ public sealed class InMemoryDriverRepository : IDriverRepository
     public Task<Driver?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         => Task.FromResult(_drivers.SingleOrDefault(d => d.Id == id));
 
+    public Task<Driver?> GetByExternalUserIdAsync(string externalUserId, CancellationToken cancellationToken)
+        => Task.FromResult(_drivers.SingleOrDefault(d => d.ExternalUserId == externalUserId));
+
     // Ordinal ordering, matching the EF repository's column collation. The fake must not
     // define a different notion of "sorted" from the one production uses.
     public Task<IReadOnlyList<Driver>> ListAsync(

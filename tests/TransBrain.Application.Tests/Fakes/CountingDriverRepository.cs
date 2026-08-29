@@ -20,6 +20,9 @@ public sealed class CountingDriverRepository : IDriverRepository
     public Task<Driver?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         => _inner.GetByIdAsync(id, cancellationToken);
 
+    public Task<Driver?> GetByExternalUserIdAsync(string externalUserId, CancellationToken cancellationToken)
+        => _inner.GetByExternalUserIdAsync(externalUserId, cancellationToken);
+
     public Task<IReadOnlyList<Driver>> ListAsync(
         int skip, int take, DriverStatus? status, CancellationToken cancellationToken)
     {

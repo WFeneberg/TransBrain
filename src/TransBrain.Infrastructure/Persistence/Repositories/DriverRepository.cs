@@ -32,6 +32,11 @@ internal sealed class DriverRepository(TransBrainDbContext context) : IDriverRep
     public Task<Driver?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         => context.Drivers.SingleOrDefaultAsync(d => d.Id == id, cancellationToken);
 
+    // Backed by the unique filtered index Phase 2 added on ExternalUserId, so this is an index
+    // seek and can match at most one driver - which is what makes SingleOrDefault safe here.
+    public Task<Driver?> GetByExternalUserIdAsync(string externalUserId, CancellationToken cancellationToken)
+        => context.Drivers.SingleOrDefaultAsync(d => d.ExternalUserId == externalUserId, cancellationToken);
+
     public async Task<IReadOnlyList<Driver>> ListAsync(
         int skip, int take, DriverStatus? status, CancellationToken cancellationToken)
         => await Filter(status)
