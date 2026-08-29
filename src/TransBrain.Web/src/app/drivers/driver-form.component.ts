@@ -5,6 +5,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Router } from '@angular/router';
+import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { shareReplay, switchMap } from 'rxjs';
 import { Driver, DriverService, DriverWriteRequest } from './driver.service';
 
 interface ProblemDetailsBody {
@@ -83,6 +85,14 @@ export class DriverFormComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
+    private readonly oidc = inject(OidcSecurityService);
+
+    // angular-auth-oidc-client only hydrates its stored session when checkAuth() runs, and until
+    // it has, the auth interceptor attaches no access token. The list components call it; a form
+    // reached by a DIRECT navigation - a bookmark, a page reload while editing, browser back -
+    // has no list component in its lifetime, so saving answered 401 to a plainly signed-in user.
+    // shareReplay(1) so the check runs once and both the load and the save share its result.
+    private readonly session = this.oidc.checkAuth().pipe(shareReplay(1));
 
     protected readonly licenseClassOptions = ['B', 'C1', 'C', 'CE'];
     protected readonly driverId = this.route.snapshot.paramMap.get('id');
@@ -102,7 +112,7 @@ export class DriverFormComponent {
 
     constructor() {
         if (this.isEditMode) {
-            this.service.getById(this.driverId!).subscribe({
+            this.session.pipe(switchMap(() => this.service.getById(this.driverId!))).subscribe({
                 next: (driver: Driver) => {
                     this.externalUserId = driver.externalUserId;
                     this.form.patchValue({
@@ -150,9 +160,11 @@ export class DriverFormComponent {
         }
 
         const request: DriverWriteRequest = { ...this.form.getRawValue(), externalUserId: this.externalUserId };
-        const save$ = this.isEditMode
-            ? this.service.update(this.driverId!, request)
-            : this.service.create(request);
+        const save$ = this.session.pipe(
+            switchMap(() => (this.isEditMode
+                ? this.service.update(this.driverId!, request)
+                : this.service.create(request))),
+        );
 
         save$.subscribe({
             next: () => this.router.navigateByUrl('/drivers'),

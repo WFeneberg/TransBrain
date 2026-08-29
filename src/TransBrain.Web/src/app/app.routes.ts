@@ -6,6 +6,9 @@ const loadDriverList = () => import('./drivers/driver-list.component').then((m) 
 const loadDriverForm = () => import('./drivers/driver-form.component').then((m) => m.DriverFormComponent);
 const loadOrderList = () => import('./orders/order-list.component').then((m) => m.OrderListComponent);
 const loadOrderForm = () => import('./orders/order-form.component').then((m) => m.OrderFormComponent);
+const loadTourList = () => import('./tours/tour-list.component').then((m) => m.TourListComponent);
+const loadTourForm = () => import('./tours/tour-form.component').then((m) => m.TourFormComponent);
+const loadTourDetail = () => import('./tours/tour-detail.component').then((m) => m.TourDetailComponent);
 
 export const routes: Routes = [
     // angular-auth-oidc-client's checkAuth() detects the OIDC callback by comparing the
@@ -28,4 +31,7 @@ export const routes: Routes = [
     { path: 'orders', loadComponent: loadOrderList },
     { path: 'orders/new', loadComponent: loadOrderForm },
     { path: 'orders/:id', loadComponent: loadOrderForm },
+    { path: 'tours', loadComponent: loadTourList },
+    { path: 'tours/new', loadComponent: loadTourForm },
+    { path: 'tours/:id', loadComponent: loadTourDetail },
 ];

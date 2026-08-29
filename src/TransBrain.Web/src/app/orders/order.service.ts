@@ -50,10 +50,25 @@ export interface PagedResult<T> {
 export class OrderService {
     private readonly http = inject(HttpClient);
 
-    list(status?: string | null): Observable<PagedResult<Order>> {
+    /**
+     * @param pageSize Orders come back sorted by order number ASCENDING, so the default page of
+     * 20 is the twenty OLDEST matches. A caller that needs to choose among current orders — the
+     * tour detail's assignable-order picker — must ask for more. The API caps this at 100; a
+     * haulier with more than 100 open drafts will need a searchable picker, not a bigger page.
+     */
+    list(status?: string | null, pageSize?: number, page?: number): Observable<PagedResult<Order>> {
         // An omitted `status` must not become the string "null"/"undefined" in the query
         // string: the API rejects an unknown status with a 400 rather than ignoring it.
-        const params = status ? new HttpParams().set('status', status) : new HttpParams();
+        let params = new HttpParams();
+        if (status) {
+            params = params.set('status', status);
+        }
+        if (pageSize) {
+            params = params.set('pageSize', String(pageSize));
+        }
+        if (page) {
+            params = params.set('page', String(page));
+        }
         return this.http.get<PagedResult<Order>>('/api/orders', { params });
     }
 
