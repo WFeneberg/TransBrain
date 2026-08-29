@@ -9,6 +9,7 @@ using Scalar.AspNetCore;
 using TransBrain.Api.Authorization;
 using TransBrain.Api.Endpoints;
 using TransBrain.Application;
+using TransBrain.Application.Abstractions;
 using TransBrain.Infrastructure;
 using TransBrain.Infrastructure.Persistence;
 using TransBrain.ServiceDefaults;
@@ -40,6 +41,11 @@ else
 {
     builder.Services.AddDistributedMemoryCache();
 }
+
+// Scoped, because HttpContext is: this is how the Application layer learns who is calling,
+// which spec §9's "a driver only touches their own tours" rule needs.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
