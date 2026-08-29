@@ -115,13 +115,16 @@ public static class Extensions
         if (app.Environment.IsDevelopment())
         {
             // All health checks must pass for app to be considered ready to accept traffic after starting.
-            // AllowAnonymous: consumers (Aspire, container orchestrators, uptime probes) call this
-            // without a token, and the API's fallback authorization policy requires an authenticated
-            // user by default. Without this, a fallback policy turns /health into a 401 and Aspire
-            // reads that as an unhealthy resource.
+            // AllowAnonymous: this must stay reachable without a token because Aspire's health probes
+            // carry none. The API sets a fallback authorization policy requiring an authenticated user,
+            // so if this exemption is ever "tightened" away, /health starts returning 401, Aspire reads
+            // that as an unhealthy resource, and the whole stack hangs waiting on it with nothing naming
+            // the cause.
             app.MapHealthChecks(HealthEndpointPath).AllowAnonymous();
 
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
+            // Only health checks tagged with the "live" tag must pass for app to be considered alive.
+            // AllowAnonymous: same reason as above - Aspire's liveness probe has no token either, and
+            // removing this exemption would make /alive start returning 401 the same way.
             app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
             {
                 Predicate = r => r.Tags.Contains("live")
