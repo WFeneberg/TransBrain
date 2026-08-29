@@ -27,7 +27,7 @@ This file provides guidance to KI Agent (claude.ai/code, Github Copilot, Jetbrai
 - Vue 3 (Composition API, `<script setup lang="ts">`), Vite, TypeScript
 - Vuetify (`@vuetify`) for components/styling, Pinia for state, Vue Router for routing, axios for HTTP
 - Dev server on port 4300 (already allowed by the Api's CORS config)
-- Same functionality as FeWoBrain.Web / FeWoBrain.BlazorWeb, against the same FeWoBrain.Api
+- Same functionality as TransBrain.Web, against the same TransBrain.Api
 - Node.js >=26.4.0 required
 
 ## Code Conventions
@@ -48,7 +48,7 @@ This file provides guidance to KI Agent (claude.ai/code, Github Copilot, Jetbrai
 - Use Testcontainers for integration tests
 - WebApplicationFactory for API tests
 - Minimum 80% coverage in the Application layer
-- Playwright e2e tests live in `<project>/e2e/*.spec.ts` for all three frontends and GuestInfo, run via `npm run e2e`; they run in CI (`.github/workflows/ci.yml`)
+- Playwright e2e tests live in `<project>/e2e/*.spec.ts` for all frontends, run via `npm run e2e`; they run in CI (`.github/workflows/ci.yml`)
 - K6 load tests (`k6/`) run manually against a running environment (not in CI); see `k6/README.md`
 
 ## Git
