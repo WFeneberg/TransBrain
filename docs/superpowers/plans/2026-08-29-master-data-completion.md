@@ -2546,7 +2546,18 @@ Register in `AddInfrastructure`: `services.AddScoped<ICacheService, RedisCacheSe
 
 - [ ] **Step 5: Wire the handlers**
 
-Both list handlers gain an `ICacheService` parameter, build their key from every query parameter, return a cache hit when present, and store the result otherwise. All six write handlers — create, update and delete for each aggregate — call `RemoveByPrefixAsync` with their aggregate's prefix after a successful write, and only after.
+Both list handlers gain an `ICacheService` parameter, build their key from every query
+parameter, return a cache hit when present, and store the result otherwise. All six write
+handlers — create, update and delete for each aggregate — call `RemoveByPrefixAsync` with
+their aggregate's prefix after a successful write, and only after.
+
+**Expect the compiler to break older tests, and fix them here.** Every handler test written
+in Tasks 4, 5, 6, 9 and 10 constructs its handler directly as `new(repository)`. Those calls
+stop compiling the moment the constructor takes a second argument. Update each one to pass an
+`InMemoryCacheService`; that is expected work for this task, not a sign something is wrong.
+Do NOT make the cache parameter optional to keep the old call sites compiling — a dependency
+that silently does nothing when omitted is how cache invalidation quietly stops happening in
+production.
 
 - [ ] **Step 6: Run the whole suite and commit**
 
@@ -2665,7 +2676,11 @@ CHANGELOG under `[Unreleased]`: the Driver aggregate, vehicle CRUD completion, l
 
 - [ ] **Step 5: Correct AGENTS.md**
 
-It still says three frontends and `FeWoBrain` in places, still names FluentAssertions, and claims Playwright runs in CI — which it does not. Fix all four. There is a pre-existing uncommitted partial edit in the working tree; incorporate it rather than reverting it, and check with the human partner if its intent is unclear.
+It still names FluentAssertions, and still claims Playwright e2e tests "run in CI" — which
+they do not; `.github/workflows/ci.yml` says so explicitly and the reason is that there is no
+headless Aspire startup path. Fix both, and check the file for any remaining `FeWoBrain`
+references from the predecessor project. The user already corrected part of this themselves
+in commit 0b9c108, so read the current file rather than assuming its state.
 
 - [ ] **Step 6: Commit**
 
