@@ -3,7 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
-import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { SessionService } from '../auth/session.service';
 import { Driver, DriverService } from './driver.service';
 
 /**
@@ -19,9 +19,11 @@ const LIST_PAGE_SIZE = 100;
     standalone: true,
     imports: [MatTableModule, MatButtonModule, RouterLink],
     template: `
-        @if (isAuthenticated()) {
+        @if (session.isAuthenticated()) {
             <h1>Drivers</h1>
-            <a mat-raised-button routerLink="/drivers/new" data-testid="driver-add">Add driver</a>
+            @if (session.can('masterData.write')) {
+                <a mat-raised-button routerLink="/drivers/new" data-testid="driver-add">Add driver</a>
+            }
             @if (actionError(); as message) {
                 <p data-testid="driver-action-error">{{ message }}</p>
             }
@@ -57,39 +59,27 @@ const LIST_PAGE_SIZE = 100;
                 </table>
             }
         } @else {
-            @if (errorMessage(); as message) {
-                <p data-testid="driver-list-error">{{ message }}</p>
-            }
-            <button mat-raised-button data-testid="login" (click)="login()">Sign in</button>
+            <p>Please sign in to see the drivers.</p>
         }
     `,
 })
 export class DriverListComponent {
     private readonly service = inject(DriverService);
-    private readonly oidc = inject(OidcSecurityService);
+    protected readonly session = inject(SessionService);
 
     protected readonly columns = ['lastName', 'firstName', 'licenseClasses', 'status', 'actions'];
     protected readonly drivers = signal<Driver[]>([]);
-    protected readonly isAuthenticated = signal(false);
     protected readonly errorMessage = signal<string | null>(null);
     // Separate from errorMessage: a failed delete must not hide the table the way a failed
     // list load does (mirrors VehicleListComponent's actionError - see that file for why).
     protected readonly actionError = signal<string | null>(null);
 
     constructor() {
-        this.oidc.checkAuth().subscribe({
-            next: ({ isAuthenticated }) => {
-                this.isAuthenticated.set(isAuthenticated);
-                if (isAuthenticated) {
-                    this.refresh();
-                }
-            },
-            error: () => this.errorMessage.set('Could not verify your sign-in status. Please try signing in again.'),
+        this.session.ready.subscribe((isAuthenticated) => {
+            if (isAuthenticated) {
+                this.refresh();
+            }
         });
-    }
-
-    protected login(): void {
-        this.oidc.authorize();
     }
 
     // See VehicleListComponent.delete for why these actions are shown to every authenticated

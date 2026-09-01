@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { signIn } from './login';
 
 test('adminUser_createEditAndDeleteDriver_throughTheUi', async ({ page }) => {
     // The OIDC redirectUrl is always the origin ('/'), regardless of the page login was
@@ -7,17 +8,7 @@ test('adminUser_createEditAndDeleteDriver_throughTheUi', async ({ page }) => {
     // does, and only then can the test navigate to '/drivers'. A page.goto there is a plain
     // navigation, not a fresh OIDC callback, so checkAuth() re-establishes the session
     // silently from the stored tokens rather than bouncing back to Keycloak.
-    await page.goto('/');
-    await page.getByTestId('login').click();
-    // Keycloak's default theme also renders a "Show password" toggle button whose
-    // aria-label contains the substring "password", so `getByLabel('Password')` matches
-    // both it and the real input under Playwright's default case-insensitive substring
-    // match and throws a strict-mode violation. Target the two form fields by their
-    // stable Keycloak-theme ids instead of by label text.
-    await page.locator('#username').fill('admin.user');
-    await page.locator('#password').fill('admin');
-    await page.getByRole('button', { name: 'Sign In' }).click();
-    await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
+    await signIn(page, 'admin');
 
     await page.goto('/drivers');
     await expect(page.getByRole('heading', { name: 'Drivers' })).toBeVisible();
@@ -62,12 +53,7 @@ test('blankRequiredNames_showVisibleFieldErrorsOnSave', async ({ page }) => {
     // driver-form.component.ts, this assertion failed (mat-form-field renders nothing without
     // a <mat-error> child to project, even though the control was already invalid and touched
     // via markAllAsTouched()) - it is not a test that would have passed regardless of the fix.
-    await page.goto('/');
-    await page.getByTestId('login').click();
-    await page.locator('#username').fill('admin.user');
-    await page.locator('#password').fill('admin');
-    await page.getByRole('button', { name: 'Sign In' }).click();
-    await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
+    await signIn(page, 'admin');
 
     await page.goto('/drivers/new');
     await expect(page.getByRole('heading', { name: 'New driver' })).toBeVisible();

@@ -1,18 +1,10 @@
 import { expect, test } from '@playwright/test';
+import { signIn } from './login';
 
 test('adminUser_createEditAndDeleteVehicle_throughTheUi', async ({ page }) => {
-    // See drivers.spec.ts for why login must be established from '/' - the OIDC redirectUrl
-    // is always the origin, and '/' already mounts the vehicle list directly.
-    await page.goto('/');
-    await page.getByTestId('login').click();
-    // Keycloak's default theme also renders a "Show password" toggle button whose
-    // aria-label contains the substring "password", so `getByLabel('Password')` matches
-    // both it and the real input under Playwright's default case-insensitive substring
-    // match and throws a strict-mode violation. Target the two form fields by their
-    // stable Keycloak-theme ids instead of by label text.
-    await page.locator('#username').fill('admin.user');
-    await page.locator('#password').fill('admin');
-    await page.getByRole('button', { name: 'Sign In' }).click();
+    // Signing in lands on the home page now, so the list is one navigation further on.
+    await signIn(page, 'admin');
+    await page.goto('/vehicles');
     await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
 
     // A licence plate unique per run - the plate column carries a unique index, so a fixed

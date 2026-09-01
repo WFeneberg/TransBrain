@@ -6,7 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
-import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { SessionService } from '../auth/session.service';
 import { Order, OrderService } from './order.service';
 
 /**
@@ -22,9 +22,11 @@ const LIST_PAGE_SIZE = 100;
     standalone: true,
     imports: [MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, RouterLink, DatePipe],
     template: `
-        @if (isAuthenticated()) {
+        @if (session.isAuthenticated()) {
             <h1>Orders</h1>
-            <a mat-raised-button routerLink="/orders/new" data-testid="order-add">Add order</a>
+            @if (session.can('dispatch.write')) {
+                <a mat-raised-button routerLink="/orders/new" data-testid="order-add">Add order</a>
+            }
             <mat-form-field>
                 <mat-label>Status</mat-label>
                 <mat-select
@@ -95,16 +97,13 @@ const LIST_PAGE_SIZE = 100;
                 </table>
             }
         } @else {
-            @if (errorMessage(); as message) {
-                <p data-testid="order-list-error">{{ message }}</p>
-            }
-            <button mat-raised-button data-testid="login" (click)="login()">Sign in</button>
+            <p>Please sign in to see the orders.</p>
         }
     `,
 })
 export class OrderListComponent {
     private readonly service = inject(OrderService);
-    private readonly oidc = inject(OidcSecurityService);
+    protected readonly session = inject(SessionService);
 
     protected readonly columns = [
         'orderNumber',
@@ -117,7 +116,6 @@ export class OrderListComponent {
     ];
     protected readonly statusOptions = ['Draft', 'Planned', 'InTransit', 'Delivered', 'Cancelled'];
     protected readonly orders = signal<Order[]>([]);
-    protected readonly isAuthenticated = signal(false);
     protected readonly errorMessage = signal<string | null>(null);
     // Separate from errorMessage: a failed cancel must not hide the table the way a failed
     // list load does (mirrors DriverListComponent's actionError).
@@ -126,19 +124,11 @@ export class OrderListComponent {
     protected readonly pendingCancelId = signal<string | null>(null);
 
     constructor() {
-        this.oidc.checkAuth().subscribe({
-            next: ({ isAuthenticated }) => {
-                this.isAuthenticated.set(isAuthenticated);
-                if (isAuthenticated) {
-                    this.refresh();
-                }
-            },
-            error: () => this.errorMessage.set('Could not verify your sign-in status. Please try signing in again.'),
+        this.session.ready.subscribe((isAuthenticated) => {
+            if (isAuthenticated) {
+                this.refresh();
+            }
         });
-    }
-
-    protected login(): void {
-        this.oidc.authorize();
     }
 
     protected filterByStatus(status: string): void {

@@ -5,8 +5,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { OidcSecurityService } from 'angular-auth-oidc-client';
-import { Observable, of, shareReplay, switchMap } from 'rxjs';
+import { SessionService } from '../auth/session.service';
+import { Observable, of, switchMap } from 'rxjs';
 import { Order, OrderService } from '../orders/order.service';
 import { Tour, TourService } from './tour.service';
 
@@ -68,7 +68,7 @@ import { Tour, TourService } from './tour.service';
                     <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef>Actions</th>
                         <td mat-cell *matCellDef="let s">
-                            @if (s.stopType === 'Pickup') {
+                            @if (s.stopType === 'Pickup' && session.can('dispatch.write')) {
                                 <button
                                     mat-button
                                     data-testid="tour-remove"
@@ -84,6 +84,7 @@ import { Tour, TourService } from './tour.service';
                 </table>
             </section>
 
+            @if (session.can('dispatch.write')) {
             <section>
                 <h2>Assign an order</h2>
                 <!-- Only Draft orders are offered: any other status is refused by the domain,
@@ -105,17 +106,22 @@ import { Tour, TourService } from './tour.service';
                 </mat-form-field>
                 <button mat-raised-button data-testid="tour-assign" (click)="assign()">Assign</button>
             </section>
+            }
 
-            <section>
-                @if (t.status === 'Planned') {
-                    <button mat-raised-button data-testid="tour-start" (click)="start()">Start tour</button>
-                }
-                @if (t.status === 'InProgress') {
-                    <button mat-raised-button data-testid="tour-complete" (click)="complete()">
-                        Complete tour
-                    </button>
-                }
-            </section>
+            <!-- tourStatus.write, not dispatch.write: a fahrer may run their own tour without
+                 being allowed to change what is on it. -->
+            @if (session.can('tourStatus.write')) {
+                <section>
+                    @if (t.status === 'Planned') {
+                        <button mat-raised-button data-testid="tour-start" (click)="start()">Start tour</button>
+                    }
+                    @if (t.status === 'InProgress') {
+                        <button mat-raised-button data-testid="tour-complete" (click)="complete()">
+                            Complete tour
+                        </button>
+                    }
+                </section>
+            }
 
             <a mat-button routerLink="/tours" data-testid="tour-back">Back to tours</a>
         }
@@ -126,11 +132,11 @@ export class TourDetailComponent {
     private readonly orderService = inject(OrderService);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
-    private readonly oidc = inject(OidcSecurityService);
-
-    // See TourFormComponent.session - a directly opened /tours/{id} would otherwise send every
-    // request without a bearer token.
-    private readonly session = this.oidc.checkAuth().pipe(shareReplay(1));
+    // SessionService.ready is what guarantees angular-auth-oidc-client has rehydrated its
+    // stored session before the first request goes out; a directly opened /tours/{id} would
+    // otherwise send every request without a bearer token. The one checkAuth() behind it runs in
+    // the App component.
+    protected readonly session = inject(SessionService);
 
     protected readonly tourId = this.route.snapshot.paramMap.get('id')!;
     protected readonly stopColumns = ['sequence', 'orderNumber', 'stopType', 'actions'];
@@ -180,7 +186,7 @@ export class TourDetailComponent {
     }
 
     private run(action: Observable<Tour>, fallback: string): void {
-        this.session.pipe(switchMap(() => action)).subscribe({
+        this.session.ready.pipe(switchMap(() => action)).subscribe({
             next: (tour) => {
                 this.tour.set(tour);
                 this.selectedOrderId.set('');
@@ -191,7 +197,7 @@ export class TourDetailComponent {
     }
 
     private refresh(): void {
-        this.session.pipe(switchMap(() => this.service.getById(this.tourId))).subscribe({
+        this.session.ready.pipe(switchMap(() => this.service.getById(this.tourId))).subscribe({
             next: (tour) => {
                 this.tour.set(tour);
                 this.loadDraftOrders();
@@ -211,7 +217,7 @@ export class TourDetailComponent {
     private loadDraftOrders(): void {
         const pageSize = 100;
 
-        this.session
+        this.session.ready
             .pipe(
                 switchMap(() => this.orderService.list('Draft', pageSize)),
                 switchMap((first) => {
