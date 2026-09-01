@@ -1130,7 +1130,7 @@ Ergebnis: `npm run build` grün (`vue-tsc` sauber; die Chunk-Größen-Warnung is
 - Consumes: `SessionService` (Task 2), `Capability` (Task 2)
 - Produces: `requireAuthentication: CanActivateFn`, `requireCapability(capability: Capability): CanActivateFn`
 
-- [ ] **Step 1: Die fehlschlagenden Tests schreiben**
+- [x] **Step 1: Die fehlschlagenden Tests schreiben**
 
 An `src/TransBrain.Web/e2e/home.spec.ts` anhängen:
 
@@ -1170,7 +1170,7 @@ test('unauthenticatedVisitor_openingTheTourList_isSentBackToHome', async ({ page
 });
 ```
 
-- [ ] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
@@ -1178,7 +1178,7 @@ cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
 
 Erwartet: `viewerUser_openingTheVehicleForm_isSentBackToHome` und `unauthenticatedVisitor_openingTheTourList_isSentBackToHome` scheitern (ungeschützte Routen lassen beide durch). Die anderen beiden laufen bereits grün und müssen das nach Step 3 immer noch tun.
 
-- [ ] **Step 3: Die Guards schreiben**
+- [x] **Step 3: Die Guards schreiben**
 
 `src/TransBrain.Web/src/app/auth/capability.guard.ts`:
 
@@ -1227,7 +1227,7 @@ export function requireCapability(capability: Capability): CanActivateFn {
 }
 ```
 
-- [ ] **Step 4: Die Guards auf die Routen legen**
+- [x] **Step 4: Die Guards auf die Routen legen**
 
 `src/TransBrain.Web/src/app/app.routes.ts` — Import ergänzen:
 
@@ -1256,7 +1256,7 @@ und die Routenliste ab `vehicles` so setzen:
     { path: 'tours/:id', loadComponent: loadTourDetail, canActivate: [requireAuthentication] },
 ```
 
-- [ ] **Step 5: Tests laufen lassen**
+- [x] **Step 5: Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.Web && npm run build && npx playwright test e2e/home.spec.ts
@@ -1264,7 +1264,7 @@ cd src/TransBrain.Web && npm run build && npx playwright test e2e/home.spec.ts
 
 Erwartet: Build erfolgreich, alle zehn Tests grün.
 
-- [ ] **Step 6: Committen**
+- [x] **Step 6: Committen**
 
 ```bash
 git add src/TransBrain.Web/src/app/auth/capability.guard.ts \
@@ -1274,6 +1274,12 @@ git commit -m "feat(web): guard the write routes behind capabilities"
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — eine Ergänzung gegenüber dem Planwortlaut:**
+
+Beide Suiten bekommen ein `globalSetup` (`e2e/warm-up.ts`, in beiden Frontends gleich): es lädt einmal `/`, klickt „Sign in" und wartet auf Keycloaks Formular, bevor der erste Test läuft. Grund: der Dev-Server kompiliert auf Anfrage und Keycloak rendert sein Theme erstmalig — gemessen über 30 s direkt nach einer Quelltextänderung, gegen unter 2 s bei jeder späteren Anmeldung. Diese Kosten trafen bisher vollständig den ersten authentifizierten Test, der dadurch scheiterte und beim Wiederholungslauf grün war. Aufwärmen ist der Fristerhöhung vorzuziehen: ein echter Fehler scheitert weiterhin in Sekunden.
+
+Verifiziert unter genau der Bedingung, die vorher rot war (`touch` auf eine Quelldatei, danach voller Lauf): beide Suiten 10/10.
 
 ### Task 5: Angular — Kennzahlen und Arbeitslisten auf der Startseite
 
@@ -1896,11 +1902,11 @@ Das Gegenstück zu Task 4.
 - Consumes: `useAuthStore` (Task 3), `Capability` (Task 3)
 - Produces: `meta.capability` auf den Schreib-Routen; ein globaler `router.beforeEach`
 
-- [ ] **Step 1: Die fehlschlagenden Tests schreiben**
+- [x] **Step 1: Die fehlschlagenden Tests schreiben**
 
 Die vier Tests aus Task 4, Step 1 wortgleich an `src/TransBrain.VueWeb/e2e/home.spec.ts` anhängen.
 
-- [ ] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
@@ -1908,7 +1914,7 @@ cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
 
 Erwartet: die beiden Umleitungs-Tests scheitern.
 
-- [ ] **Step 3: Guard und Route-Metadaten einbauen**
+- [x] **Step 3: Guard und Route-Metadaten einbauen**
 
 In `src/TransBrain.VueWeb/src/main.ts` den Import ergänzen:
 
@@ -1974,7 +1980,7 @@ router.beforeEach(async (to) => {
 });
 ```
 
-- [ ] **Step 4: Build und Tests laufen lassen**
+- [x] **Step 4: Build und Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.VueWeb && npm run build && npx playwright test e2e/home.spec.ts
@@ -1982,7 +1988,7 @@ cd src/TransBrain.VueWeb && npm run build && npx playwright test e2e/home.spec.t
 
 Erwartet: Build erfolgreich, alle zehn Tests grün.
 
-- [ ] **Step 5: Committen**
+- [x] **Step 5: Committen**
 
 ```bash
 git add src/TransBrain.VueWeb/src/main.ts src/TransBrain.VueWeb/e2e/home.spec.ts
@@ -1990,6 +1996,8 @@ git commit -m "feat(vueweb): guard the write routes behind capabilities"
 ```
 
 ---
+
+**Ausführung am 2026-09-01:** zusammen mit Task 4 umgesetzt, damit beide Frontends dieselbe Guard-Semantik zum selben Zeitpunkt tragen. `e2e/home.spec.ts` und `e2e/warm-up.ts` sind in beiden Suiten identisch. Ergebnis: `npm run build` grün, `npx playwright test e2e/home.spec.ts` 10/10 grün.
 
 ### Task 8: Vue — Kennzahlen und Arbeitslisten auf der Startseite
 
