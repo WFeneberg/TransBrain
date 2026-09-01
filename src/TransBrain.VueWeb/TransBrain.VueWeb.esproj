@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.6537497">
+  <PropertyGroup>
+    <!-- Mirrors package.json: Vite's own "dev" script, which is also what the Aspire AppHost
+         starts via AddViteApp("vueweb", ...) without an explicit script name. -->
+    <StartupCommand>npm run dev</StartupCommand>
+    <BuildCommand>npm run build</BuildCommand>
+    <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
+
+    <!-- No TestCommand: this project has no unit-test script today, only the Playwright e2e suite
+         (e2e/), which needs the full Aspire stack and is deliberately not wired into any build.
+         See the note at the top of .github/workflows/ci.yml. -->
+
+    <!-- See TransBrain.Web.esproj for why these are gated on Visual Studio. -->
+    <ShouldRunNpmInstall Condition="'$(BuildingInsideVisualStudio)' != 'true'">false</ShouldRunNpmInstall>
+    <ShouldRunBuildScript Condition="'$(BuildingInsideVisualStudio)' != 'true'">false</ShouldRunBuildScript>
+  </PropertyGroup>
+</Project>

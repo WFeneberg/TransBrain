@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.6537497">
+  <PropertyGroup>
+    <!-- Mirrors package.json. "start" (not the SDK default "dev") because this is the Angular
+         CLI: `ng serve`. The Aspire AppHost launches the same script via AddViteApp("web", ...,
+         "start"), so the two stay in step. -->
+    <StartupCommand>npm run start</StartupCommand>
+    <BuildCommand>npm run build</BuildCommand>
+    <!-- @angular/build:unit-test is vitest-backed and watches by default; the explicit
+         watch=false flag below is what makes it terminate, exactly as the CI frontends job
+         invokes it. -->
+    <TestCommand>npm run test -- --watch=false</TestCommand>
+    <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
+
+    <!-- Outside Visual Studio this project is a no-op. The CI backend job runs
+         `dotnet build TransBrain.slnx`, and without these two the frontend would be npm-installed
+         and built a second time there - work the separate `frontends` matrix job already does
+         properly (with its own node-version pin and npm ci). Inside VS, Build still does the real
+         thing, which is what anyone hitting Ctrl+Shift+B expects. -->
+    <ShouldRunNpmInstall Condition="'$(BuildingInsideVisualStudio)' != 'true'">false</ShouldRunNpmInstall>
+    <ShouldRunBuildScript Condition="'$(BuildingInsideVisualStudio)' != 'true'">false</ShouldRunBuildScript>
+  </PropertyGroup>
+</Project>
