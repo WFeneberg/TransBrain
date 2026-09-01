@@ -37,9 +37,19 @@ export class VehicleService {
      * choose from - the tour form - has to ask for more, or a recently added one simply is not
      * in the list and cannot be chosen. Capped at 100 by the API; a fleet larger than that
      * needs a searchable picker, not a bigger page.
+     * @param status Filters server-side (VehicleEndpoints.cs). The home page asks with pageSize 1
+     * and reads only totalCount, so a fleet count costs one row over the wire.
      */
-    list(pageSize?: number): Observable<PagedResult<Vehicle>> {
-        const params = pageSize ? new HttpParams().set('pageSize', String(pageSize)) : new HttpParams();
+    list(pageSize?: number, status?: string | null): Observable<PagedResult<Vehicle>> {
+        let params = new HttpParams();
+        if (pageSize) {
+            params = params.set('pageSize', String(pageSize));
+        }
+        // An omitted status must not become the string "null" in the query string - the API
+        // rejects an unknown status with a 400 rather than ignoring it.
+        if (status) {
+            params = params.set('status', status);
+        }
         return this.http.get<PagedResult<Vehicle>>('/api/vehicles', { params });
     }
 
