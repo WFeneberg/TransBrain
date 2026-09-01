@@ -6,6 +6,7 @@ import * as components from 'vuetify/components';
 import * as directives from 'vuetify/directives';
 import 'vuetify/styles';
 import App from './App.vue';
+import Home from './views/Home.vue';
 import VehicleList from './views/VehicleList.vue';
 import VehicleForm from './views/VehicleForm.vue';
 import DriverList from './views/DriverList.vue';
@@ -20,11 +21,7 @@ import AuthCallback from './views/AuthCallback.vue';
 const router = createRouter({
     history: createWebHistory(),
     routes: [
-        { path: '/', component: VehicleList },
-        // Two canonical URLs for one screen, mirroring the Angular app's app.routes.ts: '/'
-        // must stay the primary route (see AuthCallback.vue on why '/' is load-bearing for the
-        // Vue OIDC callback too), and '/vehicles' is kept reachable as a second route pointing
-        // at the same component so the vehicle form's save/cancel has somewhere named to go.
+        { path: '/', component: Home },
         { path: '/vehicles', component: VehicleList },
         // 'new' must be registered before ':id' - the router matches path segments in order,
         // and a ':id' route registered first would swallow '/vehicles/new' by treating "new"
