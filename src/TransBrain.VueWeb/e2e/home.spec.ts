@@ -94,3 +94,43 @@ test('unauthenticatedVisitor_openingTheTourList_isSentBackToHome', async ({ page
 
     await expect(page.getByTestId('login')).toBeVisible();
 });
+
+// The counts are asserted as "some number", not as an exact value. The database does start empty
+// on every AppHost run, but other specs in this suite create rows, and so does anyone who used
+// the app before running the tests. Pinning a number here would make this test fail for reasons
+// that have nothing to do with what it is about: which blocks each role gets.
+const A_NUMBER = /^\d+$/;
+
+test('adminUser_onHome_seesEveryKpiAndTheDispatchWorkList', async ({ page }) => {
+    await signIn(page, 'admin');
+
+    await expect(page.getByTestId('home-kpi-vehicles-available')).toHaveText(A_NUMBER);
+    await expect(page.getByTestId('home-kpi-vehicles-workshop')).toHaveText(A_NUMBER);
+    await expect(page.getByTestId('home-kpi-drivers-available')).toHaveText(A_NUMBER);
+    await expect(page.getByTestId('home-kpi-orders-draft')).toHaveText(A_NUMBER);
+    await expect(page.getByTestId('home-kpi-tours-today')).toHaveText(A_NUMBER);
+    await expect(page.getByTestId('home-draft-orders')).toBeVisible();
+    await expect(page.getByTestId('home-plan-tour')).toBeVisible();
+    // An admin is not bound to a Driver record, so "my tours" means nothing for them.
+    await expect(page.getByTestId('home-my-tours')).toBeHidden();
+});
+
+test('viewerUser_onHome_seesKpisButNoWorkList', async ({ page }) => {
+    await signIn(page, 'viewer');
+
+    await expect(page.getByTestId('home-kpi-orders-draft')).toHaveText(A_NUMBER);
+    // dispatch.write is what carries the work list, and a viewer does not have it.
+    await expect(page.getByTestId('home-draft-orders')).toBeHidden();
+    await expect(page.getByTestId('home-my-tours')).toBeHidden();
+});
+
+test('fahrerUser_onHome_seesOnlyTheOwnTourBlock', async ({ page }) => {
+    await signIn(page, 'fahrer');
+
+    await expect(page.getByTestId('home-my-tours')).toBeVisible();
+    await expect(page.getByTestId('home-kpi-tours-today')).toHaveText(A_NUMBER);
+    await expect(page.getByTestId('home-draft-orders')).toBeHidden();
+    await expect(page.getByTestId('home-kpi-vehicles-available')).toBeHidden();
+    await expect(page.getByTestId('home-kpi-drivers-available')).toBeHidden();
+    await expect(page.getByTestId('home-kpi-orders-draft')).toBeHidden();
+});
