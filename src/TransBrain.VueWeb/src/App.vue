@@ -22,7 +22,10 @@ onMounted(async () => {
                 <v-btn v-if="auth.areas.has('orders')" to="/orders" data-testid="nav-orders">Orders</v-btn>
                 <v-btn v-if="auth.areas.has('tours')" to="/tours" data-testid="nav-tours">Tours</v-btn>
                 <v-spacer />
-                <span data-testid="nav-user">{{ auth.displayName }}</span>
+                <!-- Hidden on phone widths: the driver's home page is meant to be usable in
+                     the cab, and there the name pushes the nav links and Sign out into each
+                     other. The name is the least load-bearing thing in the bar. -->
+                <span class="d-none d-sm-inline" data-testid="nav-user">{{ auth.displayName }}</span>
                 <v-btn data-testid="logout" @click="auth.logout()">Sign out</v-btn>
             </template>
         </v-app-bar>

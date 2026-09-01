@@ -251,8 +251,8 @@ German, change both lines above (in `src/TransBrain.Api/Program.cs`) to
 
 ## Running the tests
 
-Domain, Application and the Testcontainers-backed API integration tests (138 tests at
-time of writing: 42 Domain, 67 Application, 29 API integration) all run with:
+Domain, Application and the Testcontainers-backed API integration tests (375 tests at
+time of writing: 131 Domain, 171 Application, 73 API integration) all run with:
 
 ```bash
 dotnet test TransBrain.slnx
@@ -260,8 +260,9 @@ dotnet test TransBrain.slnx
 
 This requires Docker to be running (for the integration tests).
 
-Each frontend additionally has Playwright end-to-end tests (5 specs per frontend, covering
-login, the vehicle list/form and the driver list/form):
+Each frontend additionally has Playwright end-to-end tests (6 spec files per frontend, 30
+tests, covering the role-based home page for all four realm roles, sign-in and sign-out, the
+route guards, and the vehicle, driver, order and tour screens):
 
 ```bash
 npm run e2e
@@ -271,6 +272,12 @@ run from `src/TransBrain.Web` or `src/TransBrain.VueWeb`. These need the full st
 running (`dotnet run --project src/TransBrain.AppHost`, including a trusted dev
 certificate — see above) since they exercise the real OIDC login flow against Keycloak.
 They are not run in CI yet — see `.github/workflows/ci.yml` for why.
+
+Both frontends' `playwright.config.ts` also register a `globalSetup` (`e2e/warm-up.ts`) that
+signs the dev server's and Keycloak's cold-start cost off once before the first test. Without
+it that cost - over 30s right after a source change, against under 2s for every later sign-in -
+lands entirely on whichever test authenticates first and fails it. It is best-effort: if the
+warm-up itself fails it logs and steps aside rather than aborting the run.
 
 Both frontends' `playwright.config.ts` pin `workers: 1` deliberately, not as an
 unoptimised default: every spec authenticates through the same Keycloak realm/container,

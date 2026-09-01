@@ -17,7 +17,7 @@
             }
         </nav>
         <span class="spacer"></span>
-        <span data-testid="nav-user">{{ session.displayName() }}</span>
+        <span class="user-name" data-testid="nav-user">{{ session.displayName() }}</span>
         <button mat-button data-testid="logout" (click)="session.logout()">Sign out</button>
     }
 </mat-toolbar>
