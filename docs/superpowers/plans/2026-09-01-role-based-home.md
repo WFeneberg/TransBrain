@@ -251,7 +251,7 @@ Deliverable: Die Angular-App hat eine Kopfleiste mit rollengefilterter Navigatio
   - `SessionService` mit `isAuthenticated: Signal<boolean>`, `error: Signal<string | null>`, `roles: Signal<AppRole[]>`, `displayName: Signal<string>`, `areas: Signal<ReadonlySet<Area>>`, `ready: Observable<boolean>`, `can(c: Capability): boolean`, `hasRole(r: AppRole): boolean`, `login(): void`, `logout(): void`, `initialize(): void`
   - `signIn(page, role)` und `type TestRole` aus `e2e/login.ts`
 
-- [ ] **Step 1: Den fehlschlagenden e2e-Test schreiben**
+- [x] **Step 1: Den fehlschlagenden e2e-Test schreiben**
 
 `src/TransBrain.Web/e2e/login.ts`:
 
@@ -357,7 +357,7 @@ test('signedInUser_afterSigningOut_isBackAtTheSignInButton', async ({ page }) =>
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Test laufen lassen und Fehlschlag bestätigen**
 
 Voraussetzung: `dotnet run --project src/TransBrain.AppHost` läuft — er bringt den Dev-Server auf Port 4200 selbst mit.
 
@@ -367,7 +367,7 @@ cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
 
 Erwartet: alle sechs Tests scheitern, die fünf angemeldeten mit einem Timeout auf `home-greeting` (die Startseite existiert noch nicht), der erste mit einem Timeout auf `nav-tours`, weil `toBeHidden()` zwar zutrifft, aber `login` auf `/` noch von der Fahrzeugliste kommt — je nach Reihenfolge kann dieser eine Test bereits durchlaufen. Das ist in Ordnung; entscheidend sind die fünf anderen.
 
-- [ ] **Step 3: Die Capability-Tabelle schreiben**
+- [x] **Step 3: Die Capability-Tabelle schreiben**
 
 `src/TransBrain.Web/src/app/auth/capabilities.ts`:
 
@@ -437,7 +437,7 @@ export function areasFor(roles: readonly string[]): ReadonlySet<Area> {
 }
 ```
 
-- [ ] **Step 4: Den SessionService schreiben**
+- [x] **Step 4: Den SessionService schreiben**
 
 `src/TransBrain.Web/src/app/auth/session.service.ts`:
 
@@ -542,7 +542,7 @@ export class SessionService {
 
 Falls Task 1 den Rückfallweg genommen hat: `claims` zusätzlich aus dem Access-Token speisen, indem im `tap` `this.claims.set({ ...userData, realm_access: { roles: realmRolesFromJwt(accessToken) } })` gesetzt wird — `accessToken` ist Teil der `LoginResponse`.
 
-- [ ] **Step 5: Die Startseite schreiben (Gerüst)**
+- [x] **Step 5: Die Startseite schreiben (Gerüst)**
 
 `src/TransBrain.Web/src/app/home/home.component.ts`:
 
@@ -663,7 +663,7 @@ export class HomeComponent {
 }
 ```
 
-- [ ] **Step 6: Die Shell schreiben**
+- [x] **Step 6: Die Shell schreiben**
 
 `src/TransBrain.Web/src/app/app.html`:
 
@@ -741,7 +741,7 @@ main {
 }
 ```
 
-- [ ] **Step 7: Routing umstellen**
+- [x] **Step 7: Routing umstellen**
 
 In `src/TransBrain.Web/src/app/app.routes.ts` die Lade-Funktion ergänzen und den Kopf der Routenliste ersetzen. Die bisherigen Zeilen 13-23 (Kommentarblock, `{ path: '', ... }`, der „Two canonical URLs"-Kommentar und `{ path: 'vehicles', ... }`) werden zu:
 
@@ -762,7 +762,7 @@ export const routes: Routes = [
 
 Der Rest der Liste bleibt unverändert. Die frühere Dublette `''` → `VehicleListComponent` und der Kommentar, der sie als „stopgap, not a design choice" markierte, entfallen ersatzlos — die Konsolidierung, die er ankündigte, ist genau das hier.
 
-- [ ] **Step 8: Den bestehenden Unit-Test anpassen**
+- [x] **Step 8: Den bestehenden Unit-Test anpassen**
 
 `app.spec.ts` rendert heute die `App`-Komponente. Die braucht jetzt `SessionService`, der wiederum `OidcSecurityService` braucht. Die Datei prüfen und, falls sie nur auf Erzeugung testet, den Auth-Provider ergänzen:
 
@@ -773,7 +773,7 @@ import { authConfig } from './auth/auth.config';
 
 und in `TestBed.configureTestingModule({ providers: [...] })` `provideAuth(authConfig)` sowie `provideHttpClient()` aufnehmen.
 
-- [ ] **Step 9: Build prüfen**
+- [x] **Step 9: Build prüfen**
 
 ```bash
 cd src/TransBrain.Web && npm run build
@@ -781,7 +781,7 @@ cd src/TransBrain.Web && npm run build
 
 Erwartet: erfolgreich, keine TypeScript-Fehler.
 
-- [ ] **Step 10: Die e2e-Tests laufen lassen**
+- [x] **Step 10: Die e2e-Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
@@ -791,7 +791,7 @@ Erwartet: alle sechs Tests grün.
 
 Die bestehenden Specs (`vehicles.spec.ts` und die anderen) scheitern ab jetzt, weil sie nach der Anmeldung auf `/` die Überschrift „Vehicles" erwarten. Das ist bekannt und wird in Task 6 behoben — hier **nicht** nebenbei reparieren.
 
-- [ ] **Step 11: Committen**
+- [x] **Step 11: Committen**
 
 ```bash
 git add src/TransBrain.Web/src/app/auth/capabilities.ts \
@@ -808,6 +808,13 @@ git commit -m "feat(web): add a role-aware home page and navigation shell"
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — zwei Ergänzungen gegenüber dem Planwortlaut:**
+
+- `src/TransBrain.Web/angular.json`: die Warnschwelle des Initial-Bundles von `500kB` auf `600kB` angehoben. Die Shell legt `MatToolbarModule` und `MatButtonModule` dauerhaft ins Root-Bundle und überschreitet die alte Schwelle um 3 kB. Eine Warnung, die ab jetzt bei jedem Build feuert, entwertet Warnungen.
+- `app.spec.ts` bekommt einen `SessionServiceStub` statt echter Provider. Mit dem echten Dienst würde `App`s Konstruktor `checkAuth()` gegen ein laufendes Keycloak feuern — ein Unit-Test, der einen Realm braucht, ist keiner.
+
+Ergebnis: `npm run build` warnungsfrei, `npm test` grün, `npx playwright test e2e/home.spec.ts` 6/6 grün. Die bestehenden Specs scheitern jetzt erwartungsgemäß — Task 6.
 
 ### Task 3: Vue — Capability-Schicht, Shell und Startseiten-Gerüst
 
