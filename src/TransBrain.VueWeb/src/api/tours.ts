@@ -33,6 +33,12 @@ export interface TourFilters {
     tourDate?: string | null;
     vehicleId?: string | null;
     driverId?: string | null;
+    /**
+     * The API defaults to 20 rows and tours come back sorted ascending, so without this the list
+     * shows the twenty OLDEST tours and hides everything planned since - the same trap the
+     * vehicle, driver and order clients already ask past. Capped at 100 by the API.
+     */
+    pageSize?: number | null;
 }
 
 export interface PagedResult<T> {
@@ -64,6 +70,9 @@ export async function listTours(filters: TourFilters = {}): Promise<PagedResult<
     }
     if (filters.driverId) {
         params.driverId = filters.driverId;
+    }
+    if (filters.pageSize) {
+        params.pageSize = String(filters.pageSize);
     }
 
     const response = await client.get<PagedResult<Tour>>('/tours', { params });

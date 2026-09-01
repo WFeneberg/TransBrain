@@ -14,6 +14,14 @@ import { Tour, TourService } from './tour.service';
 /** The API's maximum page size. A picker must offer every choice, not the first twenty. */
 const PICKER_PAGE_SIZE = 100;
 
+/**
+ * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
+ * request returns is all a user can ever see - and lists come back sorted ascending, meaning a
+ * default page of 20 shows the twenty OLDEST records and hides everything added since. Asking
+ * for the cap is a stopgap, not a fix: real paging controls are still needed above 100 rows.
+ */
+const LIST_PAGE_SIZE = 100;
+
 @Component({
     selector: 'app-tour-list',
     standalone: true,
@@ -153,6 +161,7 @@ export class TourListComponent {
                 tourDate: this.dateFilter(),
                 vehicleId: this.vehicleFilter(),
                 driverId: this.driverFilter(),
+                pageSize: LIST_PAGE_SIZE,
             })
             .subscribe({
                 next: (page) => this.tours.set(page.items),
