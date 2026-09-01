@@ -175,7 +175,14 @@ test('removingAnOrderFromATour_returnsItToDraft', async ({ page, browser }) => {
 
     await signInAsDispatcher(page);
     await createOrder(page, consignor);
+
+    // Same wait as the two sibling tests: the detail page renders as soon as the TOUR arrives,
+    // so touching the picker before its options exist makes this flaky rather than wrong.
+    const draftOrders = page.waitForResponse(
+        (response) => response.url().includes('/api/orders') && response.url().includes('status=Draft'),
+    );
     await createTour(page, uniqueTourDate(1), plate, driverName);
+    await draftOrders;
 
     await selectOrderByConsignor(page, consignor);
     await page.getByTestId('tour-assign').click();
