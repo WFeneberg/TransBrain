@@ -1704,7 +1704,7 @@ Deliverable: In der gesamten Angular-App wird keine Aktion mehr angeboten, die d
 - Consumes: `SessionService` (Task 2)
 - Produces: nichts Neues
 
-- [ ] **Step 1: Die bestehenden Specs auf die neue Startseite umstellen**
+- [x] **Step 1: Die bestehenden Specs auf die neue Startseite umstellen**
 
 Alle fünf bestehenden Specs melden sich heute selbst an und erwarten danach die Fahrzeugliste auf `/`. In jeder Datei:
 
@@ -1731,7 +1731,7 @@ test('adminUser_afterKeycloakLogin_seesVehicleList', async ({ page }) => {
 
 Der Rest des Tests (Token aus dem sessionStorage lesen, Fahrzeug per API anlegen, `page.reload()`) bleibt wortgleich, inklusive aller Kommentare. Nach `page.reload()` steht die Seite weiterhin auf `/vehicles`, die Liste wird also erneut geladen.
 
-- [ ] **Step 2: Rollen-Assertions in die bestehenden Specs aufnehmen**
+- [x] **Step 2: Rollen-Assertions in die bestehenden Specs aufnehmen**
 
 An `vehicles.spec.ts` anhängen:
 
@@ -1766,7 +1766,7 @@ test('disponentUser_onTheOrderList_seesTheWriteActions', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 3: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 3: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.Web && npx playwright test
@@ -1774,7 +1774,7 @@ cd src/TransBrain.Web && npx playwright test
 
 Erwartet: die drei neuen Rollen-Tests scheitern (die Buttons sind noch für jeden sichtbar). Die umgestellten Bestandstests laufen bereits grün, weil Step 1 nur die Navigation korrigiert hat.
 
-- [ ] **Step 4: Die vier Listen umbauen**
+- [x] **Step 4: Die vier Listen umbauen**
 
 In `vehicle-list.component.ts`:
 
@@ -1827,7 +1827,7 @@ und in der `actions`-Spalte:
 
 `tour-list.component.ts` genauso, mit `dispatch.write` für `tour-add`. `tour-open` bleibt ungegated — es ist ein Link auf eine Route, die jeder Angemeldete sehen darf.
 
-- [ ] **Step 5: Die Tour-Detailseite umbauen**
+- [x] **Step 5: Die Tour-Detailseite umbauen**
 
 In `tour-detail.component.ts`:
 
@@ -1859,7 +1859,7 @@ In `tour-detail.component.ts`:
 
 - In der Stopp-Tabelle den `tour-remove`-Button in `@if (session.can('dispatch.write')) { … }` einschließen.
 
-- [ ] **Step 6: Die vier Formulare umbauen**
+- [x] **Step 6: Die vier Formulare umbauen**
 
 In `vehicle-form.component.ts`, `driver-form.component.ts`, `order-form.component.ts` und `tour-form.component.ts` steht jeweils dieselbe Konstruktion:
 
@@ -1880,7 +1880,7 @@ Diese durch den gemeinsamen Dienst ersetzen: `OidcSecurityService`-Import und `-
 
 Der ungenutzte `shareReplay`-Import fliegt in allen vier Dateien raus.
 
-- [ ] **Step 7: Build und die volle Suite laufen lassen**
+- [x] **Step 7: Build und die volle Suite laufen lassen**
 
 ```bash
 cd src/TransBrain.Web && npm run build && npx playwright test
@@ -1888,7 +1888,7 @@ cd src/TransBrain.Web && npm run build && npx playwright test
 
 Erwartet: Build erfolgreich, alle Specs grün — die dreizehn aus `home.spec.ts`, die fünf bestehenden Dateien und die drei neuen Rollen-Tests.
 
-- [ ] **Step 8: Committen**
+- [x] **Step 8: Committen**
 
 ```bash
 git add src/TransBrain.Web/src/app src/TransBrain.Web/e2e
@@ -1896,6 +1896,14 @@ git commit -m "feat(web): hide actions the signed-in role may not perform"
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — drei Funde:**
+
+- **Tourenliste ohne `pageSize`.** Beide Frontends holten die Tourenliste ohne Seitengröße und liefen damit auf den API-Standard von 20, während die drei Nachbarlisten ausdrücklich 100 anfordern und den Grund kommentieren. Bei 46 angesammelten Touren war eine frisch geplante Tour schlicht nicht auf der gerenderten Seite. Vorbestehend, nicht durch diese Änderung verursacht — aber blockierend. Eigener Commit, beide Frontends.
+- **Wettlauf im Touren-Spec.** `dispatcher_planATourAssignAnOrderAndRunIt_throughTheUi` öffnete den Auftrags-Picker, bevor die Draft-Orders-Antwort da war. Der Nachbartest hatte den Wait seit `f179e13`, dieser nicht. Das Rennen bestand vorher schon; es begann zu verlieren, als die Startseite ihre fünf eigenen Requests davorlegte. Derselbe Wait, beide Frontends.
+- **Widerlegte Hypothese.** Vor dem `pageSize`-Fund vermutete ich zu viele *Fahrzeuge* für den Picker im Tourenformular. Gemessen: 8 Fahrzeuge — Hypothese falsch, kein Eingriff. (Später waren es 54; der Picker fordert 100 an und ist damit weiter in Ordnung.)
+
+Ergebnis: `npm run build` grün, `npm test` grün, **30/30 e2e grün**. `OidcSecurityService` wird nur noch in `session.service.ts` referenziert.
 
 ### Task 7: Vue — Route-Guards
 
@@ -2347,15 +2355,15 @@ Das Gegenstück zu Task 6.
 - Consumes: `useAuthStore` (Task 3)
 - Produces: nichts Neues
 
-- [ ] **Step 1: Die bestehenden Specs umstellen**
+- [x] **Step 1: Die bestehenden Specs umstellen**
 
 Wie Task 6, Step 1: in allen fünf Specs den eigenen Anmeldeblock durch `signIn(page, 'admin')` aus `./login` ersetzen und danach zum jeweiligen Bereich navigieren. Der Rest bleibt wortgleich, inklusive des Kommentars zum `oidc.user:`-Schlüssel im `sessionStorage`.
 
-- [ ] **Step 2: Rollen-Assertions ergänzen**
+- [x] **Step 2: Rollen-Assertions ergänzen**
 
 Die beiden Testblöcke aus Task 6, Step 2 wortgleich an `vehicles.spec.ts` bzw. `orders.spec.ts` anhängen.
 
-- [ ] **Step 3: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 3: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.VueWeb && npx playwright test
@@ -2363,7 +2371,7 @@ cd src/TransBrain.VueWeb && npx playwright test
 
 Erwartet: die drei neuen Rollen-Tests scheitern.
 
-- [ ] **Step 4: Die vier Listen umbauen**
+- [x] **Step 4: Die vier Listen umbauen**
 
 In `VehicleList.vue`:
 
@@ -2410,15 +2418,15 @@ sowie
 
 `DriverList.vue` genauso mit `masterData.write`. `OrderList.vue` und `TourList.vue` genauso mit `dispatch.write` für `order-add` / `order-edit` / `order-cancel` bzw. `tour-add`.
 
-- [ ] **Step 5: `TourDetail.vue` umbauen**
+- [x] **Step 5: `TourDetail.vue` umbauen**
 
 Den Zuordnungs-Abschnitt und den `tour-remove`-Button in `v-if="auth.can('dispatch.write')"` einschließen, die Start-/Complete-Buttons in `v-if="auth.can('tourStatus.write')"`. Die Statuslogik (`v-if="tour.status === 'Planned'"` bzw. `'InProgress'`) bleibt zusätzlich bestehen.
 
-- [ ] **Step 6: Die vier Formulare umbauen**
+- [x] **Step 6: Die vier Formulare umbauen**
 
 In `VehicleForm.vue`, `DriverForm.vue`, `OrderForm.vue` und `TourForm.vue` den `await auth.load()`-Aufruf aus `onMounted` entfernen — der Router-Guard hat ihn zu diesem Zeitpunkt bereits ausgeführt. Alles Übrige bleibt.
 
-- [ ] **Step 7: Build und die volle Suite laufen lassen**
+- [x] **Step 7: Build und die volle Suite laufen lassen**
 
 ```bash
 cd src/TransBrain.VueWeb && npm run build && npx playwright test
@@ -2426,7 +2434,7 @@ cd src/TransBrain.VueWeb && npm run build && npx playwright test
 
 Erwartet: Build erfolgreich, alle Specs grün.
 
-- [ ] **Step 8: Committen**
+- [x] **Step 8: Committen**
 
 ```bash
 git add src/TransBrain.VueWeb/src src/TransBrain.VueWeb/e2e
@@ -2434,6 +2442,10 @@ git commit -m "feat(vueweb): hide actions the signed-in role may not perform"
 ```
 
 ---
+
+**Ausführung am 2026-09-01:** zusammen mit Task 6 umgesetzt. Step 6 des Plans (`await auth.load()` aus den Formularen entfernen) entfiel — die vier Vue-Formulare rühren den Auth-Store gar nicht an, nur die vier Listen und `Home.vue` taten das. `TourDetail.vue` brauchte umgekehrt einen **neuen** `useAuthStore()`-Import, den der Plan nicht vorsah, weil es dort jetzt Capability-Prüfungen gibt.
+
+Ergebnis: `npm run build` grün (`vue-tsc` sauber), **30/30 e2e grün**.
 
 ### Task 10: Gesamtverifikation
 
