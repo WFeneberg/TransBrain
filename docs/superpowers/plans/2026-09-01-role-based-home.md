@@ -833,13 +833,13 @@ Das Gegenstück zu Task 2. Gleiche Test-IDs, gleiches Verhalten, Vue-idiomatisch
 - Consumes: aus Task 1 die Rollenquelle `user.profile.realm_access.roles`
 - Produces: dieselben Typen und Funktionen wie Task 2 (`Capability`, `AppRole`, `Area`, `knownRoles`, `capabilitiesFor`, `areasFor`); Store-Mitglieder `roles`, `displayName`, `can(c)`, `hasRole(r)`, `logout()`; `signIn(page, role)` aus `e2e/login.ts`
 
-- [ ] **Step 1: Den fehlschlagenden e2e-Test schreiben**
+- [x] **Step 1: Den fehlschlagenden e2e-Test schreiben**
 
 `src/TransBrain.VueWeb/e2e/login.ts` — **identisch** zur Angular-Fassung aus Task 2, Step 1. Die Datei wortgleich anlegen (die beiden Suites teilen keinen Code, wie schon bei den bestehenden Specs).
 
 `src/TransBrain.VueWeb/e2e/home.spec.ts` — **identisch** zur Angular-Fassung aus Task 2, Step 1.
 
-- [ ] **Step 2: Test laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Test laufen lassen und Fehlschlag bestätigen**
 
 Voraussetzung: `dotnet run --project src/TransBrain.AppHost` läuft — er bringt den Dev-Server auf Port 4300 selbst mit.
 
@@ -849,11 +849,11 @@ cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
 
 Erwartet: die fünf angemeldeten Tests scheitern mit Timeout auf `home-greeting`.
 
-- [ ] **Step 3: Die Capability-Tabelle schreiben**
+- [x] **Step 3: Die Capability-Tabelle schreiben**
 
 `src/TransBrain.VueWeb/src/auth/capabilities.ts` — inhaltlich identisch zu `src/TransBrain.Web/src/app/auth/capabilities.ts` aus Task 2, Step 3. Die Datei enthält keine Angular-Abhängigkeit; sie kann eins zu eins übernommen werden, inklusive aller Kommentare. Nur der Verweis auf die Guards am Ende des `AREAS_BY_ROLE`-Kommentars lautet hier `see the router guard in main.ts`.
 
-- [ ] **Step 4: Den auth-Store erweitern**
+- [x] **Step 4: Den auth-Store erweitern**
 
 `src/TransBrain.VueWeb/src/stores/auth.ts` vollständig ersetzen:
 
@@ -932,7 +932,7 @@ export const useAuthStore = defineStore('auth', () => {
 });
 ```
 
-- [ ] **Step 5: Die Startseite schreiben (Gerüst)**
+- [x] **Step 5: Die Startseite schreiben (Gerüst)**
 
 `src/TransBrain.VueWeb/src/views/Home.vue`:
 
@@ -1024,7 +1024,7 @@ const auth = useAuthStore();
 </template>
 ```
 
-- [ ] **Step 6: Die Shell schreiben**
+- [x] **Step 6: Die Shell schreiben**
 
 `src/TransBrain.VueWeb/src/App.vue`:
 
@@ -1064,7 +1064,7 @@ onMounted(async () => {
 </template>
 ```
 
-- [ ] **Step 7: Routing umstellen**
+- [x] **Step 7: Routing umstellen**
 
 In `src/TransBrain.VueWeb/src/main.ts` den Import ergänzen:
 
@@ -1081,7 +1081,7 @@ und die ersten beiden Routen samt des „Two canonical URLs"-Kommentars ersetzen
 
 Der Rest der Liste bleibt unverändert, inklusive `{ path: '/callback', component: AuthCallback }`.
 
-- [ ] **Step 8: Build prüfen**
+- [x] **Step 8: Build prüfen**
 
 ```bash
 cd src/TransBrain.VueWeb && npm run build
@@ -1089,7 +1089,7 @@ cd src/TransBrain.VueWeb && npm run build
 
 Erwartet: erfolgreich; `vue-tsc` meldet keine Typfehler.
 
-- [ ] **Step 9: Die e2e-Tests laufen lassen**
+- [x] **Step 9: Die e2e-Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
@@ -1097,7 +1097,7 @@ cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
 
 Erwartet: alle sechs Tests grün. Die bestehenden Specs scheitern jetzt ebenfalls; das behebt Task 10.
 
-- [ ] **Step 10: Committen**
+- [x] **Step 10: Committen**
 
 ```bash
 git add src/TransBrain.VueWeb/src/auth/capabilities.ts \
@@ -1111,6 +1111,13 @@ git commit -m "feat(vueweb): add a role-aware home page and navigation shell"
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — eine Ergänzung gegenüber dem Planwortlaut:**
+
+`signIn()` wartet in **beiden** Suiten jetzt explizit mit 30 s auf `#username`. Beobachtet: beim allerersten Lauf gegen einen kalten Vite-Dev-Server scheiterte der erste authentifizierte Test am 5-s-Standard-Timeout (39,5 s Gesamtlaufzeit gegen 10,5 s bei warmem Server); die übrigen fünf liefen durch. Eine Umleitung zu einem externen IdP ist legitim langsamer als jede Zusicherung gegen die eigenen Seiten — die Frist gehört an diese eine Stelle, nicht als Retry über die ganze Suite.
+
+Ergebnis: `npm run build` grün (`vue-tsc` sauber; die Chunk-Größen-Warnung ist vorbestehend, Vuetify wird komplett gebündelt), `npx playwright test e2e/home.spec.ts` 6/6 grün in beiden Frontends.
+
 
 ### Task 4: Angular — Route-Guards
 
