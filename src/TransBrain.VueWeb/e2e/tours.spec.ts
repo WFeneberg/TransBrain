@@ -1,17 +1,11 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { signIn } from './login';
 
 // dispo.user: planning tours is dispatch work, and DispatchWrite admits a dispatcher.
 async function signInAsDispatcher(page: Page): Promise<void> {
     // The OIDC redirect_uri always lands on '/callback', which then replaces the URL with '/'
     // (see AuthCallback.vue), so login must be established from '/' first.
-    await page.goto('/');
-    await page.getByTestId('login').click();
-    // Keycloak's theme also renders a "Show password" toggle whose aria-label contains
-    // "password", so getByLabel('Password') matches two elements. Use the stable ids.
-    await page.locator('#username').fill('dispo.user');
-    await page.locator('#password').fill('dispo');
-    await page.getByRole('button', { name: 'Sign In' }).click();
-    await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
+    await signIn(page, 'dispo');
 }
 
 /** A tour date far enough out, and unique per run, that the double-booking indexes cannot bite. */
@@ -28,12 +22,7 @@ async function asAdmin(browser: Browser, work: (page: Page) => Promise<void>): P
     const context = await browser.newContext();
     const page = await context.newPage();
     try {
-        await page.goto('/');
-        await page.getByTestId('login').click();
-        await page.locator('#username').fill('admin.user');
-        await page.locator('#password').fill('admin');
-        await page.getByRole('button', { name: 'Sign In' }).click();
-        await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
+        await signIn(page, 'admin');
         await work(page);
     } finally {
         await context.close();
@@ -124,6 +113,15 @@ test('dispatcher_planATourAssignAnOrderAndRunIt_throughTheUi', async ({ page, br
 
     await signInAsDispatcher(page);
     await createOrder(page, consignor);
+
+    // Wait for the assignable-order request the detail page fires on load, the same way
+    // directNavigationToTheTourDetail_canStillAssign does: the page renders as soon as the TOUR
+    // arrives, so reading the select before its options exist makes this flaky rather than
+    // wrong. The race was always here; it started losing once the home page began issuing its
+    // own five requests ahead of this one.
+    const draftOrders = page.waitForResponse(
+        (response) => response.url().includes('/api/orders') && response.url().includes('status=Draft'),
+    );
     await createTour(page, date, plate, driverName);
 
     // Saving a tour lands on its detail page, because assigning orders is the next thing a
@@ -131,6 +129,7 @@ test('dispatcher_planATourAssignAnOrderAndRunIt_throughTheUi', async ({ page, br
     await expect(page.getByTestId('tour-detail-status')).toHaveText('Planned');
     await expect(page.getByTestId('tour-detail-vehicle')).toHaveText(plate);
     await expect(page.getByTestId('tour-capacity-weight')).toHaveText('0 / 18000 kg');
+    await draftOrders;
 
     // Assign the order: two stops appear and the capacity readout moves.
     await selectOrderByConsignor(page, consignor);
@@ -260,7 +259,7 @@ test('directNavigationToTheTourDetail_canStillAssign', async ({ page, browser })
     await expect(page.getByTestId('tour-detail-status')).toHaveText('Planned');
     const detailUrl = page.url();
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
+    await expect(page.getByTestId('home-greeting')).toBeVisible();
 
     // Straight to the detail page, with no list component in between to hydrate the session.
     // Wait for the assignable-order request to settle before touching the picker: the page

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { signIn } from './login';
 
 // dispo.user, not admin.user: orders are dispatch data, and DispatchWrite admits a dispatcher.
 // Logging in as the role that will actually use this screen proves the policy choice from the
@@ -8,15 +9,7 @@ async function signInAsDispatcher(page: Page): Promise<void> {
     // The OIDC redirect_uri always lands on '/callback', which then replaces the URL with '/'
     // (see AuthCallback.vue) - regardless of the page login was initiated from. So login must
     // be established from '/' first, and only then can the test navigate to '/orders'.
-    await page.goto('/');
-    await page.getByTestId('login').click();
-    // Keycloak's default theme also renders a "Show password" toggle whose aria-label contains
-    // "password", so getByLabel('Password') matches two elements and throws a strict-mode
-    // violation. Target the stable Keycloak-theme ids instead.
-    await page.locator('#username').fill('dispo.user');
-    await page.locator('#password').fill('dispo');
-    await page.getByRole('button', { name: 'Sign In' }).click();
-    await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
+    await signIn(page, 'dispo');
 }
 
 async function fillAddress(page: Page, party: 'consignor' | 'consignee', name: string): Promise<void> {
@@ -171,4 +164,19 @@ test('directNavigationToTheForm_canStillSave', async ({ page }) => {
 
     await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
     await expect(page.locator('tr').filter({ hasText: consignor })).toBeVisible();
+});
+
+test('viewerUser_onTheOrderList_seesNoWriteActions', async ({ page }) => {
+    await signIn(page, 'viewer');
+    await page.goto('/orders');
+
+    await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
+    await expect(page.getByTestId('order-add')).toBeHidden();
+});
+
+test('disponentUser_onTheOrderList_seesTheWriteActions', async ({ page }) => {
+    await signIn(page, 'dispo');
+    await page.goto('/orders');
+
+    await expect(page.getByTestId('order-add')).toBeVisible();
 });

@@ -30,7 +30,6 @@ const headers = [
 ];
 
 onMounted(async () => {
-    await auth.load();
     if (auth.isAuthenticated) {
         await refresh();
     }
@@ -78,7 +77,12 @@ function describe(error: unknown, fallback: string): string {
     <v-container>
         <template v-if="auth.isAuthenticated">
             <h1>Drivers</h1>
-            <v-btn data-testid="driver-add" @click="router.push('/drivers/new')">Add driver</v-btn>
+            <v-btn
+                v-if="auth.can('masterData.write')"
+                data-testid="driver-add"
+                @click="router.push('/drivers/new')"
+                >Add driver</v-btn
+            >
             <p v-if="actionError" data-testid="driver-action-error">{{ actionError }}</p>
             <p v-if="errorMessage" data-testid="driver-list-error">{{ errorMessage }}</p>
             <!-- items-per-page="-1": the API already returned one page, and Vuetify would
@@ -103,14 +107,13 @@ function describe(error: unknown, fallback: string): string {
                     {{ item.licenseClasses.join(', ') }}
                 </template>
                 <template #item.actions="{ item }">
-                    <v-btn data-testid="driver-edit" @click="router.push(`/drivers/${item.id}`)">Edit</v-btn>
-                    <v-btn data-testid="driver-delete" @click="remove(item)">Delete</v-btn>
+                    <template v-if="auth.can('masterData.write')">
+                        <v-btn data-testid="driver-edit" @click="router.push(`/drivers/${item.id}`)">Edit</v-btn>
+                        <v-btn data-testid="driver-delete" @click="remove(item)">Delete</v-btn>
+                    </template>
                 </template>
             </v-data-table>
         </template>
-        <template v-else>
-            <p v-if="errorMessage" data-testid="driver-list-error">{{ errorMessage }}</p>
-            <v-btn data-testid="login" @click="auth.login()">Sign in</v-btn>
-        </template>
+        <p v-else>Please sign in to see the drivers.</p>
     </v-container>
 </template>

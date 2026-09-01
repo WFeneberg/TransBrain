@@ -36,7 +36,6 @@ const headers = [
 ];
 
 onMounted(async () => {
-    await auth.load();
     if (auth.isAuthenticated) {
         await refresh();
     }
@@ -103,7 +102,12 @@ function describe(error: unknown, fallback: string): string {
     <v-container>
         <template v-if="auth.isAuthenticated">
             <h1>Orders</h1>
-            <v-btn data-testid="order-add" @click="router.push('/orders/new')">Add order</v-btn>
+            <v-btn
+                v-if="auth.can('dispatch.write')"
+                data-testid="order-add"
+                @click="router.push('/orders/new')"
+                >Add order</v-btn
+            >
             <!-- A plain <select>, not <v-select>: Vuetify's select renders an overlay listbox
                  rather than native options, and the same testid-lands-on-a-wrapper-div problem
                  DriverForm.vue documents for v-text-field applies to it. -->
@@ -152,6 +156,7 @@ function describe(error: unknown, fallback: string): string {
                     <span data-testid="order-status">{{ item.status }}</span>
                 </template>
                 <template #item.actions="{ item }">
+                    <template v-if="auth.can('dispatch.write')">
                     <v-btn data-testid="order-edit" @click="router.push(`/orders/${item.id}`)">Edit</v-btn>
                     <!-- Inline confirmation rather than window.confirm(): a native dialog blocks
                          until a Playwright dialog handler answers it, and an in-DOM confirmation
@@ -161,12 +166,10 @@ function describe(error: unknown, fallback: string): string {
                         <v-btn data-testid="order-cancel-abort" @click="abortCancel()">Keep order</v-btn>
                     </template>
                     <v-btn v-else data-testid="order-cancel" @click="askToCancel(item)">Cancel order</v-btn>
+                    </template>
                 </template>
             </v-data-table>
         </template>
-        <template v-else>
-            <p v-if="errorMessage" data-testid="order-list-error">{{ errorMessage }}</p>
-            <v-btn data-testid="login" @click="auth.login()">Sign in</v-btn>
-        </template>
+        <p v-else>Please sign in to see the orders.</p>
     </v-container>
 </template>
