@@ -60,3 +60,37 @@ test('signedInUser_afterSigningOut_isBackAtTheSignInButton', async ({ page }) =>
     await page.getByTestId('logout').click();
     await expect(page.getByTestId('login')).toBeVisible();
 });
+
+test('viewerUser_openingTheVehicleForm_isSentBackToHome', async ({ page }) => {
+    await signIn(page, 'viewer');
+
+    await page.goto('/vehicles/new');
+
+    // Redirected, not 403'd: a user who typed a URL they cannot use lands on their own home.
+    await expect(page.getByTestId('home-greeting')).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+});
+
+test('fahrerUser_openingTheVehicleList_isLetThrough', async ({ page }) => {
+    await signIn(page, 'fahrer');
+
+    await page.goto('/vehicles');
+
+    // Hidden from the navigation is not the same as forbidden: Policies.Read covers a fahrer,
+    // so inventing a client-side block here would be a second, disagreeing truth.
+    await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
+});
+
+test('disponentUser_openingTheOrderForm_isLetThrough', async ({ page }) => {
+    await signIn(page, 'dispo');
+
+    await page.goto('/orders/new');
+
+    await expect(page.getByTestId('order-save')).toBeVisible();
+});
+
+test('unauthenticatedVisitor_openingTheTourList_isSentBackToHome', async ({ page }) => {
+    await page.goto('/tours');
+
+    await expect(page.getByTestId('login')).toBeVisible();
+});
