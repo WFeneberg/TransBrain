@@ -96,7 +96,7 @@ Diese Task steht allein, weil von ihrem Ausgang abhängt, woher die anderen neun
 - Consumes: nichts
 - Produces: der Claim `realm_access.roles` als String-Array in ID-Token, Access-Token und UserInfo-Antwort des Clients `transbrain-spa`. Tasks 2 und 3 lesen ihn.
 
-- [ ] **Step 1: Realm-Mapper ergänzen**
+- [x] **Step 1: Realm-Mapper ergänzen**
 
 In `transbrain-realm.json` das `protocolMappers`-Array des Clients `transbrain-spa` um einen zweiten Eintrag erweitern. Das Array enthält bisher nur `transbrain-api-audience`; der neue Eintrag kommt dahinter.
 
@@ -119,75 +119,58 @@ In `transbrain-realm.json` das `protocolMappers`-Array des Clients `transbrain-s
 
 `userinfo.token.claim` steht hier zusätzlich zu dem, was Spec §4 zeigt: `angular-auth-oidc-client` befüllt `userData` per Voreinstellung aus dem UserInfo-Endpunkt, nicht aus dem ID-Token. Ohne dieses Flag wäre `userData` in der Angular-App rollenlos, obwohl das ID-Token die Rollen trägt.
 
-- [ ] **Step 2: Stack starten**
+- [x] **Step 2: Stack starten**
 
 ```bash
 dotnet run --project src/TransBrain.AppHost
 ```
 
-Warten, bis das Aspire-Dashboard alle Ressourcen als „Running" zeigt. Der Realm wird bei jedem Start neu importiert, die Änderung ist also sofort wirksam.
-
-- [ ] **Step 3: Ein echtes Token holen und den Claim prüfen**
-
-Der Realm erlaubt für `transbrain-spa` keinen Direct Access Grant (`"directAccessGrantsEnabled": false`), ein `curl` mit Passwort funktioniert also nicht. Der verlässliche Weg führt über das Frontend:
+Der AppHost startet Postgres, Redis, Keycloak, die API **und beide Dev-Server** (`AppHost.cs:51-61`) — ein separater `npm start` ist nicht nötig. Warten, bis Keycloak und der Dev-Server antworten:
 
 ```bash
-cd src/TransBrain.Web && npm start
+until curl -sk -o /dev/null https://localhost:8080/realms/transbrain/.well-known/openid-configuration && curl -s -o /dev/null http://localhost:4200; do sleep 3; done
 ```
 
-Im Browser `http://localhost:4200` öffnen, als `admin.user` / `admin` anmelden, dann in der DevTools-Konsole:
+Der Realm wird bei jedem Start neu importiert, die Änderung ist also sofort wirksam.
 
-```js
-const raw = Object.entries(sessionStorage).find(([k]) => k.includes('transbrain-spa'))[1];
-const stored = JSON.parse(raw);
-const payload = (t) => JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-console.log('id_token  ', JSON.stringify(payload(stored.idToken ?? stored.id_token).realm_access));
-console.log('access    ', JSON.stringify(payload(stored.accessToken ?? stored.access_token).realm_access));
+- [x] **Step 3+4: Ein echtes Token holen, den Claim und die API prüfen**
+
+Der Realm erlaubt für `transbrain-spa` keinen Direct Access Grant (`"directAccessGrantsEnabled": false`), ein `curl` mit Passwort funktioniert also nicht — die Anmeldung muss durch das Frontend laufen. Statt das von Hand in der DevTools-Konsole zu tun, erledigt es eine temporäre Playwright-Spec: reproduzierbar, und das Ergebnis steht im Testprotokoll.
+
+`src/TransBrain.Web/e2e/_claim-check.spec.ts` anlegen: als `admin.user` anmelden, den kompletten `sessionStorage` rekursiv nach JWT-förmigen Strings durchlaufen und von jedem `realm_access` ausgeben, dann mit dem gefundenen Access-Token ein `POST /api/vehicles` absetzen und den Status ausgeben. Rekursiv durchlaufen ist wichtig: `angular-auth-oidc-client` legt die Rohtokens unter `0-transbrain-spa.authnResult.*` ab, ein Zugriff auf `parsed.accessToken` findet nichts und erzeugt ein irreführendes `401`.
+
+```bash
+cd src/TransBrain.Web && npx playwright test e2e/_claim-check.spec.ts
 ```
 
-Erwartet, in **beiden** Zeilen:
-
-```
-{"roles":["admin"]}
-```
-
-Zu prüfen ist dreierlei:
-1. `realm_access.roles` ist in beiden Tokens vorhanden.
-2. `roles` enthält `"admin"` **genau einmal** — kein `["admin","admin"]`.
+Zu prüfen ist viererlei:
+1. `realm_access.roles` ist in ID- **und** Access-Token vorhanden.
+2. `roles` enthält die Rolle **genau einmal** — kein `["admin","admin"]`.
 3. Es gibt keinen zusätzlichen, anders verschachtelten Claim wie `realm_access.realm_access`.
+4. `POST /api/vehicles` als `admin.user` liefert `201`. Der Default-Scope schrieb `realm_access` schon vorher ins Access-Token; ein `403` hier hieße, dass der neue Mapper die Autorisierung der API zerlegt hat — dann greift Step 6.
 
-- [ ] **Step 4: Die API gegen dasselbe Token prüfen**
+**Ergebnis der Ausführung am 2026-09-01:**
 
-Der Default-Scope schrieb `realm_access` schon vorher ins Access-Token. Wenn der neue Mapper dort etwas kaputt macht, bricht die Autorisierung der API — deshalb ein Schreibzugriff, den nur `admin` darf:
-
-Weiterhin als `admin.user` angemeldet, in der DevTools-Konsole auf `http://localhost:4200`:
-
-```js
-const raw = Object.entries(sessionStorage).find(([k]) => k.includes('transbrain-spa'))[1];
-const token = JSON.parse(raw).accessToken ?? JSON.parse(raw).access_token;
-const r = await fetch('/api/vehicles', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-        licensePlate: `CLAIM${Date.now().toString(36).toUpperCase()}`,
-        type: 'Tractor', payloadKg: 12000, loadMeters: 13.6, nextInspectionDue: '2027-06-01',
-    }),
-});
-console.log(r.status);
+```
+0-transbrain-spa.authnResult.access_token (jwt)  {"roles":["admin"]}
+0-transbrain-spa.authnResult.id_token     (jwt)  {"roles":["admin"]}
+0-transbrain-spa.authzData                (jwt)  {"roles":["admin"]}
+userData.realm_access                            {"roles":["admin"]}
+POST /api/vehicles -> 201
 ```
 
-Erwartet: `201`. Ein `403` bedeutet, dass die Rollen nicht mehr aus dem Access-Token gelesen werden können — dann greift Step 6.
+Alle vier Kriterien erfüllt. Die Spec danach wieder löschen.
 
-- [ ] **Step 5: Wenn Steps 3 und 4 wie erwartet ausgehen — committen und Task beenden**
+- [x] **Step 5: Wenn Steps 3 und 4 wie erwartet ausgehen — committen und Task beenden**
 
 ```bash
 git add src/TransBrain.AppHost/realms/transbrain-realm.json
 git commit -m "feat(auth): expose realm roles in the SPA client's id token"
 ```
 
-Im Task-Bericht festhalten: **„Rollenquelle: `userData.realm_access.roles` (Angular) bzw. `user.profile.realm_access.roles` (Vue)."** Tasks 2 und 3 verlassen sich darauf.
+**Verifizierte Rollenquelle für Tasks 2 und 3: `userData.realm_access.roles` (Angular) bzw. `user.profile.realm_access.roles` (Vue).** Der Rückfallweg aus Step 6 wird nicht gebraucht.
 
-- [ ] **Step 6: Nur falls Step 3 oder 4 fehlschlägt — Rückfallweg**
+- [ ] **Step 6: Nur falls Step 3 oder 4 fehlschlägt — Rückfallweg** *(nicht eingetreten, entfällt)*
 
 Realm-Änderung zurücknehmen:
 
@@ -376,7 +359,7 @@ test('signedInUser_afterSigningOut_isBackAtTheSignInButton', async ({ page }) =>
 
 - [ ] **Step 2: Test laufen lassen und Fehlschlag bestätigen**
 
-Voraussetzung: `dotnet run --project src/TransBrain.AppHost` läuft, und in einem zweiten Terminal `cd src/TransBrain.Web && npm start`.
+Voraussetzung: `dotnet run --project src/TransBrain.AppHost` läuft — er bringt den Dev-Server auf Port 4200 selbst mit.
 
 ```bash
 cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
@@ -851,7 +834,7 @@ Das Gegenstück zu Task 2. Gleiche Test-IDs, gleiches Verhalten, Vue-idiomatisch
 
 - [ ] **Step 2: Test laufen lassen und Fehlschlag bestätigen**
 
-Voraussetzung: AppHost läuft, dazu `cd src/TransBrain.VueWeb && npm run dev`.
+Voraussetzung: `dotnet run --project src/TransBrain.AppHost` läuft — er bringt den Dev-Server auf Port 4300 selbst mit.
 
 ```bash
 cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
@@ -2447,7 +2430,7 @@ Erwartet: beide erfolgreich, keine TypeScript-Fehler.
 
 - [ ] **Step 3: Beide e2e-Suiten vollständig laufen lassen**
 
-Mit laufendem AppHost und beiden Dev-Servern:
+Mit laufendem AppHost:
 
 ```bash
 cd src/TransBrain.Web && npx playwright test
@@ -2475,7 +2458,7 @@ Auffälligkeiten notieren, aber hier nicht beheben: eine echte Abweichung von §
 
 - [ ] **Step 1: Die Screenshots aufnehmen**
 
-Mit laufendem AppHost und beiden Dev-Servern. Damit die Startseite nicht leer aussieht, zuerst über die Oberfläche als `admin.user` ein Fahrzeug, einen Fahrer und einen Auftrag anlegen.
+Mit laufendem AppHost. Damit die Startseite nicht leer aussieht, zuerst über die Oberfläche als `admin.user` ein Fahrzeug, einen Fahrer und einen Auftrag anlegen.
 
 Eine temporäre Spec `src/TransBrain.Web/e2e/screenshots.spec.ts` anlegen:
 
