@@ -42,10 +42,18 @@ client.interceptors.request.use(async (config) => {
  * from - the tour form - has to ask for more, or a recently added one simply is not in the list
  * and cannot be chosen. Capped at 100 by the API.
  */
-export async function listDrivers(pageSize?: number): Promise<PagedResult<Driver>> {
-    const response = await client.get<PagedResult<Driver>>('/drivers', {
-        params: pageSize ? { pageSize: String(pageSize) } : undefined,
-    });
+export async function listDrivers(pageSize?: number, status?: string | null): Promise<PagedResult<Driver>> {
+    // Only filters that are actually set are sent. An omitted one must not become the string
+    // "null" in the query string - the API would reject that with a 400.
+    const params: Record<string, string> = {};
+    if (pageSize) {
+        params.pageSize = String(pageSize);
+    }
+    if (status) {
+        params.status = status;
+    }
+
+    const response = await client.get<PagedResult<Driver>>('/drivers', { params });
     return response.data;
 }
 

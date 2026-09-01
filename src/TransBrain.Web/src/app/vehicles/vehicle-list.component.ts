@@ -3,7 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
-import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { SessionService } from '../auth/session.service';
 import { Vehicle, VehicleService } from './vehicle.service';
 
 /**
@@ -19,9 +19,11 @@ const LIST_PAGE_SIZE = 100;
     standalone: true,
     imports: [MatTableModule, MatButtonModule, RouterLink],
     template: `
-        @if (isAuthenticated()) {
+        @if (session.isAuthenticated()) {
             <h1>Vehicles</h1>
-            <a mat-raised-button routerLink="/vehicles/new" data-testid="vehicle-add">Add vehicle</a>
+            @if (session.can('masterData.write')) {
+                <a mat-raised-button routerLink="/vehicles/new" data-testid="vehicle-add">Add vehicle</a>
+            }
             @if (actionError(); as message) {
                 <p data-testid="vehicle-action-error">{{ message }}</p>
             }
@@ -44,8 +46,10 @@ const LIST_PAGE_SIZE = 100;
                     <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef>Actions</th>
                         <td mat-cell *matCellDef="let v">
-                            <a mat-button [routerLink]="['/vehicles', v.id]" data-testid="vehicle-edit">Edit</a>
-                            <button mat-button data-testid="vehicle-delete" (click)="delete(v)">Delete</button>
+                            @if (session.can('masterData.write')) {
+                                <a mat-button [routerLink]="['/vehicles', v.id]" data-testid="vehicle-edit">Edit</a>
+                                <button mat-button data-testid="vehicle-delete" (click)="delete(v)">Delete</button>
+                            }
                         </td>
                     </ng-container>
                     <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -53,20 +57,16 @@ const LIST_PAGE_SIZE = 100;
                 </table>
             }
         } @else {
-            @if (errorMessage(); as message) {
-                <p data-testid="vehicle-list-error">{{ message }}</p>
-            }
-            <button mat-raised-button data-testid="login" (click)="login()">Sign in</button>
+            <p>Please sign in to see the vehicles.</p>
         }
     `,
 })
 export class VehicleListComponent {
     private readonly service = inject(VehicleService);
-    private readonly oidc = inject(OidcSecurityService);
+    protected readonly session = inject(SessionService);
 
     protected readonly columns = ['licensePlate', 'type', 'payloadKg', 'actions'];
     protected readonly vehicles = signal<Vehicle[]>([]);
-    protected readonly isAuthenticated = signal(false);
     protected readonly errorMessage = signal<string | null>(null);
     // Separate from errorMessage: a failed delete must not hide the table the way a failed
     // list load does (the @else branch above only renders the table when errorMessage is
@@ -74,29 +74,13 @@ export class VehicleListComponent {
     protected readonly actionError = signal<string | null>(null);
 
     constructor() {
-        this.oidc.checkAuth().subscribe({
-            next: ({ isAuthenticated }) => {
-                this.isAuthenticated.set(isAuthenticated);
-                if (isAuthenticated) {
-                    this.refresh();
-                }
-            },
-            // Without this, a checkAuth failure (e.g. Keycloak unreachable) escaped unhandled and
-            // the user was bounced to the Sign in button with no explanation of why. Same scope as
-            // the existing HTTP error handling above: set the message, no retry, no toast.
-            error: () => this.errorMessage.set('Could not verify your sign-in status. Please try signing in again.'),
+        this.session.ready.subscribe((isAuthenticated) => {
+            if (isAuthenticated) {
+                this.refresh();
+            }
         });
     }
 
-    protected login(): void {
-        this.oidc.authorize();
-    }
-
-    // Any authenticated user sees the Add/Edit/Delete controls above - the app has no
-    // role-decoding infrastructure yet (isAuthenticated is the only auth state tracked
-    // anywhere in this SPA), and building one just to hide three buttons is out of scope for
-    // this task. A non-admin (dispo/fahrer/viewer) who uses them gets a 403 from the API,
-    // which surfaces here via actionError/formError rather than silently failing.
     protected delete(vehicle: Vehicle): void {
         this.actionError.set(null);
         this.service.remove(vehicle.id).subscribe({

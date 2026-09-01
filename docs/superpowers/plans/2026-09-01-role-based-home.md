@@ -96,7 +96,7 @@ Diese Task steht allein, weil von ihrem Ausgang abhängt, woher die anderen neun
 - Consumes: nichts
 - Produces: der Claim `realm_access.roles` als String-Array in ID-Token, Access-Token und UserInfo-Antwort des Clients `transbrain-spa`. Tasks 2 und 3 lesen ihn.
 
-- [ ] **Step 1: Realm-Mapper ergänzen**
+- [x] **Step 1: Realm-Mapper ergänzen**
 
 In `transbrain-realm.json` das `protocolMappers`-Array des Clients `transbrain-spa` um einen zweiten Eintrag erweitern. Das Array enthält bisher nur `transbrain-api-audience`; der neue Eintrag kommt dahinter.
 
@@ -119,75 +119,58 @@ In `transbrain-realm.json` das `protocolMappers`-Array des Clients `transbrain-s
 
 `userinfo.token.claim` steht hier zusätzlich zu dem, was Spec §4 zeigt: `angular-auth-oidc-client` befüllt `userData` per Voreinstellung aus dem UserInfo-Endpunkt, nicht aus dem ID-Token. Ohne dieses Flag wäre `userData` in der Angular-App rollenlos, obwohl das ID-Token die Rollen trägt.
 
-- [ ] **Step 2: Stack starten**
+- [x] **Step 2: Stack starten**
 
 ```bash
 dotnet run --project src/TransBrain.AppHost
 ```
 
-Warten, bis das Aspire-Dashboard alle Ressourcen als „Running" zeigt. Der Realm wird bei jedem Start neu importiert, die Änderung ist also sofort wirksam.
-
-- [ ] **Step 3: Ein echtes Token holen und den Claim prüfen**
-
-Der Realm erlaubt für `transbrain-spa` keinen Direct Access Grant (`"directAccessGrantsEnabled": false`), ein `curl` mit Passwort funktioniert also nicht. Der verlässliche Weg führt über das Frontend:
+Der AppHost startet Postgres, Redis, Keycloak, die API **und beide Dev-Server** (`AppHost.cs:51-61`) — ein separater `npm start` ist nicht nötig. Warten, bis Keycloak und der Dev-Server antworten:
 
 ```bash
-cd src/TransBrain.Web && npm start
+until curl -sk -o /dev/null https://localhost:8080/realms/transbrain/.well-known/openid-configuration && curl -s -o /dev/null http://localhost:4200; do sleep 3; done
 ```
 
-Im Browser `http://localhost:4200` öffnen, als `admin.user` / `admin` anmelden, dann in der DevTools-Konsole:
+Der Realm wird bei jedem Start neu importiert, die Änderung ist also sofort wirksam.
 
-```js
-const raw = Object.entries(sessionStorage).find(([k]) => k.includes('transbrain-spa'))[1];
-const stored = JSON.parse(raw);
-const payload = (t) => JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-console.log('id_token  ', JSON.stringify(payload(stored.idToken ?? stored.id_token).realm_access));
-console.log('access    ', JSON.stringify(payload(stored.accessToken ?? stored.access_token).realm_access));
+- [x] **Step 3+4: Ein echtes Token holen, den Claim und die API prüfen**
+
+Der Realm erlaubt für `transbrain-spa` keinen Direct Access Grant (`"directAccessGrantsEnabled": false`), ein `curl` mit Passwort funktioniert also nicht — die Anmeldung muss durch das Frontend laufen. Statt das von Hand in der DevTools-Konsole zu tun, erledigt es eine temporäre Playwright-Spec: reproduzierbar, und das Ergebnis steht im Testprotokoll.
+
+`src/TransBrain.Web/e2e/_claim-check.spec.ts` anlegen: als `admin.user` anmelden, den kompletten `sessionStorage` rekursiv nach JWT-förmigen Strings durchlaufen und von jedem `realm_access` ausgeben, dann mit dem gefundenen Access-Token ein `POST /api/vehicles` absetzen und den Status ausgeben. Rekursiv durchlaufen ist wichtig: `angular-auth-oidc-client` legt die Rohtokens unter `0-transbrain-spa.authnResult.*` ab, ein Zugriff auf `parsed.accessToken` findet nichts und erzeugt ein irreführendes `401`.
+
+```bash
+cd src/TransBrain.Web && npx playwright test e2e/_claim-check.spec.ts
 ```
 
-Erwartet, in **beiden** Zeilen:
-
-```
-{"roles":["admin"]}
-```
-
-Zu prüfen ist dreierlei:
-1. `realm_access.roles` ist in beiden Tokens vorhanden.
-2. `roles` enthält `"admin"` **genau einmal** — kein `["admin","admin"]`.
+Zu prüfen ist viererlei:
+1. `realm_access.roles` ist in ID- **und** Access-Token vorhanden.
+2. `roles` enthält die Rolle **genau einmal** — kein `["admin","admin"]`.
 3. Es gibt keinen zusätzlichen, anders verschachtelten Claim wie `realm_access.realm_access`.
+4. `POST /api/vehicles` als `admin.user` liefert `201`. Der Default-Scope schrieb `realm_access` schon vorher ins Access-Token; ein `403` hier hieße, dass der neue Mapper die Autorisierung der API zerlegt hat — dann greift Step 6.
 
-- [ ] **Step 4: Die API gegen dasselbe Token prüfen**
+**Ergebnis der Ausführung am 2026-09-01:**
 
-Der Default-Scope schrieb `realm_access` schon vorher ins Access-Token. Wenn der neue Mapper dort etwas kaputt macht, bricht die Autorisierung der API — deshalb ein Schreibzugriff, den nur `admin` darf:
-
-Weiterhin als `admin.user` angemeldet, in der DevTools-Konsole auf `http://localhost:4200`:
-
-```js
-const raw = Object.entries(sessionStorage).find(([k]) => k.includes('transbrain-spa'))[1];
-const token = JSON.parse(raw).accessToken ?? JSON.parse(raw).access_token;
-const r = await fetch('/api/vehicles', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-        licensePlate: `CLAIM${Date.now().toString(36).toUpperCase()}`,
-        type: 'Tractor', payloadKg: 12000, loadMeters: 13.6, nextInspectionDue: '2027-06-01',
-    }),
-});
-console.log(r.status);
+```
+0-transbrain-spa.authnResult.access_token (jwt)  {"roles":["admin"]}
+0-transbrain-spa.authnResult.id_token     (jwt)  {"roles":["admin"]}
+0-transbrain-spa.authzData                (jwt)  {"roles":["admin"]}
+userData.realm_access                            {"roles":["admin"]}
+POST /api/vehicles -> 201
 ```
 
-Erwartet: `201`. Ein `403` bedeutet, dass die Rollen nicht mehr aus dem Access-Token gelesen werden können — dann greift Step 6.
+Alle vier Kriterien erfüllt. Die Spec danach wieder löschen.
 
-- [ ] **Step 5: Wenn Steps 3 und 4 wie erwartet ausgehen — committen und Task beenden**
+- [x] **Step 5: Wenn Steps 3 und 4 wie erwartet ausgehen — committen und Task beenden**
 
 ```bash
 git add src/TransBrain.AppHost/realms/transbrain-realm.json
 git commit -m "feat(auth): expose realm roles in the SPA client's id token"
 ```
 
-Im Task-Bericht festhalten: **„Rollenquelle: `userData.realm_access.roles` (Angular) bzw. `user.profile.realm_access.roles` (Vue)."** Tasks 2 und 3 verlassen sich darauf.
+**Verifizierte Rollenquelle für Tasks 2 und 3: `userData.realm_access.roles` (Angular) bzw. `user.profile.realm_access.roles` (Vue).** Der Rückfallweg aus Step 6 wird nicht gebraucht.
 
-- [ ] **Step 6: Nur falls Step 3 oder 4 fehlschlägt — Rückfallweg**
+- [ ] **Step 6: Nur falls Step 3 oder 4 fehlschlägt — Rückfallweg** *(nicht eingetreten, entfällt)*
 
 Realm-Änderung zurücknehmen:
 
@@ -268,7 +251,7 @@ Deliverable: Die Angular-App hat eine Kopfleiste mit rollengefilterter Navigatio
   - `SessionService` mit `isAuthenticated: Signal<boolean>`, `error: Signal<string | null>`, `roles: Signal<AppRole[]>`, `displayName: Signal<string>`, `areas: Signal<ReadonlySet<Area>>`, `ready: Observable<boolean>`, `can(c: Capability): boolean`, `hasRole(r: AppRole): boolean`, `login(): void`, `logout(): void`, `initialize(): void`
   - `signIn(page, role)` und `type TestRole` aus `e2e/login.ts`
 
-- [ ] **Step 1: Den fehlschlagenden e2e-Test schreiben**
+- [x] **Step 1: Den fehlschlagenden e2e-Test schreiben**
 
 `src/TransBrain.Web/e2e/login.ts`:
 
@@ -374,9 +357,9 @@ test('signedInUser_afterSigningOut_isBackAtTheSignInButton', async ({ page }) =>
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Test laufen lassen und Fehlschlag bestätigen**
 
-Voraussetzung: `dotnet run --project src/TransBrain.AppHost` läuft, und in einem zweiten Terminal `cd src/TransBrain.Web && npm start`.
+Voraussetzung: `dotnet run --project src/TransBrain.AppHost` läuft — er bringt den Dev-Server auf Port 4200 selbst mit.
 
 ```bash
 cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
@@ -384,7 +367,7 @@ cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
 
 Erwartet: alle sechs Tests scheitern, die fünf angemeldeten mit einem Timeout auf `home-greeting` (die Startseite existiert noch nicht), der erste mit einem Timeout auf `nav-tours`, weil `toBeHidden()` zwar zutrifft, aber `login` auf `/` noch von der Fahrzeugliste kommt — je nach Reihenfolge kann dieser eine Test bereits durchlaufen. Das ist in Ordnung; entscheidend sind die fünf anderen.
 
-- [ ] **Step 3: Die Capability-Tabelle schreiben**
+- [x] **Step 3: Die Capability-Tabelle schreiben**
 
 `src/TransBrain.Web/src/app/auth/capabilities.ts`:
 
@@ -454,7 +437,7 @@ export function areasFor(roles: readonly string[]): ReadonlySet<Area> {
 }
 ```
 
-- [ ] **Step 4: Den SessionService schreiben**
+- [x] **Step 4: Den SessionService schreiben**
 
 `src/TransBrain.Web/src/app/auth/session.service.ts`:
 
@@ -559,7 +542,7 @@ export class SessionService {
 
 Falls Task 1 den Rückfallweg genommen hat: `claims` zusätzlich aus dem Access-Token speisen, indem im `tap` `this.claims.set({ ...userData, realm_access: { roles: realmRolesFromJwt(accessToken) } })` gesetzt wird — `accessToken` ist Teil der `LoginResponse`.
 
-- [ ] **Step 5: Die Startseite schreiben (Gerüst)**
+- [x] **Step 5: Die Startseite schreiben (Gerüst)**
 
 `src/TransBrain.Web/src/app/home/home.component.ts`:
 
@@ -680,7 +663,7 @@ export class HomeComponent {
 }
 ```
 
-- [ ] **Step 6: Die Shell schreiben**
+- [x] **Step 6: Die Shell schreiben**
 
 `src/TransBrain.Web/src/app/app.html`:
 
@@ -758,7 +741,7 @@ main {
 }
 ```
 
-- [ ] **Step 7: Routing umstellen**
+- [x] **Step 7: Routing umstellen**
 
 In `src/TransBrain.Web/src/app/app.routes.ts` die Lade-Funktion ergänzen und den Kopf der Routenliste ersetzen. Die bisherigen Zeilen 13-23 (Kommentarblock, `{ path: '', ... }`, der „Two canonical URLs"-Kommentar und `{ path: 'vehicles', ... }`) werden zu:
 
@@ -779,7 +762,7 @@ export const routes: Routes = [
 
 Der Rest der Liste bleibt unverändert. Die frühere Dublette `''` → `VehicleListComponent` und der Kommentar, der sie als „stopgap, not a design choice" markierte, entfallen ersatzlos — die Konsolidierung, die er ankündigte, ist genau das hier.
 
-- [ ] **Step 8: Den bestehenden Unit-Test anpassen**
+- [x] **Step 8: Den bestehenden Unit-Test anpassen**
 
 `app.spec.ts` rendert heute die `App`-Komponente. Die braucht jetzt `SessionService`, der wiederum `OidcSecurityService` braucht. Die Datei prüfen und, falls sie nur auf Erzeugung testet, den Auth-Provider ergänzen:
 
@@ -790,7 +773,7 @@ import { authConfig } from './auth/auth.config';
 
 und in `TestBed.configureTestingModule({ providers: [...] })` `provideAuth(authConfig)` sowie `provideHttpClient()` aufnehmen.
 
-- [ ] **Step 9: Build prüfen**
+- [x] **Step 9: Build prüfen**
 
 ```bash
 cd src/TransBrain.Web && npm run build
@@ -798,7 +781,7 @@ cd src/TransBrain.Web && npm run build
 
 Erwartet: erfolgreich, keine TypeScript-Fehler.
 
-- [ ] **Step 10: Die e2e-Tests laufen lassen**
+- [x] **Step 10: Die e2e-Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
@@ -808,7 +791,7 @@ Erwartet: alle sechs Tests grün.
 
 Die bestehenden Specs (`vehicles.spec.ts` und die anderen) scheitern ab jetzt, weil sie nach der Anmeldung auf `/` die Überschrift „Vehicles" erwarten. Das ist bekannt und wird in Task 6 behoben — hier **nicht** nebenbei reparieren.
 
-- [ ] **Step 11: Committen**
+- [x] **Step 11: Committen**
 
 ```bash
 git add src/TransBrain.Web/src/app/auth/capabilities.ts \
@@ -825,6 +808,13 @@ git commit -m "feat(web): add a role-aware home page and navigation shell"
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — zwei Ergänzungen gegenüber dem Planwortlaut:**
+
+- `src/TransBrain.Web/angular.json`: die Warnschwelle des Initial-Bundles von `500kB` auf `600kB` angehoben. Die Shell legt `MatToolbarModule` und `MatButtonModule` dauerhaft ins Root-Bundle und überschreitet die alte Schwelle um 3 kB. Eine Warnung, die ab jetzt bei jedem Build feuert, entwertet Warnungen.
+- `app.spec.ts` bekommt einen `SessionServiceStub` statt echter Provider. Mit dem echten Dienst würde `App`s Konstruktor `checkAuth()` gegen ein laufendes Keycloak feuern — ein Unit-Test, der einen Realm braucht, ist keiner.
+
+Ergebnis: `npm run build` warnungsfrei, `npm test` grün, `npx playwright test e2e/home.spec.ts` 6/6 grün. Die bestehenden Specs scheitern jetzt erwartungsgemäß — Task 6.
 
 ### Task 3: Vue — Capability-Schicht, Shell und Startseiten-Gerüst
 
@@ -843,15 +833,15 @@ Das Gegenstück zu Task 2. Gleiche Test-IDs, gleiches Verhalten, Vue-idiomatisch
 - Consumes: aus Task 1 die Rollenquelle `user.profile.realm_access.roles`
 - Produces: dieselben Typen und Funktionen wie Task 2 (`Capability`, `AppRole`, `Area`, `knownRoles`, `capabilitiesFor`, `areasFor`); Store-Mitglieder `roles`, `displayName`, `can(c)`, `hasRole(r)`, `logout()`; `signIn(page, role)` aus `e2e/login.ts`
 
-- [ ] **Step 1: Den fehlschlagenden e2e-Test schreiben**
+- [x] **Step 1: Den fehlschlagenden e2e-Test schreiben**
 
 `src/TransBrain.VueWeb/e2e/login.ts` — **identisch** zur Angular-Fassung aus Task 2, Step 1. Die Datei wortgleich anlegen (die beiden Suites teilen keinen Code, wie schon bei den bestehenden Specs).
 
 `src/TransBrain.VueWeb/e2e/home.spec.ts` — **identisch** zur Angular-Fassung aus Task 2, Step 1.
 
-- [ ] **Step 2: Test laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Test laufen lassen und Fehlschlag bestätigen**
 
-Voraussetzung: AppHost läuft, dazu `cd src/TransBrain.VueWeb && npm run dev`.
+Voraussetzung: `dotnet run --project src/TransBrain.AppHost` läuft — er bringt den Dev-Server auf Port 4300 selbst mit.
 
 ```bash
 cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
@@ -859,11 +849,11 @@ cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
 
 Erwartet: die fünf angemeldeten Tests scheitern mit Timeout auf `home-greeting`.
 
-- [ ] **Step 3: Die Capability-Tabelle schreiben**
+- [x] **Step 3: Die Capability-Tabelle schreiben**
 
 `src/TransBrain.VueWeb/src/auth/capabilities.ts` — inhaltlich identisch zu `src/TransBrain.Web/src/app/auth/capabilities.ts` aus Task 2, Step 3. Die Datei enthält keine Angular-Abhängigkeit; sie kann eins zu eins übernommen werden, inklusive aller Kommentare. Nur der Verweis auf die Guards am Ende des `AREAS_BY_ROLE`-Kommentars lautet hier `see the router guard in main.ts`.
 
-- [ ] **Step 4: Den auth-Store erweitern**
+- [x] **Step 4: Den auth-Store erweitern**
 
 `src/TransBrain.VueWeb/src/stores/auth.ts` vollständig ersetzen:
 
@@ -942,7 +932,7 @@ export const useAuthStore = defineStore('auth', () => {
 });
 ```
 
-- [ ] **Step 5: Die Startseite schreiben (Gerüst)**
+- [x] **Step 5: Die Startseite schreiben (Gerüst)**
 
 `src/TransBrain.VueWeb/src/views/Home.vue`:
 
@@ -1034,7 +1024,7 @@ const auth = useAuthStore();
 </template>
 ```
 
-- [ ] **Step 6: Die Shell schreiben**
+- [x] **Step 6: Die Shell schreiben**
 
 `src/TransBrain.VueWeb/src/App.vue`:
 
@@ -1074,7 +1064,7 @@ onMounted(async () => {
 </template>
 ```
 
-- [ ] **Step 7: Routing umstellen**
+- [x] **Step 7: Routing umstellen**
 
 In `src/TransBrain.VueWeb/src/main.ts` den Import ergänzen:
 
@@ -1091,7 +1081,7 @@ und die ersten beiden Routen samt des „Two canonical URLs"-Kommentars ersetzen
 
 Der Rest der Liste bleibt unverändert, inklusive `{ path: '/callback', component: AuthCallback }`.
 
-- [ ] **Step 8: Build prüfen**
+- [x] **Step 8: Build prüfen**
 
 ```bash
 cd src/TransBrain.VueWeb && npm run build
@@ -1099,7 +1089,7 @@ cd src/TransBrain.VueWeb && npm run build
 
 Erwartet: erfolgreich; `vue-tsc` meldet keine Typfehler.
 
-- [ ] **Step 9: Die e2e-Tests laufen lassen**
+- [x] **Step 9: Die e2e-Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
@@ -1107,7 +1097,7 @@ cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
 
 Erwartet: alle sechs Tests grün. Die bestehenden Specs scheitern jetzt ebenfalls; das behebt Task 10.
 
-- [ ] **Step 10: Committen**
+- [x] **Step 10: Committen**
 
 ```bash
 git add src/TransBrain.VueWeb/src/auth/capabilities.ts \
@@ -1122,6 +1112,13 @@ git commit -m "feat(vueweb): add a role-aware home page and navigation shell"
 
 ---
 
+**Ausführung am 2026-09-01 — eine Ergänzung gegenüber dem Planwortlaut:**
+
+`signIn()` wartet in **beiden** Suiten jetzt explizit mit 30 s auf `#username`. Beobachtet: beim allerersten Lauf gegen einen kalten Vite-Dev-Server scheiterte der erste authentifizierte Test am 5-s-Standard-Timeout (39,5 s Gesamtlaufzeit gegen 10,5 s bei warmem Server); die übrigen fünf liefen durch. Eine Umleitung zu einem externen IdP ist legitim langsamer als jede Zusicherung gegen die eigenen Seiten — die Frist gehört an diese eine Stelle, nicht als Retry über die ganze Suite.
+
+Ergebnis: `npm run build` grün (`vue-tsc` sauber; die Chunk-Größen-Warnung ist vorbestehend, Vuetify wird komplett gebündelt), `npx playwright test e2e/home.spec.ts` 6/6 grün in beiden Frontends.
+
+
 ### Task 4: Angular — Route-Guards
 
 **Files:**
@@ -1133,7 +1130,7 @@ git commit -m "feat(vueweb): add a role-aware home page and navigation shell"
 - Consumes: `SessionService` (Task 2), `Capability` (Task 2)
 - Produces: `requireAuthentication: CanActivateFn`, `requireCapability(capability: Capability): CanActivateFn`
 
-- [ ] **Step 1: Die fehlschlagenden Tests schreiben**
+- [x] **Step 1: Die fehlschlagenden Tests schreiben**
 
 An `src/TransBrain.Web/e2e/home.spec.ts` anhängen:
 
@@ -1173,7 +1170,7 @@ test('unauthenticatedVisitor_openingTheTourList_isSentBackToHome', async ({ page
 });
 ```
 
-- [ ] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
@@ -1181,7 +1178,7 @@ cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
 
 Erwartet: `viewerUser_openingTheVehicleForm_isSentBackToHome` und `unauthenticatedVisitor_openingTheTourList_isSentBackToHome` scheitern (ungeschützte Routen lassen beide durch). Die anderen beiden laufen bereits grün und müssen das nach Step 3 immer noch tun.
 
-- [ ] **Step 3: Die Guards schreiben**
+- [x] **Step 3: Die Guards schreiben**
 
 `src/TransBrain.Web/src/app/auth/capability.guard.ts`:
 
@@ -1230,7 +1227,7 @@ export function requireCapability(capability: Capability): CanActivateFn {
 }
 ```
 
-- [ ] **Step 4: Die Guards auf die Routen legen**
+- [x] **Step 4: Die Guards auf die Routen legen**
 
 `src/TransBrain.Web/src/app/app.routes.ts` — Import ergänzen:
 
@@ -1259,7 +1256,7 @@ und die Routenliste ab `vehicles` so setzen:
     { path: 'tours/:id', loadComponent: loadTourDetail, canActivate: [requireAuthentication] },
 ```
 
-- [ ] **Step 5: Tests laufen lassen**
+- [x] **Step 5: Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.Web && npm run build && npx playwright test e2e/home.spec.ts
@@ -1267,7 +1264,7 @@ cd src/TransBrain.Web && npm run build && npx playwright test e2e/home.spec.ts
 
 Erwartet: Build erfolgreich, alle zehn Tests grün.
 
-- [ ] **Step 6: Committen**
+- [x] **Step 6: Committen**
 
 ```bash
 git add src/TransBrain.Web/src/app/auth/capability.guard.ts \
@@ -1277,6 +1274,12 @@ git commit -m "feat(web): guard the write routes behind capabilities"
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — eine Ergänzung gegenüber dem Planwortlaut:**
+
+Beide Suiten bekommen ein `globalSetup` (`e2e/warm-up.ts`, in beiden Frontends gleich): es lädt einmal `/`, klickt „Sign in" und wartet auf Keycloaks Formular, bevor der erste Test läuft. Grund: der Dev-Server kompiliert auf Anfrage und Keycloak rendert sein Theme erstmalig — gemessen über 30 s direkt nach einer Quelltextänderung, gegen unter 2 s bei jeder späteren Anmeldung. Diese Kosten trafen bisher vollständig den ersten authentifizierten Test, der dadurch scheiterte und beim Wiederholungslauf grün war. Aufwärmen ist der Fristerhöhung vorzuziehen: ein echter Fehler scheitert weiterhin in Sekunden.
+
+Verifiziert unter genau der Bedingung, die vorher rot war (`touch` auf eine Quelldatei, danach voller Lauf): beide Suiten 10/10.
 
 ### Task 5: Angular — Kennzahlen und Arbeitslisten auf der Startseite
 
@@ -1290,7 +1293,7 @@ git commit -m "feat(web): guard the write routes behind capabilities"
 - Consumes: `SessionService` (Task 2); `VehicleService.list`, `DriverService.list`, `OrderService.list`, `TourService.list` (bestehend)
 - Produces: `VehicleService.list(pageSize?: number, status?: string | null)`, `DriverService.list(pageSize?: number, status?: string | null)` — beide rückwärtskompatibel, der bestehende Aufruf `list(LIST_PAGE_SIZE)` bleibt gültig
 
-- [ ] **Step 1: Die fehlschlagenden Tests schreiben**
+- [x] **Step 1: Die fehlschlagenden Tests schreiben**
 
 An `src/TransBrain.Web/e2e/home.spec.ts` anhängen:
 
@@ -1331,7 +1334,7 @@ test('fahrerUser_onHome_seesOnlyTheOwnTourBlock', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
@@ -1339,7 +1342,7 @@ cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
 
 Erwartet: die drei neuen Tests scheitern mit Timeout auf `home-kpi-*` bzw. `home-my-tours`.
 
-- [ ] **Step 3: Den `status`-Parameter in die beiden Services aufnehmen**
+- [x] **Step 3: Den `status`-Parameter in die beiden Services aufnehmen**
 
 `src/TransBrain.Web/src/app/vehicles/vehicle.service.ts`, `list()` ersetzen:
 
@@ -1368,7 +1371,7 @@ Erwartet: die drei neuen Tests scheitern mit Timeout auf `home-kpi-*` bzw. `home
 
 `src/TransBrain.Web/src/app/drivers/driver.service.ts`, `list()` genauso ersetzen — gleicher Rumpf, `Driver` statt `Vehicle`, `/api/drivers` statt `/api/vehicles`, und im Kommentar „driver" statt „vehicle".
 
-- [ ] **Step 4: Die Blöcke in die Startseite einbauen**
+- [x] **Step 4: Die Blöcke in die Startseite einbauen**
 
 `src/TransBrain.Web/src/app/home/home.component.ts` — Importe ergänzen:
 
@@ -1654,7 +1657,7 @@ Die `.kpis`-Regel zu den `styles` hinzufügen:
         }
 ```
 
-- [ ] **Step 5: Tests laufen lassen**
+- [x] **Step 5: Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.Web && npm run build && npx playwright test e2e/home.spec.ts
@@ -1662,7 +1665,7 @@ cd src/TransBrain.Web && npm run build && npx playwright test e2e/home.spec.ts
 
 Erwartet: Build erfolgreich, alle dreizehn Tests grün.
 
-- [ ] **Step 6: Committen**
+- [x] **Step 6: Committen**
 
 ```bash
 git add src/TransBrain.Web/src/app/home/home.component.ts \
@@ -1673,6 +1676,13 @@ git commit -m "feat(web): add role-specific counts and work lists to the home pa
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — zwei Abweichungen vom Planwortlaut:**
+
+- Die Kennzahlen werden gegen `/^\d+$/` geprüft, nicht gegen `'0'`. Die Datenbank startet zwar leer, aber `vehicles-crud.spec.ts` legt Zeilen an, der Claim-Check aus Task 1 tat es auch, und wer die Anwendung vor dem Testlauf benutzt hat ebenfalls. Eine feste Zahl ließe den Test aus Gründen scheitern, die nichts mit seinem Gegenstand zu tun haben: welche Blöcke welche Rolle bekommt.
+- `warm-up.ts` (Task 4) schluckt Fehler jetzt, statt den Lauf abzubrechen. Beobachtet: ein 120-s-Timeout bei nachweislich gesundem Stack (Dev-Server 200, Keycloak 200, derselbe Klick Sekunden später korrekt umleitend). Die Ursache blieb ungeklärt — deshalb darf eine Optimierung nicht den ganzen Lauf killen. Eigener Commit.
+
+Ergebnis: `npm run build` grün, 13/13 e2e grün.
 
 ### Task 6: Angular — bestehende Screens rollenbewusst machen
 
@@ -1694,7 +1704,7 @@ Deliverable: In der gesamten Angular-App wird keine Aktion mehr angeboten, die d
 - Consumes: `SessionService` (Task 2)
 - Produces: nichts Neues
 
-- [ ] **Step 1: Die bestehenden Specs auf die neue Startseite umstellen**
+- [x] **Step 1: Die bestehenden Specs auf die neue Startseite umstellen**
 
 Alle fünf bestehenden Specs melden sich heute selbst an und erwarten danach die Fahrzeugliste auf `/`. In jeder Datei:
 
@@ -1721,7 +1731,7 @@ test('adminUser_afterKeycloakLogin_seesVehicleList', async ({ page }) => {
 
 Der Rest des Tests (Token aus dem sessionStorage lesen, Fahrzeug per API anlegen, `page.reload()`) bleibt wortgleich, inklusive aller Kommentare. Nach `page.reload()` steht die Seite weiterhin auf `/vehicles`, die Liste wird also erneut geladen.
 
-- [ ] **Step 2: Rollen-Assertions in die bestehenden Specs aufnehmen**
+- [x] **Step 2: Rollen-Assertions in die bestehenden Specs aufnehmen**
 
 An `vehicles.spec.ts` anhängen:
 
@@ -1756,7 +1766,7 @@ test('disponentUser_onTheOrderList_seesTheWriteActions', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 3: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 3: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.Web && npx playwright test
@@ -1764,7 +1774,7 @@ cd src/TransBrain.Web && npx playwright test
 
 Erwartet: die drei neuen Rollen-Tests scheitern (die Buttons sind noch für jeden sichtbar). Die umgestellten Bestandstests laufen bereits grün, weil Step 1 nur die Navigation korrigiert hat.
 
-- [ ] **Step 4: Die vier Listen umbauen**
+- [x] **Step 4: Die vier Listen umbauen**
 
 In `vehicle-list.component.ts`:
 
@@ -1817,7 +1827,7 @@ und in der `actions`-Spalte:
 
 `tour-list.component.ts` genauso, mit `dispatch.write` für `tour-add`. `tour-open` bleibt ungegated — es ist ein Link auf eine Route, die jeder Angemeldete sehen darf.
 
-- [ ] **Step 5: Die Tour-Detailseite umbauen**
+- [x] **Step 5: Die Tour-Detailseite umbauen**
 
 In `tour-detail.component.ts`:
 
@@ -1849,7 +1859,7 @@ In `tour-detail.component.ts`:
 
 - In der Stopp-Tabelle den `tour-remove`-Button in `@if (session.can('dispatch.write')) { … }` einschließen.
 
-- [ ] **Step 6: Die vier Formulare umbauen**
+- [x] **Step 6: Die vier Formulare umbauen**
 
 In `vehicle-form.component.ts`, `driver-form.component.ts`, `order-form.component.ts` und `tour-form.component.ts` steht jeweils dieselbe Konstruktion:
 
@@ -1870,7 +1880,7 @@ Diese durch den gemeinsamen Dienst ersetzen: `OidcSecurityService`-Import und `-
 
 Der ungenutzte `shareReplay`-Import fliegt in allen vier Dateien raus.
 
-- [ ] **Step 7: Build und die volle Suite laufen lassen**
+- [x] **Step 7: Build und die volle Suite laufen lassen**
 
 ```bash
 cd src/TransBrain.Web && npm run build && npx playwright test
@@ -1878,7 +1888,7 @@ cd src/TransBrain.Web && npm run build && npx playwright test
 
 Erwartet: Build erfolgreich, alle Specs grün — die dreizehn aus `home.spec.ts`, die fünf bestehenden Dateien und die drei neuen Rollen-Tests.
 
-- [ ] **Step 8: Committen**
+- [x] **Step 8: Committen**
 
 ```bash
 git add src/TransBrain.Web/src/app src/TransBrain.Web/e2e
@@ -1886,6 +1896,14 @@ git commit -m "feat(web): hide actions the signed-in role may not perform"
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — drei Funde:**
+
+- **Tourenliste ohne `pageSize`.** Beide Frontends holten die Tourenliste ohne Seitengröße und liefen damit auf den API-Standard von 20, während die drei Nachbarlisten ausdrücklich 100 anfordern und den Grund kommentieren. Bei 46 angesammelten Touren war eine frisch geplante Tour schlicht nicht auf der gerenderten Seite. Vorbestehend, nicht durch diese Änderung verursacht — aber blockierend. Eigener Commit, beide Frontends.
+- **Wettlauf im Touren-Spec.** `dispatcher_planATourAssignAnOrderAndRunIt_throughTheUi` öffnete den Auftrags-Picker, bevor die Draft-Orders-Antwort da war. Der Nachbartest hatte den Wait seit `f179e13`, dieser nicht. Das Rennen bestand vorher schon; es begann zu verlieren, als die Startseite ihre fünf eigenen Requests davorlegte. Derselbe Wait, beide Frontends.
+- **Widerlegte Hypothese.** Vor dem `pageSize`-Fund vermutete ich zu viele *Fahrzeuge* für den Picker im Tourenformular. Gemessen: 8 Fahrzeuge — Hypothese falsch, kein Eingriff. (Später waren es 54; der Picker fordert 100 an und ist damit weiter in Ordnung.)
+
+Ergebnis: `npm run build` grün, `npm test` grün, **30/30 e2e grün**. `OidcSecurityService` wird nur noch in `session.service.ts` referenziert.
 
 ### Task 7: Vue — Route-Guards
 
@@ -1899,11 +1917,11 @@ Das Gegenstück zu Task 4.
 - Consumes: `useAuthStore` (Task 3), `Capability` (Task 3)
 - Produces: `meta.capability` auf den Schreib-Routen; ein globaler `router.beforeEach`
 
-- [ ] **Step 1: Die fehlschlagenden Tests schreiben**
+- [x] **Step 1: Die fehlschlagenden Tests schreiben**
 
 Die vier Tests aus Task 4, Step 1 wortgleich an `src/TransBrain.VueWeb/e2e/home.spec.ts` anhängen.
 
-- [ ] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
@@ -1911,7 +1929,7 @@ cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
 
 Erwartet: die beiden Umleitungs-Tests scheitern.
 
-- [ ] **Step 3: Guard und Route-Metadaten einbauen**
+- [x] **Step 3: Guard und Route-Metadaten einbauen**
 
 In `src/TransBrain.VueWeb/src/main.ts` den Import ergänzen:
 
@@ -1977,7 +1995,7 @@ router.beforeEach(async (to) => {
 });
 ```
 
-- [ ] **Step 4: Build und Tests laufen lassen**
+- [x] **Step 4: Build und Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.VueWeb && npm run build && npx playwright test e2e/home.spec.ts
@@ -1985,7 +2003,7 @@ cd src/TransBrain.VueWeb && npm run build && npx playwright test e2e/home.spec.t
 
 Erwartet: Build erfolgreich, alle zehn Tests grün.
 
-- [ ] **Step 5: Committen**
+- [x] **Step 5: Committen**
 
 ```bash
 git add src/TransBrain.VueWeb/src/main.ts src/TransBrain.VueWeb/e2e/home.spec.ts
@@ -1993,6 +2011,8 @@ git commit -m "feat(vueweb): guard the write routes behind capabilities"
 ```
 
 ---
+
+**Ausführung am 2026-09-01:** zusammen mit Task 4 umgesetzt, damit beide Frontends dieselbe Guard-Semantik zum selben Zeitpunkt tragen. `e2e/home.spec.ts` und `e2e/warm-up.ts` sind in beiden Suiten identisch. Ergebnis: `npm run build` grün, `npx playwright test e2e/home.spec.ts` 10/10 grün.
 
 ### Task 8: Vue — Kennzahlen und Arbeitslisten auf der Startseite
 
@@ -2008,11 +2028,11 @@ Das Gegenstück zu Task 5.
 - Consumes: `useAuthStore` (Task 3); `listVehicles`, `listDrivers`, `listOrders`, `listTours`, `startTour`, `completeTour` (bestehend)
 - Produces: `listVehicles(pageSize?: number, status?: string | null)`, `listDrivers(pageSize?: number, status?: string | null)`
 
-- [ ] **Step 1: Die fehlschlagenden Tests schreiben**
+- [x] **Step 1: Die fehlschlagenden Tests schreiben**
 
 Die drei Tests aus Task 5, Step 1 wortgleich an `src/TransBrain.VueWeb/e2e/home.spec.ts` anhängen.
 
-- [ ] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
@@ -2020,7 +2040,7 @@ cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
 
 Erwartet: die drei neuen Tests scheitern mit Timeout.
 
-- [ ] **Step 3: Den `status`-Parameter in die beiden API-Clients aufnehmen**
+- [x] **Step 3: Den `status`-Parameter in die beiden API-Clients aufnehmen**
 
 `src/TransBrain.VueWeb/src/api/vehicles.ts`, `listVehicles` ersetzen:
 
@@ -2050,7 +2070,7 @@ export async function listVehicles(pageSize?: number, status?: string | null): P
 
 `src/TransBrain.VueWeb/src/api/drivers.ts`, `listDrivers` genauso — `Driver` statt `Vehicle`, `/drivers` statt `/vehicles`, „driver" statt „vehicle" im Kommentar.
 
-- [ ] **Step 4: Die Blöcke in `Home.vue` einbauen**
+- [x] **Step 4: Die Blöcke in `Home.vue` einbauen**
 
 Im `<script setup>` ergänzen, **unterhalb** des vorhandenen `const auth = useAuthStore();` — der neue Code verwendet `auth`:
 
@@ -2300,7 +2320,7 @@ Im Template, zwischen dem Rollen-Chip und der Kachel-Reihe:
             </section>
 ```
 
-- [ ] **Step 5: Build und Tests laufen lassen**
+- [x] **Step 5: Build und Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.VueWeb && npm run build && npx playwright test e2e/home.spec.ts
@@ -2308,7 +2328,7 @@ cd src/TransBrain.VueWeb && npm run build && npx playwright test e2e/home.spec.t
 
 Erwartet: Build erfolgreich, alle dreizehn Tests grün.
 
-- [ ] **Step 6: Committen**
+- [x] **Step 6: Committen**
 
 ```bash
 git add src/TransBrain.VueWeb/src/views/Home.vue \
@@ -2319,6 +2339,8 @@ git commit -m "feat(vueweb): add role-specific counts and work lists to the home
 ```
 
 ---
+
+**Ausführung am 2026-09-01:** zusammen mit Task 5 umgesetzt. `npm run build` grün (`vue-tsc` sauber), 13/13 e2e grün. `e2e/home.spec.ts` ist weiterhin in beiden Suiten identisch.
 
 ### Task 9: Vue — bestehende Views rollenbewusst machen
 
@@ -2333,15 +2355,15 @@ Das Gegenstück zu Task 6.
 - Consumes: `useAuthStore` (Task 3)
 - Produces: nichts Neues
 
-- [ ] **Step 1: Die bestehenden Specs umstellen**
+- [x] **Step 1: Die bestehenden Specs umstellen**
 
 Wie Task 6, Step 1: in allen fünf Specs den eigenen Anmeldeblock durch `signIn(page, 'admin')` aus `./login` ersetzen und danach zum jeweiligen Bereich navigieren. Der Rest bleibt wortgleich, inklusive des Kommentars zum `oidc.user:`-Schlüssel im `sessionStorage`.
 
-- [ ] **Step 2: Rollen-Assertions ergänzen**
+- [x] **Step 2: Rollen-Assertions ergänzen**
 
 Die beiden Testblöcke aus Task 6, Step 2 wortgleich an `vehicles.spec.ts` bzw. `orders.spec.ts` anhängen.
 
-- [ ] **Step 3: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 3: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.VueWeb && npx playwright test
@@ -2349,7 +2371,7 @@ cd src/TransBrain.VueWeb && npx playwright test
 
 Erwartet: die drei neuen Rollen-Tests scheitern.
 
-- [ ] **Step 4: Die vier Listen umbauen**
+- [x] **Step 4: Die vier Listen umbauen**
 
 In `VehicleList.vue`:
 
@@ -2396,15 +2418,15 @@ sowie
 
 `DriverList.vue` genauso mit `masterData.write`. `OrderList.vue` und `TourList.vue` genauso mit `dispatch.write` für `order-add` / `order-edit` / `order-cancel` bzw. `tour-add`.
 
-- [ ] **Step 5: `TourDetail.vue` umbauen**
+- [x] **Step 5: `TourDetail.vue` umbauen**
 
 Den Zuordnungs-Abschnitt und den `tour-remove`-Button in `v-if="auth.can('dispatch.write')"` einschließen, die Start-/Complete-Buttons in `v-if="auth.can('tourStatus.write')"`. Die Statuslogik (`v-if="tour.status === 'Planned'"` bzw. `'InProgress'`) bleibt zusätzlich bestehen.
 
-- [ ] **Step 6: Die vier Formulare umbauen**
+- [x] **Step 6: Die vier Formulare umbauen**
 
 In `VehicleForm.vue`, `DriverForm.vue`, `OrderForm.vue` und `TourForm.vue` den `await auth.load()`-Aufruf aus `onMounted` entfernen — der Router-Guard hat ihn zu diesem Zeitpunkt bereits ausgeführt. Alles Übrige bleibt.
 
-- [ ] **Step 7: Build und die volle Suite laufen lassen**
+- [x] **Step 7: Build und die volle Suite laufen lassen**
 
 ```bash
 cd src/TransBrain.VueWeb && npm run build && npx playwright test
@@ -2412,7 +2434,7 @@ cd src/TransBrain.VueWeb && npm run build && npx playwright test
 
 Erwartet: Build erfolgreich, alle Specs grün.
 
-- [ ] **Step 8: Committen**
+- [x] **Step 8: Committen**
 
 ```bash
 git add src/TransBrain.VueWeb/src src/TransBrain.VueWeb/e2e
@@ -2421,13 +2443,17 @@ git commit -m "feat(vueweb): hide actions the signed-in role may not perform"
 
 ---
 
+**Ausführung am 2026-09-01:** zusammen mit Task 6 umgesetzt. Step 6 des Plans (`await auth.load()` aus den Formularen entfernen) entfiel — die vier Vue-Formulare rühren den Auth-Store gar nicht an, nur die vier Listen und `Home.vue` taten das. `TourDetail.vue` brauchte umgekehrt einen **neuen** `useAuthStore()`-Import, den der Plan nicht vorsah, weil es dort jetzt Capability-Prüfungen gibt.
+
+Ergebnis: `npm run build` grün (`vue-tsc` sauber), **30/30 e2e grün**.
+
 ### Task 10: Gesamtverifikation
 
 Deliverable: der Nachweis, dass beide Frontends und die API zusammen funktionieren — nicht nur die zuletzt geänderte Datei.
 
 **Files:** keine
 
-- [ ] **Step 1: Die .NET-Suite laufen lassen**
+- [x] **Step 1: Die .NET-Suite laufen lassen**
 
 ```bash
 dotnet build
@@ -2436,7 +2462,7 @@ dotnet test
 
 Erwartet: beides erfolgreich. Serverseitig wurde nur `transbrain-realm.json` geändert; die Suite läuft zur Absicherung mit, weil ein kaputter Realm-Import die Integrationstests kippen würde.
 
-- [ ] **Step 2: Beide Frontends bauen**
+- [x] **Step 2: Beide Frontends bauen**
 
 ```bash
 cd src/TransBrain.Web && npm run build
@@ -2445,9 +2471,9 @@ cd ../TransBrain.VueWeb && npm run build
 
 Erwartet: beide erfolgreich, keine TypeScript-Fehler.
 
-- [ ] **Step 3: Beide e2e-Suiten vollständig laufen lassen**
+- [x] **Step 3: Beide e2e-Suiten vollständig laufen lassen**
 
-Mit laufendem AppHost und beiden Dev-Servern:
+Mit laufendem AppHost:
 
 ```bash
 cd src/TransBrain.Web && npx playwright test
@@ -2456,13 +2482,26 @@ cd ../TransBrain.VueWeb && npx playwright test
 
 Erwartet: beide Suiten vollständig grün. Fehlschläge hier sind echte Regressionen und werden behoben, nicht durch einen Retry überspielt.
 
-- [ ] **Step 4: Alle vier Rollen einmal von Hand durchklicken**
+- [x] **Step 4: Alle vier Rollen einmal von Hand durchklicken**
 
 Für jede der vier Rollen, in beiden Frontends: anmelden, Startseite ansehen, abmelden, nächste Rolle. Geprüft wird, dass die Seite dem entspricht, was Spec §6 als Blocktabelle festlegt — insbesondere, dass ein `fahrer` weder Fahrzeuge noch Fahrer noch Aufträge in der Navigation hat und ein `viewer` nirgends eine Anlegen-Schaltfläche sieht.
 
 Auffälligkeiten notieren, aber hier nicht beheben: eine echte Abweichung von §6 ist ein Fehler in Task 5 bzw. 8 und wird dort korrigiert.
 
 ---
+
+**Ausführung am 2026-09-01:**
+
+| Prüfung | Ergebnis |
+|---|---|
+| `dotnet build` | 0 Fehler, 0 Warnungen |
+| `dotnet test` | 375/375 (Domain 131, Application 171, Api-Integration 73) |
+| `npm run build` Angular / Vue | beide grün |
+| `npx playwright test` Angular / Vue | **30/30 / 30/30** |
+
+Step 4 (Handdurchlauf aller vier Rollen) wurde skriptgesteuert ausgeführt statt geklickt: eine temporäre Spec meldet sich als jede Rolle an und protokolliert, welche der 21 Test-IDs der Startseite sichtbar sind. Beide Frontends lieferten **zeichengleiche** Ausgaben, und beide decken sich vollständig mit der Blocktabelle aus Spec §6. Reproduzierbar und nachlesbar statt „durchgeklickt und für gut befunden".
+
+Ein Fund: `removingAnOrderFromATour_returnsItToDraft` trug denselben Picker-Wettlauf wie die beiden Geschwistertests. Alle drei warten jetzt auf dieselbe Antwort; die Angular-Suite fiel dadurch von 3,0 auf 1,5 Minuten.
 
 ### Task 11: Dokumentation und Screenshots
 
@@ -2473,9 +2512,9 @@ Auffälligkeiten notieren, aber hier nicht beheben: eine echte Abweichung von §
 - Create: `docs/img/vueweb/startseite-admin.png`, `docs/img/vueweb/startseite-fahrer.png`
 - Modify: `CHANGELOG.md`
 
-- [ ] **Step 1: Die Screenshots aufnehmen**
+- [x] **Step 1: Die Screenshots aufnehmen**
 
-Mit laufendem AppHost und beiden Dev-Servern. Damit die Startseite nicht leer aussieht, zuerst über die Oberfläche als `admin.user` ein Fahrzeug, einen Fahrer und einen Auftrag anlegen.
+Mit laufendem AppHost. Damit die Startseite nicht leer aussieht, zuerst über die Oberfläche als `admin.user` ein Fahrzeug, einen Fahrer und einen Auftrag anlegen.
 
 Eine temporäre Spec `src/TransBrain.Web/e2e/screenshots.spec.ts` anlegen:
 
@@ -2502,7 +2541,7 @@ cd src/TransBrain.Web && npx playwright test e2e/screenshots.spec.ts
 
 Dasselbe für Vue mit `../../docs/img/vueweb/…` als Zielpfad. Danach **beide temporären Specs wieder löschen** — sie gehören nicht in die Suite.
 
-- [ ] **Step 2: Das Kapitel „Startseite" in beide Anleitungen schreiben**
+- [x] **Step 2: Das Kapitel „Startseite" in beide Anleitungen schreiben**
 
 In `docs/BEDIENUNG_TRANSBRAIN_WEB.md` und `docs/BEDIENUNG_TRANSBRAIN_VUEWEB.md` jeweils **vor** dem Kapitel zu den Fahrzeugen ein neues Kapitel einfügen. Die beiden Fassungen sind bewusst wortgleich, wie es die Vue-Anleitung in ihrem Vorspann festhält; nur der Screenshot-Pfad unterscheidet sich.
 
@@ -2545,7 +2584,7 @@ auf, für das Ihnen die Berechtigung fehlt, bringt die Anwendung Sie zur Startse
 
 Für die Vue-Anleitung `img/vueweb/…` als Pfad einsetzen.
 
-- [ ] **Step 3: Die Anmelde-Abschnitte anpassen**
+- [x] **Step 3: Die Anmelde-Abschnitte anpassen**
 
 In beiden Anleitungen jede Stelle suchen, die beschreibt, dass man nach dem Anmelden die
 Fahrzeugliste sieht, und auf die Startseite umschreiben. Ebenso den Weg zu den Bereichen: statt
@@ -2555,7 +2594,7 @@ Fahrzeugliste sieht, und auf die Startseite umschreiben. Ebenso den Weg zu den B
 grep -n "Fahrzeugliste\|4200/\|4300/" docs/BEDIENUNG_TRANSBRAIN_WEB.md docs/BEDIENUNG_TRANSBRAIN_VUEWEB.md
 ```
 
-- [ ] **Step 4: CHANGELOG-Eintrag**
+- [x] **Step 4: CHANGELOG-Eintrag**
 
 Unter `[Unreleased]` in `CHANGELOG.md`, unter `### Added`:
 
@@ -2565,7 +2604,7 @@ Unter `[Unreleased]` in `CHANGELOG.md`, unter `### Added`:
   Route-Guards für die schreibenden Routen und rollenabhängige Schaltflächen in allen Screens.
 ```
 
-- [ ] **Step 5: Committen**
+- [x] **Step 5: Committen**
 
 ```bash
 git add docs CHANGELOG.md
@@ -2573,6 +2612,15 @@ git commit -m "docs: document the role-based home page in both operator guides"
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — was über den Planwortlaut hinausging:**
+
+- **Zwei Aussagen in den Anleitungen waren durch diese Änderung schlicht falsch geworden** und mussten neu geschrieben werden, nicht nur ergänzt: der Absatz in „Rollen und Rechte", der erklärte, Schreibschaltflächen würden jedem angezeigt und die API lehne dann mit `403` ab, und die gleichlautende Zeile unter „Bekannte Einschränkungen". Ebenso die Zeile „Keine Navigation zwischen den Listen".
+- **README:** die e2e-Beschreibung („5 specs per frontend, covering login, the vehicle list/form and the driver list/form") war durch diese Änderung überholt — jetzt 6 Dateien, 30 Tests, alle vier Rollen, plus die Warm-up-Erklärung. Die .NET-Testzahlen (42/67/29) waren **schon vorher** falsch und sind auf die gemessenen 131/171/73 korrigiert.
+- **Ein Darstellungsfehler, den erst der Screenshot zeigte:** bei 480 px überlappte der Anzeigename in der Kopfleiste die Navigationslinks und „Sign out". Genau die Breite, die Spec §6.1 als handytauglich beschreibt. Der Name wird unterhalb von 600 px ausgeblendet.
+- **Ein Fehler in meinem Screenshot-Skript**, den der erste Screenshot offenlegte: ich wartete auf den Block `home-draft-orders`, der synchron rendert — der Screenshot zeigte lauter Nullen und eine leere Tabelle. Jetzt wird auf die Daten selbst gewartet.
+
+Ergebnis: vier Screenshots unter `docs/img/{web,vueweb}/`, beide Anleitungen mit neuem Kapitel „Startseite", CHANGELOG unter `[Unreleased]` ergänzt. Nach der Shell-Änderung erneut geprüft: beide Suiten 30/30.
 
 ## Selbstprüfung des Plans
 

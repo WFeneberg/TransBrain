@@ -1,0 +1,21 @@
+.spacer {
+    flex: 1 1 auto;
+}
+
+.brand {
+    font-weight: 600;
+    margin-right: 1.5rem;
+}
+
+main {
+    padding: 1rem;
+}
+
+/* The driver's home page is meant to be usable on a phone in the cab, and at that width the
+   name pushes the nav links and Sign out into each other. The name is the least load-bearing
+   thing in the bar - the role is on the page itself - so it is what gives way. */
+@media (max-width: 600px) {
+    .user-name {
+        display: none;
+    }
+}

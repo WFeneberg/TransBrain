@@ -39,7 +39,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `TransportOrder.ReturnToDraft`, so an order removed from a tour becomes assignable again instead of being stranded in `Planned` — a transition the spec's diagram omits but its `RemoveOrder` use case requires
 - `ICurrentUser` abstraction and driver-scoped authorization: a `fahrer` sees only their own tours and may start and complete only those, enforced in the handlers because a policy cannot see which tour a request addresses
 
+- Role-based home page in both frontends at `/`, replacing the vehicle list as the landing screen: per-role counts, work lists and area tiles, driven by a capability table derived from the `realm_access.roles` claim. A dispatcher gets the draft orders awaiting a tour; a driver gets their own tours for today with `Start tour` / `Complete tour` inline, on a layout narrow enough for a phone in the cab
+- Navigation shell in both frontends (toolbar with role-filtered links, signed-in user and a **Sign out** button), and route guards that redirect a user without the required capability back to the home page. The list routes are deliberately left unguarded beyond authentication, because `Policies.Read` admits every role
+- Sign-out in both frontends, which neither had before
+- A `realm-roles-in-id-token` protocol mapper on the `transbrain-spa` client, so `realm_access.roles` reaches the id token and userinfo in the same shape the API already reads from the access token; without it a client cannot see its own roles without parsing an access token that is not addressed to it
+- Playwright `home.spec.ts` in both frontends: all four realm roles, sign-out, and the route guards — 30 tests per frontend in total
+
 ### Changed
+- Write actions are now hidden from roles that may not perform them, in every screen of both frontends, instead of being offered to everyone and refused by the API with a `403`. The operator guides' "Rollen und Rechte" chapters said the opposite and have been rewritten
+- Both frontends run their OIDC `checkAuth()` / `auth.load()` exactly once, in the app shell, instead of once per screen — nine components in the Angular app, five views in the Vue app
+- The tour list now asks for the API's maximum page size too. The earlier change below covered the vehicle, driver and order lists but missed this one, which asked for no page size at all and so inherited the default of 20; with lists sorted ascending, that hid every tour planned after the twentieth
+- The initial-bundle warning budget for the Angular app rises from 500kB to 600kB: the navigation shell belongs in the root bundle permanently and pushed it 3kB over
+- Both Playwright suites warm the dev server and Keycloak up once before the first test, so the cold-start cost stops landing on whichever test authenticates first
 - Both frontends' list screens and pickers now request the API's maximum page size instead of the default 20. Lists come back sorted ascending, so one default page showed the twenty *oldest* records and hid everything added since — with no pagination controls to reach the rest. This is a stopgap; real paging is still needed above 100 rows
 - Vuetify data tables in the Vue frontend no longer paginate a second time on top of the server's page, which could hide a record the server had returned
 - The vehicle and driver forms now hydrate the OIDC session before their first request, so a form opened by direct navigation (a bookmark, a page reload) no longer answers `401` to a signed-in user — the same fix the order form received earlier

@@ -7,6 +7,14 @@ import { listTours, type Tour } from '../api/tours';
 import { listVehicles, type Vehicle } from '../api/vehicles';
 import { useAuthStore } from '../stores/auth';
 
+/**
+ * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
+ * request returns is all a user can ever see - and lists come back sorted ascending, meaning a
+ * default page of 20 shows the twenty OLDEST records and hides everything added since. Asking
+ * for the cap is a stopgap, not a fix: real paging controls are still needed above 100 rows.
+ */
+const LIST_PAGE_SIZE = 100;
+
 const auth = useAuthStore();
 /** The API's maximum page size. A picker must offer every choice, not the first twenty. */
 const PICKER_PAGE_SIZE = 100;
@@ -30,7 +38,6 @@ const headers = [
 ];
 
 onMounted(async () => {
-    await auth.load();
     if (auth.isAuthenticated) {
         await refresh();
         await loadFilterOptions();
@@ -44,6 +51,7 @@ async function refresh(): Promise<void> {
                 tourDate: dateFilter.value,
                 vehicleId: vehicleFilter.value,
                 driverId: driverFilter.value,
+                pageSize: LIST_PAGE_SIZE,
             })
         ).items;
     } catch (error) {
@@ -77,7 +85,12 @@ function describe(error: unknown, fallback: string): string {
     <v-container>
         <template v-if="auth.isAuthenticated">
             <h1>Tours</h1>
-            <v-btn data-testid="tour-add" @click="router.push('/tours/new')">Add tour</v-btn>
+            <v-btn
+                v-if="auth.can('dispatch.write')"
+                data-testid="tour-add"
+                @click="router.push('/tours/new')"
+                >Add tour</v-btn
+            >
 
             <!-- Plain <input>/<select>, not Vuetify controls: a data-testid on a Vuetify field
                  lands on its wrapper div and Playwright's fill()/selectOption() then fail.
@@ -154,9 +167,6 @@ function describe(error: unknown, fallback: string): string {
                 </template>
             </v-data-table>
         </template>
-        <template v-else>
-            <p v-if="errorMessage" data-testid="tour-list-error">{{ errorMessage }}</p>
-            <v-btn data-testid="login" @click="auth.login()">Sign in</v-btn>
-        </template>
+        <p v-else>Please sign in to see the tours.</p>
     </v-container>
 </template>

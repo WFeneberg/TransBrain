@@ -11,7 +11,9 @@ import {
     startTour,
     type Tour,
 } from '../api/tours';
+import { useAuthStore } from '../stores/auth';
 
+const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -166,7 +168,7 @@ function describe(error: unknown, fallback: string): string {
                     </template>
                     <template #item.actions="{ item }">
                         <v-btn
-                            v-if="item.stopType === 'Pickup'"
+                            v-if="item.stopType === 'Pickup' && auth.can('dispatch.write')"
                             data-testid="tour-remove"
                             @click="remove(item.transportOrderId)"
                         >
@@ -176,7 +178,7 @@ function describe(error: unknown, fallback: string): string {
                 </v-data-table>
             </section>
 
-            <section>
+            <section v-if="auth.can('dispatch.write')">
                 <h2>Assign an order</h2>
                 <!-- Only Draft orders are offered: any other status is refused by the domain,
                      and offering a choice the server will reject is worse than not offering it. -->
@@ -192,7 +194,9 @@ function describe(error: unknown, fallback: string): string {
                 <v-btn data-testid="tour-assign" @click="assign">Assign</v-btn>
             </section>
 
-            <section>
+            <!-- tourStatus.write, not dispatch.write: a fahrer may run their own tour without
+                 being allowed to change what is on it. -->
+            <section v-if="auth.can('tourStatus.write')">
                 <!-- Hidden rather than shown-and-refused: a button that can only ever answer 409
                      is noise. Assign and Remove stay visible, matching how the order screens
                      treat Cancel - there the refusal message teaches the rule. -->

@@ -29,7 +29,6 @@ const headers = [
 ];
 
 onMounted(async () => {
-    await auth.load();
     if (auth.isAuthenticated) {
         await refresh();
     }
@@ -43,11 +42,6 @@ async function refresh(): Promise<void> {
     }
 }
 
-// Any authenticated user sees the Add/Edit/Delete controls above - the app has no
-// role-decoding infrastructure yet (auth.isAuthenticated is the only auth state tracked
-// anywhere in this SPA), and building one just to hide three buttons is out of scope. A
-// non-admin (dispo/fahrer/viewer) who uses them gets a 403 from the API, which surfaces here
-// via actionError rather than silently failing.
 async function remove(vehicle: Vehicle): Promise<void> {
     actionError.value = null;
     try {
@@ -79,7 +73,12 @@ function describe(error: unknown, fallback: string): string {
     <v-container>
         <template v-if="auth.isAuthenticated">
             <h1>Vehicles</h1>
-            <v-btn data-testid="vehicle-add" @click="router.push('/vehicles/new')">Add vehicle</v-btn>
+            <v-btn
+                v-if="auth.can('masterData.write')"
+                data-testid="vehicle-add"
+                @click="router.push('/vehicles/new')"
+                >Add vehicle</v-btn
+            >
             <p v-if="actionError" data-testid="vehicle-action-error">{{ actionError }}</p>
             <p v-if="errorMessage" data-testid="vehicle-list-error">{{ errorMessage }}</p>
             <!-- items-per-page="-1": the API already returned one page, and Vuetify would
@@ -98,11 +97,13 @@ function describe(error: unknown, fallback: string): string {
                     <span data-testid="vehicle-plate">{{ item.licensePlate }}</span>
                 </template>
                 <template #item.actions="{ item }">
-                    <v-btn data-testid="vehicle-edit" @click="router.push(`/vehicles/${item.id}`)">Edit</v-btn>
-                    <v-btn data-testid="vehicle-delete" @click="remove(item)">Delete</v-btn>
+                    <template v-if="auth.can('masterData.write')">
+                        <v-btn data-testid="vehicle-edit" @click="router.push(`/vehicles/${item.id}`)">Edit</v-btn>
+                        <v-btn data-testid="vehicle-delete" @click="remove(item)">Delete</v-btn>
+                    </template>
                 </template>
             </v-data-table>
         </template>
-        <v-btn v-else data-testid="login" @click="auth.login()">Sign in</v-btn>
+        <p v-else>Please sign in to see the vehicles.</p>
     </v-container>
 </template>

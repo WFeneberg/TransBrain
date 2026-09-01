@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { signIn } from './login';
 
 test('unauthenticated_visitor_seesSignInButton', async ({ page }) => {
     await page.goto('/');
@@ -6,15 +7,9 @@ test('unauthenticated_visitor_seesSignInButton', async ({ page }) => {
 });
 
 test('adminUser_afterKeycloakLogin_seesVehicleList', async ({ page }) => {
-    await page.goto('/');
-    await page.getByTestId('login').click();
-    await page.getByLabel('Username or email').fill('admin.user');
-    // Target the input by id, not by label. Keycloak's theme renders both the password
-    // input and a "Show password" toggle button carrying aria-label="Show password",
-    // so getByLabel('Password') matches two elements and Playwright's strict mode throws
-    // before any credentials are submitted. Verified during execution.
-    await page.locator('#password').fill('admin');
-    await page.getByRole('button', { name: 'Sign In' }).click();
+    // Signing in lands on the home page now, so the list is one navigation further on.
+    await signIn(page, 'admin');
+    await page.goto('/vehicles');
     await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
 
     // The database starts fresh on every run, so the list is empty at this point - the
@@ -59,4 +54,14 @@ test('adminUser_afterKeycloakLogin_seesVehicleList', async ({ page }) => {
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
     await expect(page.getByTestId('vehicle-plate').filter({ hasText: licensePlate })).toBeVisible();
+});
+
+test('viewerUser_onTheVehicleList_seesNoWriteActions', async ({ page }) => {
+    await signIn(page, 'viewer');
+    await page.goto('/vehicles');
+
+    await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
+    await expect(page.getByTestId('vehicle-add')).toBeHidden();
+    await expect(page.getByTestId('vehicle-edit')).toBeHidden();
+    await expect(page.getByTestId('vehicle-delete')).toBeHidden();
 });

@@ -37,7 +37,7 @@ was auf dem Bildschirm zu sehen ist.
    Fahrzeug- oder Fahrerliste zu sehen, bevor eine Anmeldung stattgefunden hat.
 3. Klick auf „Sign in“ leitet zur Keycloak-Anmeldeseite weiter (Benutzername/Passwort).
 4. Nach erfolgreicher Anmeldung erfolgt die Rückleitung zu TransBrain.Web, und die
-   Fahrzeugliste wird angezeigt (die Startseite `/` zeigt dieselbe Liste wie `/vehicles`).
+   **Startseite** wird angezeigt — siehe das gleichnamige Kapitel unten.
 5. Schlägt die Anmeldung fehl oder ist Keycloak nicht erreichbar, erscheint die Meldung
    „Could not verify your sign-in status. Please try signing in again.“
 
@@ -46,9 +46,48 @@ Keycloak-Login-Seite kommt, ist meist das lokale HTTPS-Entwicklungszertifikat ni
 vertrauenswürdig hinterlegt — siehe README.md, Abschnitt „Trust the development HTTPS
 certificate“.
 
+## Startseite
+
+Nach der Anmeldung landen Sie auf der Startseite. Sie zeigt genau die Bereiche und
+Schaltflächen, die Ihre Rolle benötigt — eine Fahrerin sieht dort etwas anderes als ein
+Administrator. Über die Kopfleiste erreichen Sie dieselben Bereiche jederzeit wieder; ganz
+rechts stehen Ihr Name und die Schaltfläche **„Sign out"** zum Abmelden.
+
+![Startseite eines Administrators](img/web/startseite-admin.png)
+
+Der obere Bereich zeigt Kennzahlen, darunter folgen die Arbeitslisten und ganz unten die
+Kacheln, über die Sie in die einzelnen Bereiche springen. Welche Rolle was sieht:
+
+| Bestandteil | admin | disponent | fahrer | viewer |
+|---|:-:|:-:|:-:|:-:|
+| Kennzahlen zu Fahrzeugen und Fahrern | ✓ | ✓ | | ✓ |
+| Kennzahl „Orders in draft" (ungeplante Aufträge) | ✓ | ✓ | | ✓ |
+| Kennzahl „Tours today" | ✓ | ✓ | ✓ (eigene) | ✓ |
+| Liste „Orders awaiting a tour" mit **„Plan a tour"** | ✓ | ✓ | | |
+| Liste „My tours today" mit **„Start tour"** / **„Complete tour"** | | | ✓ | |
+| Kacheln Vehicles, Drivers, Orders | ✓ | ✓ | | ✓ |
+| Kachel Tours | ✓ | ✓ | ✓ | ✓ |
+| Schaltflächen **„Add vehicle"** / **„Add driver"** | ✓ | | | |
+| Schaltflächen **„New order"** / **„Plan tour"** | ✓ | ✓ | | |
+
+Für eine Fahrerin ist die Seite bewusst schmal gehalten, damit sie auf einem Mobiltelefon
+im Fahrerhaus bedienbar bleibt. Sie zeigt nur die eigenen Touren des Tages und erlaubt es,
+sie direkt zu starten und abzuschließen, ohne den Umweg über die Tourenliste. Bei geringer
+Bildschirmbreite blendet die Kopfleiste den Namen aus, damit die Navigation Platz behält.
+
+![Startseite einer Fahrerin](img/web/startseite-fahrer.png)
+
+**Wichtig — der Unterschied zwischen „ausgeblendet" und „verboten":** Dass eine Kachel
+fehlt, heißt nicht, dass Ihnen der Bereich verwehrt wäre. Alle vier Rollen dürfen alle
+Listen lesen; ausgeblendet wird, was Ihre Rolle für ihre Arbeit nicht braucht. Geben Sie
+etwa als Fahrerin `/vehicles` von Hand in die Adresszeile ein, sehen Sie die Fahrzeugliste.
+Anders bei den Schaltflächen zum Anlegen, Ändern und Löschen: Die erscheinen nur, wenn Sie
+die Änderung auch tatsächlich vornehmen dürfen. Rufen Sie ein Formular über die Adresszeile
+auf, für das Ihnen die Berechtigung fehlt, bringt die Anwendung Sie zur Startseite zurück.
+
 ## Fahrzeugliste
 
-Erreichbar über `/` oder `/vehicles`.
+Erreichbar über `/vehicles` oder die Kachel **Vehicles** auf der Startseite.
 
 - Angezeigte Spalten: License plate (Kennzeichen), Type (Fahrzeugtyp), Payload (kg)
   (Zuladung).
@@ -356,6 +395,10 @@ Ein Benutzer mit der Rolle `fahrer` sieht in der Tourenliste **ausschließlich s
 Touren** und kann auch nur diese starten und abschließen. Für Administratoren, Disponenten und
 Betrachter gilt das nicht — sie sehen alle Touren.
 
+**Der kurze Weg führt über die Startseite:** Ein Fahrer findet seine Touren des Tages dort unter
+„My tours today“ und kann sie direkt starten und abschließen, ohne die Tourenliste zu öffnen. Die
+Regeln unten gelten unverändert — die Startseite ist nur eine bequemere Tür zu denselben Aktionen.
+
 - **Die Liste wird eingeschränkt, nicht verweigert.** Ein Fahrer, der `/tours` öffnet, sieht seine
   Touren. Filtert er ausdrücklich auf einen Kollegen, bleibt die Liste **leer** — das ist die
   wahrheitsgemäße Antwort auf „die Touren dieses Kollegen, unter meinen“.
@@ -390,24 +433,26 @@ Aufgabe. Bei Fahrzeugen und Fahrern (Stammdaten) darf er weiterhin nur lesen.
 und abschließen — siehe Abschnitt „Touren als Fahrer“.
 
 
-**Wichtig — dies ist keine offensichtliche Einschränkung der Oberfläche:** Die
-Schaltflächen „Add vehicle“/„Add driver“, „Edit“ und „Delete“ werden **jedem angemeldeten
-Benutzer angezeigt**, unabhängig von seiner Rolle — die Oberfläche blendet sie für
-Disponenten, Fahrer oder Betrachter nicht aus. Klickt ein Benutzer ohne die Rolle `admin`
-trotzdem auf eine dieser Schaltflächen, lehnt die API den Schreibversuch ab, und die
-Oberfläche zeigt eine Fehlermeldung wie zum Beispiel „The vehicle could not be deleted.
-(HTTP 403)“. Das ist kein Fehler in der Anwendung, sondern der aktuelle Stand: Nur ein
-Administrator-Konto kann tatsächlich schreiben, auch wenn die Schaltflächen für alle
-sichtbar sind.
+**Die Oberfläche bietet nur an, was Ihre Rolle auch darf.** Die Schaltflächen
+„Add vehicle“/„Add driver“, „Edit“ und „Delete“ erscheinen ausschließlich für die Rolle
+`admin`; „New order“, „Edit“, „Cancel order“ und „Plan tour“ nur für `admin` und
+`disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Wer
+eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
+
+Das **Lesen** ist davon unberührt: alle vier Rollen dürfen alle Listen ansehen, mit der
+einen Ausnahme, dass ein Fahrer in der Tourenliste nur seine eigenen Touren sieht. Die
+Navigation blendet für einen Fahrer die Bereiche Fahrzeuge, Fahrer und Aufträge aus, weil
+er sie für seine Arbeit nicht braucht — über die Adresszeile bleiben sie erreichbar.
+
+Sollten Sie dennoch eine Ablehnung mit `HTTP 403` sehen, ist das kein Bedienfehler: Es
+bedeutet, dass sich Ihre Rechte seit dem Laden der Seite geändert haben. Ein Neuladen zeigt
+dann die passende Oberfläche.
 
 ## Bekannte Einschränkungen (Zusammenfassung)
 
-- Keine Navigation zwischen den Listen — Adressen müssen bei Bedarf manuell eingegeben
-  werden (`/vehicles`, `/drivers`).
-- Keine Filter- oder Sortierfunktion in der Oberfläche; nur die erste Seite (bis zu 20
-  Einträge) wird angezeigt.
-- Schreibschaltflächen sind für alle Rollen sichtbar, auch wenn nur `admin` sie tatsächlich
-  nutzen kann.
+- Keine Sortierfunktion in der Oberfläche.
+- Die Kennzahlen und Arbeitslisten der Startseite werden beim Öffnen einmal geladen; sie
+  aktualisieren sich nicht von selbst, solange die Seite offen bleibt.
 - Löschen von Fahrzeugen und Fahrern erfolgt sofort, ohne Sicherheitsabfrage; das
   Stornieren eines Auftrags fragt dagegen nach.
 - In der Auftragsliste lässt sich nur nach Status filtern; die Filter nach Abholzeitraum,

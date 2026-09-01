@@ -6,8 +6,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
-import { OidcSecurityService } from 'angular-auth-oidc-client';
-import { shareReplay, switchMap } from 'rxjs';
+import { SessionService } from '../auth/session.service';
+import {switchMap} from 'rxjs';
 import { Driver, DriverService } from '../drivers/driver.service';
 import { Vehicle, VehicleService } from '../vehicles/vehicle.service';
 import { TourService } from './tour.service';
@@ -72,14 +72,12 @@ export class TourFormComponent {
     private readonly driverService = inject(DriverService);
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
-    private readonly oidc = inject(OidcSecurityService);
-
-    // angular-auth-oidc-client only hydrates its stored session when checkAuth() runs, and until
-    // it has, the auth interceptor sends the request unauthenticated. The list components call
-    // it on construction; a form reached by a DIRECT navigation - a bookmarked /tours/new, a
-    // page reload - has no list component in its lifetime, so every request from it would
-    // answer 401 to a plainly signed-in dispatcher. Same fix as OrderFormComponent.
-    private readonly session = this.oidc.checkAuth().pipe(shareReplay(1));
+    // SessionService.ready is what guarantees angular-auth-oidc-client has rehydrated its
+    // stored session before the first request goes out. A form reached by a DIRECT navigation -
+    // a bookmark, a page reload while editing, browser back - has no list component in its
+    // lifetime, so without this every request from it answered 401 to a plainly signed-in user.
+    // The one checkAuth() behind it runs in the App component.
+    protected readonly session = inject(SessionService);
 
     protected readonly vehicles = signal<Vehicle[]>([]);
     protected readonly drivers = signal<Driver[]>([]);
@@ -92,13 +90,13 @@ export class TourFormComponent {
     });
 
     constructor() {
-        this.session.pipe(switchMap(() => this.vehicleService.list(PICKER_PAGE_SIZE))).subscribe({
+        this.session.ready.pipe(switchMap(() => this.vehicleService.list(PICKER_PAGE_SIZE))).subscribe({
             next: (page) => this.vehicles.set(page.items),
             error: (error: HttpErrorResponse) =>
                 this.formError.set(this.describeFailure(error, 'The vehicle list could not be loaded.')),
         });
 
-        this.session.pipe(switchMap(() => this.driverService.list(PICKER_PAGE_SIZE))).subscribe({
+        this.session.ready.pipe(switchMap(() => this.driverService.list(PICKER_PAGE_SIZE))).subscribe({
             next: (page) => this.drivers.set(page.items),
             error: (error: HttpErrorResponse) =>
                 this.formError.set(this.describeFailure(error, 'The driver list could not be loaded.')),
@@ -123,7 +121,7 @@ export class TourFormComponent {
             return;
         }
 
-        this.session
+        this.session.ready
             .pipe(switchMap(() => this.service.create(this.form.getRawValue())))
             .subscribe({
                 // To the detail page, not the list: a dispatcher's next action after planning a

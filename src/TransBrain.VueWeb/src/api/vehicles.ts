@@ -41,11 +41,21 @@ client.interceptors.request.use(async (config) => {
  * @param pageSize The API defaults to 20 rows. A picker that must offer EVERY vehicle to choose
  * from - the tour form - has to ask for more, or a recently added one simply is not in the list
  * and cannot be chosen. Capped at 100 by the API.
+ * @param status Filters server-side (VehicleEndpoints.cs). The home page asks with pageSize 1 and
+ * reads only totalCount, so a fleet count costs one row over the wire.
  */
-export async function listVehicles(pageSize?: number): Promise<PagedResult<Vehicle>> {
-    const response = await client.get<PagedResult<Vehicle>>('/vehicles', {
-        params: pageSize ? { pageSize: String(pageSize) } : undefined,
-    });
+export async function listVehicles(pageSize?: number, status?: string | null): Promise<PagedResult<Vehicle>> {
+    // Only filters that are actually set are sent. An omitted one must not become the string
+    // "null" in the query string - the API would reject that with a 400.
+    const params: Record<string, string> = {};
+    if (pageSize) {
+        params.pageSize = String(pageSize);
+    }
+    if (status) {
+        params.status = status;
+    }
+
+    const response = await client.get<PagedResult<Vehicle>>('/vehicles', { params });
     return response.data;
 }
 

@@ -6,7 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
-import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { SessionService } from '../auth/session.service';
 import { Driver, DriverService } from '../drivers/driver.service';
 import { Vehicle, VehicleService } from '../vehicles/vehicle.service';
 import { Tour, TourService } from './tour.service';
@@ -14,14 +14,24 @@ import { Tour, TourService } from './tour.service';
 /** The API's maximum page size. A picker must offer every choice, not the first twenty. */
 const PICKER_PAGE_SIZE = 100;
 
+/**
+ * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
+ * request returns is all a user can ever see - and lists come back sorted ascending, meaning a
+ * default page of 20 shows the twenty OLDEST records and hides everything added since. Asking
+ * for the cap is a stopgap, not a fix: real paging controls are still needed above 100 rows.
+ */
+const LIST_PAGE_SIZE = 100;
+
 @Component({
     selector: 'app-tour-list',
     standalone: true,
     imports: [MatTableModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, RouterLink],
     template: `
-        @if (isAuthenticated()) {
+        @if (session.isAuthenticated()) {
             <h1>Tours</h1>
-            <a mat-raised-button routerLink="/tours/new" data-testid="tour-add">Add tour</a>
+            @if (session.can('dispatch.write')) {
+                <a mat-raised-button routerLink="/tours/new" data-testid="tour-add">Add tour</a>
+            }
             <mat-form-field>
                 <mat-label>Date</mat-label>
                 <input
@@ -95,10 +105,7 @@ const PICKER_PAGE_SIZE = 100;
                 </table>
             }
         } @else {
-            @if (errorMessage(); as message) {
-                <p data-testid="tour-list-error">{{ message }}</p>
-            }
-            <button mat-raised-button data-testid="login" (click)="login()">Sign in</button>
+            <p>Please sign in to see the tours.</p>
         }
     `,
 })
@@ -106,33 +113,24 @@ export class TourListComponent {
     private readonly service = inject(TourService);
     private readonly vehicleService = inject(VehicleService);
     private readonly driverService = inject(DriverService);
-    private readonly oidc = inject(OidcSecurityService);
+    protected readonly session = inject(SessionService);
 
     protected readonly columns = ['tourDate', 'vehicle', 'driver', 'stops', 'status', 'actions'];
     protected readonly tours = signal<Tour[]>([]);
     protected readonly vehicles = signal<Vehicle[]>([]);
     protected readonly drivers = signal<Driver[]>([]);
-    protected readonly isAuthenticated = signal(false);
     protected readonly errorMessage = signal<string | null>(null);
     protected readonly dateFilter = signal('');
     protected readonly vehicleFilter = signal('');
     protected readonly driverFilter = signal('');
 
     constructor() {
-        this.oidc.checkAuth().subscribe({
-            next: ({ isAuthenticated }) => {
-                this.isAuthenticated.set(isAuthenticated);
-                if (isAuthenticated) {
-                    this.refresh();
-                    this.loadFilterOptions();
-                }
-            },
-            error: () => this.errorMessage.set('Could not verify your sign-in status. Please try signing in again.'),
+        this.session.ready.subscribe((isAuthenticated) => {
+            if (isAuthenticated) {
+                this.refresh();
+                this.loadFilterOptions();
+            }
         });
-    }
-
-    protected login(): void {
-        this.oidc.authorize();
     }
 
     protected filterByDate(value: string): void {
@@ -163,6 +161,7 @@ export class TourListComponent {
                 tourDate: this.dateFilter(),
                 vehicleId: this.vehicleFilter(),
                 driverId: this.driverFilter(),
+                pageSize: LIST_PAGE_SIZE,
             })
             .subscribe({
                 next: (page) => this.tours.set(page.items),
