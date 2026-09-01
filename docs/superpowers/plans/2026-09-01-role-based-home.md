@@ -1293,7 +1293,7 @@ Verifiziert unter genau der Bedingung, die vorher rot war (`touch` auf eine Quel
 - Consumes: `SessionService` (Task 2); `VehicleService.list`, `DriverService.list`, `OrderService.list`, `TourService.list` (bestehend)
 - Produces: `VehicleService.list(pageSize?: number, status?: string | null)`, `DriverService.list(pageSize?: number, status?: string | null)` — beide rückwärtskompatibel, der bestehende Aufruf `list(LIST_PAGE_SIZE)` bleibt gültig
 
-- [ ] **Step 1: Die fehlschlagenden Tests schreiben**
+- [x] **Step 1: Die fehlschlagenden Tests schreiben**
 
 An `src/TransBrain.Web/e2e/home.spec.ts` anhängen:
 
@@ -1334,7 +1334,7 @@ test('fahrerUser_onHome_seesOnlyTheOwnTourBlock', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
@@ -1342,7 +1342,7 @@ cd src/TransBrain.Web && npx playwright test e2e/home.spec.ts
 
 Erwartet: die drei neuen Tests scheitern mit Timeout auf `home-kpi-*` bzw. `home-my-tours`.
 
-- [ ] **Step 3: Den `status`-Parameter in die beiden Services aufnehmen**
+- [x] **Step 3: Den `status`-Parameter in die beiden Services aufnehmen**
 
 `src/TransBrain.Web/src/app/vehicles/vehicle.service.ts`, `list()` ersetzen:
 
@@ -1371,7 +1371,7 @@ Erwartet: die drei neuen Tests scheitern mit Timeout auf `home-kpi-*` bzw. `home
 
 `src/TransBrain.Web/src/app/drivers/driver.service.ts`, `list()` genauso ersetzen — gleicher Rumpf, `Driver` statt `Vehicle`, `/api/drivers` statt `/api/vehicles`, und im Kommentar „driver" statt „vehicle".
 
-- [ ] **Step 4: Die Blöcke in die Startseite einbauen**
+- [x] **Step 4: Die Blöcke in die Startseite einbauen**
 
 `src/TransBrain.Web/src/app/home/home.component.ts` — Importe ergänzen:
 
@@ -1657,7 +1657,7 @@ Die `.kpis`-Regel zu den `styles` hinzufügen:
         }
 ```
 
-- [ ] **Step 5: Tests laufen lassen**
+- [x] **Step 5: Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.Web && npm run build && npx playwright test e2e/home.spec.ts
@@ -1665,7 +1665,7 @@ cd src/TransBrain.Web && npm run build && npx playwright test e2e/home.spec.ts
 
 Erwartet: Build erfolgreich, alle dreizehn Tests grün.
 
-- [ ] **Step 6: Committen**
+- [x] **Step 6: Committen**
 
 ```bash
 git add src/TransBrain.Web/src/app/home/home.component.ts \
@@ -1676,6 +1676,13 @@ git commit -m "feat(web): add role-specific counts and work lists to the home pa
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — zwei Abweichungen vom Planwortlaut:**
+
+- Die Kennzahlen werden gegen `/^\d+$/` geprüft, nicht gegen `'0'`. Die Datenbank startet zwar leer, aber `vehicles-crud.spec.ts` legt Zeilen an, der Claim-Check aus Task 1 tat es auch, und wer die Anwendung vor dem Testlauf benutzt hat ebenfalls. Eine feste Zahl ließe den Test aus Gründen scheitern, die nichts mit seinem Gegenstand zu tun haben: welche Blöcke welche Rolle bekommt.
+- `warm-up.ts` (Task 4) schluckt Fehler jetzt, statt den Lauf abzubrechen. Beobachtet: ein 120-s-Timeout bei nachweislich gesundem Stack (Dev-Server 200, Keycloak 200, derselbe Klick Sekunden später korrekt umleitend). Die Ursache blieb ungeklärt — deshalb darf eine Optimierung nicht den ganzen Lauf killen. Eigener Commit.
+
+Ergebnis: `npm run build` grün, 13/13 e2e grün.
 
 ### Task 6: Angular — bestehende Screens rollenbewusst machen
 
@@ -2013,11 +2020,11 @@ Das Gegenstück zu Task 5.
 - Consumes: `useAuthStore` (Task 3); `listVehicles`, `listDrivers`, `listOrders`, `listTours`, `startTour`, `completeTour` (bestehend)
 - Produces: `listVehicles(pageSize?: number, status?: string | null)`, `listDrivers(pageSize?: number, status?: string | null)`
 
-- [ ] **Step 1: Die fehlschlagenden Tests schreiben**
+- [x] **Step 1: Die fehlschlagenden Tests schreiben**
 
 Die drei Tests aus Task 5, Step 1 wortgleich an `src/TransBrain.VueWeb/e2e/home.spec.ts` anhängen.
 
-- [ ] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
+- [x] **Step 2: Tests laufen lassen und Fehlschlag bestätigen**
 
 ```bash
 cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
@@ -2025,7 +2032,7 @@ cd src/TransBrain.VueWeb && npx playwright test e2e/home.spec.ts
 
 Erwartet: die drei neuen Tests scheitern mit Timeout.
 
-- [ ] **Step 3: Den `status`-Parameter in die beiden API-Clients aufnehmen**
+- [x] **Step 3: Den `status`-Parameter in die beiden API-Clients aufnehmen**
 
 `src/TransBrain.VueWeb/src/api/vehicles.ts`, `listVehicles` ersetzen:
 
@@ -2055,7 +2062,7 @@ export async function listVehicles(pageSize?: number, status?: string | null): P
 
 `src/TransBrain.VueWeb/src/api/drivers.ts`, `listDrivers` genauso — `Driver` statt `Vehicle`, `/drivers` statt `/vehicles`, „driver" statt „vehicle" im Kommentar.
 
-- [ ] **Step 4: Die Blöcke in `Home.vue` einbauen**
+- [x] **Step 4: Die Blöcke in `Home.vue` einbauen**
 
 Im `<script setup>` ergänzen, **unterhalb** des vorhandenen `const auth = useAuthStore();` — der neue Code verwendet `auth`:
 
@@ -2305,7 +2312,7 @@ Im Template, zwischen dem Rollen-Chip und der Kachel-Reihe:
             </section>
 ```
 
-- [ ] **Step 5: Build und Tests laufen lassen**
+- [x] **Step 5: Build und Tests laufen lassen**
 
 ```bash
 cd src/TransBrain.VueWeb && npm run build && npx playwright test e2e/home.spec.ts
@@ -2313,7 +2320,7 @@ cd src/TransBrain.VueWeb && npm run build && npx playwright test e2e/home.spec.t
 
 Erwartet: Build erfolgreich, alle dreizehn Tests grün.
 
-- [ ] **Step 6: Committen**
+- [x] **Step 6: Committen**
 
 ```bash
 git add src/TransBrain.VueWeb/src/views/Home.vue \
@@ -2324,6 +2331,8 @@ git commit -m "feat(vueweb): add role-specific counts and work lists to the home
 ```
 
 ---
+
+**Ausführung am 2026-09-01:** zusammen mit Task 5 umgesetzt. `npm run build` grün (`vue-tsc` sauber), 13/13 e2e grün. `e2e/home.spec.ts` ist weiterhin in beiden Suiten identisch.
 
 ### Task 9: Vue — bestehende Views rollenbewusst machen
 
