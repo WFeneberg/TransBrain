@@ -19,11 +19,20 @@ export default async function warmUp(): Promise<void> {
     const page = await browser.newPage();
 
     try {
-        await page.goto(baseURL, { timeout: 120_000 });
-        await page.getByTestId('login').click({ timeout: 120_000 });
+        await page.goto(baseURL, { timeout: 60_000 });
+        await page.getByTestId('login').click({ timeout: 60_000 });
         // The Keycloak login form. Reaching it compiles whatever the app needs to start the OIDC
         // redirect and makes Keycloak render its theme once.
-        await page.locator('#username').waitFor({ timeout: 120_000 });
+        await page.locator('#username').waitFor({ timeout: 60_000 });
+    } catch (error) {
+        // Deliberately swallowed. This is an optimisation, not a check: letting it throw aborts
+        // the entire run before a single test has executed, which is a far worse failure than the
+        // slow first test it exists to prevent. Observed once: this timed out while the app was
+        // demonstrably healthy - the dev server answering 200, Keycloak answering 200, and the
+        // same click redirecting correctly seconds later - and the cause was never established.
+        // The tests make their own assertions and will report the truth either way.
+        const reason = error instanceof Error ? error.message.slice(0, 200) : String(error);
+        console.warn(`[warm-up] skipped: ${reason}`);
     } finally {
         await browser.close();
     }
