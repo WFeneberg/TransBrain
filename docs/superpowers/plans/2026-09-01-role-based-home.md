@@ -2453,7 +2453,7 @@ Deliverable: der Nachweis, dass beide Frontends und die API zusammen funktionier
 
 **Files:** keine
 
-- [ ] **Step 1: Die .NET-Suite laufen lassen**
+- [x] **Step 1: Die .NET-Suite laufen lassen**
 
 ```bash
 dotnet build
@@ -2462,7 +2462,7 @@ dotnet test
 
 Erwartet: beides erfolgreich. Serverseitig wurde nur `transbrain-realm.json` geändert; die Suite läuft zur Absicherung mit, weil ein kaputter Realm-Import die Integrationstests kippen würde.
 
-- [ ] **Step 2: Beide Frontends bauen**
+- [x] **Step 2: Beide Frontends bauen**
 
 ```bash
 cd src/TransBrain.Web && npm run build
@@ -2471,7 +2471,7 @@ cd ../TransBrain.VueWeb && npm run build
 
 Erwartet: beide erfolgreich, keine TypeScript-Fehler.
 
-- [ ] **Step 3: Beide e2e-Suiten vollständig laufen lassen**
+- [x] **Step 3: Beide e2e-Suiten vollständig laufen lassen**
 
 Mit laufendem AppHost:
 
@@ -2482,13 +2482,26 @@ cd ../TransBrain.VueWeb && npx playwright test
 
 Erwartet: beide Suiten vollständig grün. Fehlschläge hier sind echte Regressionen und werden behoben, nicht durch einen Retry überspielt.
 
-- [ ] **Step 4: Alle vier Rollen einmal von Hand durchklicken**
+- [x] **Step 4: Alle vier Rollen einmal von Hand durchklicken**
 
 Für jede der vier Rollen, in beiden Frontends: anmelden, Startseite ansehen, abmelden, nächste Rolle. Geprüft wird, dass die Seite dem entspricht, was Spec §6 als Blocktabelle festlegt — insbesondere, dass ein `fahrer` weder Fahrzeuge noch Fahrer noch Aufträge in der Navigation hat und ein `viewer` nirgends eine Anlegen-Schaltfläche sieht.
 
 Auffälligkeiten notieren, aber hier nicht beheben: eine echte Abweichung von §6 ist ein Fehler in Task 5 bzw. 8 und wird dort korrigiert.
 
 ---
+
+**Ausführung am 2026-09-01:**
+
+| Prüfung | Ergebnis |
+|---|---|
+| `dotnet build` | 0 Fehler, 0 Warnungen |
+| `dotnet test` | 375/375 (Domain 131, Application 171, Api-Integration 73) |
+| `npm run build` Angular / Vue | beide grün |
+| `npx playwright test` Angular / Vue | **30/30 / 30/30** |
+
+Step 4 (Handdurchlauf aller vier Rollen) wurde skriptgesteuert ausgeführt statt geklickt: eine temporäre Spec meldet sich als jede Rolle an und protokolliert, welche der 21 Test-IDs der Startseite sichtbar sind. Beide Frontends lieferten **zeichengleiche** Ausgaben, und beide decken sich vollständig mit der Blocktabelle aus Spec §6. Reproduzierbar und nachlesbar statt „durchgeklickt und für gut befunden".
+
+Ein Fund: `removingAnOrderFromATour_returnsItToDraft` trug denselben Picker-Wettlauf wie die beiden Geschwistertests. Alle drei warten jetzt auf dieselbe Antwort; die Angular-Suite fiel dadurch von 3,0 auf 1,5 Minuten.
 
 ### Task 11: Dokumentation und Screenshots
 
