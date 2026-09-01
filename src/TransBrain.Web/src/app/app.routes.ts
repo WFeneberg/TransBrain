@@ -9,17 +9,15 @@ const loadOrderForm = () => import('./orders/order-form.component').then((m) => 
 const loadTourList = () => import('./tours/tour-list.component').then((m) => m.TourListComponent);
 const loadTourForm = () => import('./tours/tour-form.component').then((m) => m.TourFormComponent);
 const loadTourDetail = () => import('./tours/tour-detail.component').then((m) => m.TourDetailComponent);
+const loadHome = () => import('./home/home.component').then((m) => m.HomeComponent);
 
 export const routes: Routes = [
     // angular-auth-oidc-client's checkAuth() detects the OIDC callback by comparing the
-    // current URL against the configured redirectUrl (the origin, i.e. path '/'). It must
-    // therefore run on a component mounted at '' directly - a `redirectTo: 'vehicles'` here
-    // would move the browser to '/vehicles' before checkAuth() runs, and the library would
-    // then discard a valid authorization code because the path no longer matches. '/vehicles'
-    // is kept reachable as a second route pointing at the same component, not the primary one.
-    { path: '', loadComponent: loadVehicleList },
-    // Two canonical URLs for one screen is a stopgap, not a design choice: once real routing
-    // exists (more screens, navigation), consolidate this to a single path.
+    // current URL against the configured redirectUrl (the origin, i.e. path '/'). A
+    // `redirectTo` here would move the browser off '/' before checkAuth() runs, and the library
+    // would then discard a valid authorization code because the path no longer matches. Home is
+    // a real component mounted at '', so the callback is processed where the library expects it.
+    { path: '', loadComponent: loadHome },
     { path: 'vehicles', loadComponent: loadVehicleList },
     // 'new' must be registered before ':id' - the router matches path segments in order, and
     // a ':id' route registered first would swallow '/vehicles/new' by treating "new" as an id.
