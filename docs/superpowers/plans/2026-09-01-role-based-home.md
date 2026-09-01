@@ -2512,7 +2512,7 @@ Ein Fund: `removingAnOrderFromATour_returnsItToDraft` trug denselben Picker-Wett
 - Create: `docs/img/vueweb/startseite-admin.png`, `docs/img/vueweb/startseite-fahrer.png`
 - Modify: `CHANGELOG.md`
 
-- [ ] **Step 1: Die Screenshots aufnehmen**
+- [x] **Step 1: Die Screenshots aufnehmen**
 
 Mit laufendem AppHost. Damit die Startseite nicht leer aussieht, zuerst über die Oberfläche als `admin.user` ein Fahrzeug, einen Fahrer und einen Auftrag anlegen.
 
@@ -2541,7 +2541,7 @@ cd src/TransBrain.Web && npx playwright test e2e/screenshots.spec.ts
 
 Dasselbe für Vue mit `../../docs/img/vueweb/…` als Zielpfad. Danach **beide temporären Specs wieder löschen** — sie gehören nicht in die Suite.
 
-- [ ] **Step 2: Das Kapitel „Startseite" in beide Anleitungen schreiben**
+- [x] **Step 2: Das Kapitel „Startseite" in beide Anleitungen schreiben**
 
 In `docs/BEDIENUNG_TRANSBRAIN_WEB.md` und `docs/BEDIENUNG_TRANSBRAIN_VUEWEB.md` jeweils **vor** dem Kapitel zu den Fahrzeugen ein neues Kapitel einfügen. Die beiden Fassungen sind bewusst wortgleich, wie es die Vue-Anleitung in ihrem Vorspann festhält; nur der Screenshot-Pfad unterscheidet sich.
 
@@ -2584,7 +2584,7 @@ auf, für das Ihnen die Berechtigung fehlt, bringt die Anwendung Sie zur Startse
 
 Für die Vue-Anleitung `img/vueweb/…` als Pfad einsetzen.
 
-- [ ] **Step 3: Die Anmelde-Abschnitte anpassen**
+- [x] **Step 3: Die Anmelde-Abschnitte anpassen**
 
 In beiden Anleitungen jede Stelle suchen, die beschreibt, dass man nach dem Anmelden die
 Fahrzeugliste sieht, und auf die Startseite umschreiben. Ebenso den Weg zu den Bereichen: statt
@@ -2594,7 +2594,7 @@ Fahrzeugliste sieht, und auf die Startseite umschreiben. Ebenso den Weg zu den B
 grep -n "Fahrzeugliste\|4200/\|4300/" docs/BEDIENUNG_TRANSBRAIN_WEB.md docs/BEDIENUNG_TRANSBRAIN_VUEWEB.md
 ```
 
-- [ ] **Step 4: CHANGELOG-Eintrag**
+- [x] **Step 4: CHANGELOG-Eintrag**
 
 Unter `[Unreleased]` in `CHANGELOG.md`, unter `### Added`:
 
@@ -2604,7 +2604,7 @@ Unter `[Unreleased]` in `CHANGELOG.md`, unter `### Added`:
   Route-Guards für die schreibenden Routen und rollenabhängige Schaltflächen in allen Screens.
 ```
 
-- [ ] **Step 5: Committen**
+- [x] **Step 5: Committen**
 
 ```bash
 git add docs CHANGELOG.md
@@ -2612,6 +2612,15 @@ git commit -m "docs: document the role-based home page in both operator guides"
 ```
 
 ---
+
+**Ausführung am 2026-09-01 — was über den Planwortlaut hinausging:**
+
+- **Zwei Aussagen in den Anleitungen waren durch diese Änderung schlicht falsch geworden** und mussten neu geschrieben werden, nicht nur ergänzt: der Absatz in „Rollen und Rechte", der erklärte, Schreibschaltflächen würden jedem angezeigt und die API lehne dann mit `403` ab, und die gleichlautende Zeile unter „Bekannte Einschränkungen". Ebenso die Zeile „Keine Navigation zwischen den Listen".
+- **README:** die e2e-Beschreibung („5 specs per frontend, covering login, the vehicle list/form and the driver list/form") war durch diese Änderung überholt — jetzt 6 Dateien, 30 Tests, alle vier Rollen, plus die Warm-up-Erklärung. Die .NET-Testzahlen (42/67/29) waren **schon vorher** falsch und sind auf die gemessenen 131/171/73 korrigiert.
+- **Ein Darstellungsfehler, den erst der Screenshot zeigte:** bei 480 px überlappte der Anzeigename in der Kopfleiste die Navigationslinks und „Sign out". Genau die Breite, die Spec §6.1 als handytauglich beschreibt. Der Name wird unterhalb von 600 px ausgeblendet.
+- **Ein Fehler in meinem Screenshot-Skript**, den der erste Screenshot offenlegte: ich wartete auf den Block `home-draft-orders`, der synchron rendert — der Screenshot zeigte lauter Nullen und eine leere Tabelle. Jetzt wird auf die Daten selbst gewartet.
+
+Ergebnis: vier Screenshots unter `docs/img/{web,vueweb}/`, beide Anleitungen mit neuem Kapitel „Startseite", CHANGELOG unter `[Unreleased]` ergänzt. Nach der Shell-Änderung erneut geprüft: beide Suiten 30/30.
 
 ## Selbstprüfung des Plans
 
