@@ -6,6 +6,12 @@
     <Project Path="src/TransBrain.Domain/TransBrain.Domain.csproj" />
     <Project Path="src/TransBrain.Infrastructure/TransBrain.Infrastructure.csproj" />
     <Project Path="src/TransBrain.ServiceDefaults/TransBrain.ServiceDefaults.csproj" />
+    <Project Path="src/TransBrain.VueWeb/TransBrain.VueWeb.esproj">
+      <Build />
+    </Project>
+    <Project Path="src/TransBrain.Web/TransBrain.Web.esproj">
+      <Build />
+    </Project>
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TransBrain.Api.IntegrationTests/TransBrain.Api.IntegrationTests.csproj" />

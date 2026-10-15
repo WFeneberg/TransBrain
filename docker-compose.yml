@@ -1,0 +1,87 @@
+# Local / demo stack. Not production: Keycloak runs in dev mode over HTTP with the
+# development realm (well-known test users) and the API runs in the Development environment.
+# Start: docker compose up --build   (see docs/INSTALLATION.md)
+name: transbrain
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: transbraindb
+      POSTGRES_USER: transbrain
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-transbrain-dev}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transbrain -d transbraindb"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # One fixed issuer for browser and API; the backchannel (API -> keycloak:8080) stays dynamic.
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+    volumes:
+      - ./src/TransBrain.AppHost/realms:/opt/keycloak/data/import:ro
+    ports:
+      - "8080:8080"
+    healthcheck:
+      # The Keycloak image has no curl; probe the realm's discovery document over bash /dev/tcp.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /realms/transbrain/.well-known/openid-configuration HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 10s
+      retries: 30
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: src/TransBrain.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__transbraindb: Host=postgres;Database=transbraindb;Username=transbrain;Password=${POSTGRES_PASSWORD:-transbrain-dev}
+      ConnectionStrings__cache: redis:6379
+      services__keycloak__http__0: http://keycloak:8080
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+    ports:
+      - "5000:8080"
+
+  web:
+    build:
+      context: .
+      dockerfile: src/TransBrain.Web/Dockerfile
+    environment:
+      API_URL: http://api:8080
+      OIDC_AUTHORITY: http://localhost:8080/realms/transbrain
+    depends_on: [api]
+    ports:
+      - "4200:80"
+
+  vueweb:
+    build:
+      context: .
+      dockerfile: src/TransBrain.VueWeb/Dockerfile
+    environment:
+      API_URL: http://api:8080
+      OIDC_AUTHORITY: http://localhost:8080/realms/transbrain
+    depends_on: [api]
+    ports:
+      - "4300:80"
+
+volumes:
+  postgres-data:

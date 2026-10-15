@@ -1,0 +1,82 @@
+{
+  "realm": "transbrain",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "attributes": {},
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Full access including master data"
+      },
+      {
+        "name": "disponent",
+        "description": "Dispatcher: orders and tours"
+      },
+      {
+        "name": "fahrer",
+        "description": "Driver: own tours, status reporting"
+      },
+      {
+        "name": "viewer",
+        "description": "Read-only access"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "transbrain-api",
+      "enabled": true,
+      "bearerOnly": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": false
+    },
+    {
+      "clientId": "transbrain-spa",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "${TRANSBRAIN_WEB_URL}/*",
+        "${TRANSBRAIN_VUEWEB_URL}/*"
+      ],
+      "webOrigins": [
+        "${TRANSBRAIN_WEB_URL}",
+        "${TRANSBRAIN_VUEWEB_URL}"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${TRANSBRAIN_WEB_URL}/*##${TRANSBRAIN_VUEWEB_URL}/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "transbrain-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "transbrain-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles-in-id-token",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

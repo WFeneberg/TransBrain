@@ -1,7 +1,7 @@
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts';
 
 export const userManager = new UserManager({
-    authority: 'https://localhost:8080/realms/transbrain',
+    authority: (window as { TRANSBRAIN_CONFIG?: { authority?: string } }).TRANSBRAIN_CONFIG?.authority ?? 'https://localhost:8080/realms/transbrain',
     client_id: 'transbrain-spa',
     // Must match a route that calls completeLogin() (see views/AuthCallback.vue) - oidc-client-ts
     // requires signinRedirectCallback() to run on the exact redirect_uri, unlike the Angular

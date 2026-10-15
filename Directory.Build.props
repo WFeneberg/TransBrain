@@ -1,5 +1,10 @@
 <Project>
-  <PropertyGroup>
+  <!-- Scoped to .NET projects. The two frontends are .esproj (Microsoft.VisualStudio.JavaScript.Sdk),
+       which has no compiler and no target framework of its own; handing it TargetFramework=net10.0
+       makes NuGet restore it as if it were a .NET assembly, and MSBuildTreatWarningsAsErrors turns
+       the SDK's own npm-related warnings into build failures. Neither property means anything for a
+       project whose "build" is `npm run build`. -->
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' != '.esproj'">
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>

@@ -148,10 +148,13 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();
     app.MapScalarApiReference().AllowAnonymous();
+}
 
-    // No retry here: this assumes PostgreSQL is already reachable. Aspire's WaitFor in the
-    // AppHost (Task 11) is what guarantees the database is up before the Api starts, so a
-    // cold start where PostgreSQL isn't ready yet will throw here rather than retry.
+// Development always migrates; any other environment opts in with Database__MigrateOnStartup=true
+// (the Azure Bicep template does). No retry: PostgreSQL must already be reachable, otherwise the
+// start fails and the orchestrator (Aspire WaitFor, compose depends_on, Container Apps restart) retries.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
     using IServiceScope scope = app.Services.CreateScope();
     await scope.ServiceProvider.GetRequiredService<TransBrainDbContext>().Database.MigrateAsync();
 }

@@ -1,0 +1,1 @@
+window.TRANSBRAIN_CONFIG = {};

@@ -12,6 +12,12 @@ added list filters, Redis caching, per-field validation errors and a fallback
 authorization policy. See [CHANGELOG.md](CHANGELOG.md) for the detailed list of what
 exists today, and `.superpowers/sdd/` for the phase plans.
 
+## Documentation
+
+- [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) — architecture, conventions, how to extend and test
+- [docs/INSTALLATION.md](docs/INSTALLATION.md) — local (Aspire), Docker Compose and Azure (Bicep)
+- [docs/KEYCLOAK.md](docs/KEYCLOAK.md) — authentication setup
+
 ## Prerequisites
 
 - .NET 10 SDK
@@ -72,9 +78,9 @@ Keycloak admin console, to still be there after a restart.
 environment (Staging, QA, production, ...) starts against whatever schema is already there —
 an empty database on first deploy — and every request will fail once it reaches EF Core,
 with nothing in the error naming a missing migration as the cause. A deployed environment
-needs an explicit migration step (for example `dotnet ef database update`, or running
-migrations as part of the deployment pipeline) before the API is started. This is not wired
-up yet; it is a known gap for the next phase, not an oversight.
+either sets `Database__MigrateOnStartup=true` (the Docker and Azure setups in
+[docs/INSTALLATION.md](docs/INSTALLATION.md) rely on it) or runs an explicit migration step
+(for example `dotnet ef database update`) before the API is started.
 
 ## Test users
 

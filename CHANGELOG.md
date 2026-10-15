@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Developer guide (`docs/DEVELOPER_GUIDE.md`) and installation guide (`docs/INSTALLATION.md`) covering local Aspire, Docker Compose and Azure Container Apps
+- Dockerfiles for the API and both frontends, `docker-compose.yml`, a Keycloak production image with its own realm template (`deploy/keycloak`) and `infra/main.bicep` for Azure
+- `Database:MigrateOnStartup` setting that applies EF migrations at start outside Development
+- Runtime `config.js` in both frontends so the OIDC authority is configured per container instead of being compiled in
 - Clean Architecture solution layout with Domain, Application, Infrastructure and Api layers
 - Hand-rolled CQRS mediator with validation and logging pipeline behaviors
 - Result pattern with `Validation`, `NotFound`, `Conflict` and `Forbidden` error types
