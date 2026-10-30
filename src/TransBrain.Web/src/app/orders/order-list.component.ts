@@ -7,6 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { SessionService } from '../auth/session.service';
+import { I18nService } from '../i18n/i18n.service';
 import { Order, OrderService } from './order.service';
 
 /**
@@ -23,18 +24,18 @@ const LIST_PAGE_SIZE = 100;
     imports: [MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, RouterLink, DatePipe],
     template: `
         @if (session.isAuthenticated()) {
-            <h1>Orders</h1>
+            <h1>{{ i18n.t('nav.orders') }}</h1>
             @if (session.can('dispatch.write')) {
-                <a mat-raised-button routerLink="/orders/new" data-testid="order-add">Add order</a>
+                <a mat-raised-button routerLink="/orders/new" data-testid="order-add">{{ i18n.t('orders.add') }}</a>
             }
             <mat-form-field>
-                <mat-label>Status</mat-label>
+                <mat-label>{{ i18n.t('common.status') }}</mat-label>
                 <mat-select
                     [value]="statusFilter()"
                     (valueChange)="filterByStatus($event)"
                     data-testid="order-status-filter"
                 >
-                    <mat-option [value]="''">All</mat-option>
+                    <mat-option [value]="''">{{ i18n.t('common.all') }}</mat-option>
                     @for (status of statusOptions; track status) {
                         <mat-option [value]="status">{{ status }}</mat-option>
                     }
@@ -48,46 +49,46 @@ const LIST_PAGE_SIZE = 100;
             } @else {
                 <table mat-table [dataSource]="orders()">
                     <ng-container matColumnDef="orderNumber">
-                        <th mat-header-cell *matHeaderCellDef>Order number</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('orders.number') }}</th>
                         <td mat-cell *matCellDef="let o" data-testid="order-number">{{ o.orderNumber }}</td>
                     </ng-container>
                     <ng-container matColumnDef="consignor">
-                        <th mat-header-cell *matHeaderCellDef>Consignor</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('orders.consignor') }}</th>
                         <td mat-cell *matCellDef="let o" data-testid="order-consignor">{{ o.consignor.name }}</td>
                     </ng-container>
                     <ng-container matColumnDef="consignee">
-                        <th mat-header-cell *matHeaderCellDef>Consignee</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('orders.consignee') }}</th>
                         <td mat-cell *matCellDef="let o" data-testid="order-consignee">{{ o.consignee.name }}</td>
                     </ng-container>
                     <ng-container matColumnDef="cargo">
-                        <th mat-header-cell *matHeaderCellDef>Cargo</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('orders.cargo') }}</th>
                         <td mat-cell *matCellDef="let o" data-testid="order-cargo">{{ o.cargoDescription }}</td>
                     </ng-container>
                     <ng-container matColumnDef="pickup">
-                        <th mat-header-cell *matHeaderCellDef>Pickup</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('orders.pickup') }}</th>
                         <td mat-cell *matCellDef="let o">{{ o.pickupFrom | date: 'short' }}</td>
                     </ng-container>
                     <ng-container matColumnDef="status">
-                        <th mat-header-cell *matHeaderCellDef>Status</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.status') }}</th>
                         <td mat-cell *matCellDef="let o" data-testid="order-status">{{ o.status }}</td>
                     </ng-container>
                     <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Actions</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.actions') }}</th>
                         <td mat-cell *matCellDef="let o">
-                            <a mat-button [routerLink]="['/orders', o.id]" data-testid="order-edit">Edit</a>
+                            <a mat-button [routerLink]="['/orders', o.id]" data-testid="order-edit">{{ i18n.t('common.edit') }}</a>
                             @if (pendingCancelId() === o.id) {
                                 <!-- Inline confirmation rather than window.confirm(): a native
                                      dialog blocks until a Playwright dialog handler answers it,
                                      and an in-DOM confirmation is what the e2e spec can assert. -->
                                 <button mat-button data-testid="order-cancel-confirm" (click)="cancel(o)">
-                                    Confirm cancel
+                                    {{ i18n.t('orders.cancelConfirm') }}
                                 </button>
                                 <button mat-button data-testid="order-cancel-abort" (click)="abortCancel()">
-                                    Keep order
+                                    {{ i18n.t('orders.cancelKeep') }}
                                 </button>
                             } @else {
                                 <button mat-button data-testid="order-cancel" (click)="askToCancel(o)">
-                                    Cancel order
+                                    {{ i18n.t('orders.cancel') }}
                                 </button>
                             }
                         </td>
@@ -97,13 +98,14 @@ const LIST_PAGE_SIZE = 100;
                 </table>
             }
         } @else {
-            <p>Please sign in to see the orders.</p>
+            <p>{{ i18n.t('orders.signIn') }}</p>
         }
     `,
 })
 export class OrderListComponent {
     private readonly service = inject(OrderService);
     protected readonly session = inject(SessionService);
+    protected readonly i18n = inject(I18nService);
 
     protected readonly columns = [
         'orderNumber',
@@ -159,7 +161,7 @@ export class OrderListComponent {
             // middleware before the endpoint runs, so it carries no ProblemDetails body at all -
             // describe()'s fallback text is therefore action-specific, not the list-load one.
             error: (error: HttpErrorResponse) =>
-                this.actionError.set(this.describe(error, 'The order could not be cancelled.')),
+                this.actionError.set(this.describe(error, this.i18n.t('orders.error.cancel'))),
         });
     }
 
@@ -167,7 +169,7 @@ export class OrderListComponent {
         this.service.list(this.statusFilter(), LIST_PAGE_SIZE).subscribe({
             next: (page) => this.orders.set(page.items),
             error: (error: HttpErrorResponse) =>
-                this.errorMessage.set(this.describe(error, 'The order list could not be loaded.')),
+                this.errorMessage.set(this.describe(error, this.i18n.t('orders.error.list'))),
         });
     }
 

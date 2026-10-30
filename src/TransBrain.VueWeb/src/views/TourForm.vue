@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { listDrivers, type Driver } from '../api/drivers';
 import { createTour } from '../api/tours';
 import { listVehicles, type Vehicle } from '../api/vehicles';
+import { useI18n } from '../i18n';
 
 interface ProblemDetailsBody {
     errors?: Record<string, string[]>;
@@ -16,6 +17,7 @@ interface ProblemDetailsBody {
 /** The API's maximum page size. A picker must offer every choice, not the first twenty. */
 const PICKER_PAGE_SIZE = 100;
 
+const { t } = useI18n();
 const router = useRouter();
 
 const vehicles = ref<Vehicle[]>([]);
@@ -45,14 +47,14 @@ onMounted(async () => {
         drivers.value = (await listDrivers(PICKER_PAGE_SIZE)).items;
     } catch (error) {
         // A failed load is not a failed save - give it its own wording.
-        formError.value = describeFailure(error, 'The vehicles and drivers could not be loaded.');
+        formError.value = describeFailure(error, t('tours.formLoadFailed'));
     }
 });
 
 function validateRequired(): boolean {
-    fieldErrors.tourDate = form.tourDate ? null : 'This field is required.';
-    fieldErrors.vehicleId = form.vehicleId ? null : 'This field is required.';
-    fieldErrors.driverId = form.driverId ? null : 'This field is required.';
+    fieldErrors.tourDate = form.tourDate ? null : t('common.required');
+    fieldErrors.vehicleId = form.vehicleId ? null : t('common.required');
+    fieldErrors.driverId = form.driverId ? null : t('common.required');
     return Object.values(fieldErrors).every((message) => message === null);
 }
 
@@ -98,11 +100,11 @@ function applyServerErrors(error: unknown): void {
         // A double booking, a vehicle in the workshop and an expired licence all arrive here as
         // a 409 whose detail names the reason - exactly what the dispatcher needs, so it is
         // shown verbatim rather than replaced by a generic sentence.
-        formError.value = describeFailure(error, 'The tour could not be saved.');
+        formError.value = describeFailure(error, t('tours.saveFailed'));
         return;
     }
 
-    formError.value = 'The tour could not be saved.';
+    formError.value = t('tours.saveFailed');
 }
 
 function describeFailure(error: unknown, fallback: string): string {
@@ -117,13 +119,13 @@ function describeFailure(error: unknown, fallback: string): string {
 
 <template>
     <v-container>
-        <h1>New tour</h1>
+        <h1>{{ t('tours.new') }}</h1>
         <p v-if="formError" data-testid="tour-form-error">{{ formError }}</p>
         <!-- novalidate: see VehicleForm.vue - without it a native input constraint can silently
              block the submit event before this handler ever runs. -->
         <form novalidate @submit.prevent="save">
             <div>
-                <label for="tour-tourDate">Tour date</label>
+                <label for="tour-tourDate">{{ t('tours.tourDate') }}</label>
                 <input id="tour-tourDate" v-model="form.tourDate" type="date" data-testid="tour-tourDate" />
             </div>
             <p v-if="attemptedSubmit && fieldErrors.tourDate" data-testid="tour-tourDate-error">
@@ -131,7 +133,7 @@ function describeFailure(error: unknown, fallback: string): string {
             </p>
 
             <div>
-                <label for="tour-vehicleId">Vehicle</label>
+                <label for="tour-vehicleId">{{ t('common.vehicle') }}</label>
                 <select id="tour-vehicleId" v-model="form.vehicleId" data-testid="tour-vehicleId">
                     <option value="">-</option>
                     <option v-for="vehicle in vehicles" :key="vehicle.id" :value="vehicle.id">
@@ -144,7 +146,7 @@ function describeFailure(error: unknown, fallback: string): string {
             </p>
 
             <div>
-                <label for="tour-driverId">Driver</label>
+                <label for="tour-driverId">{{ t('common.driver') }}</label>
                 <select id="tour-driverId" v-model="form.driverId" data-testid="tour-driverId">
                     <option value="">-</option>
                     <option v-for="driver in drivers" :key="driver.id" :value="driver.id">
@@ -156,8 +158,8 @@ function describeFailure(error: unknown, fallback: string): string {
                 {{ fieldErrors.driverId }}
             </p>
 
-            <v-btn type="submit" data-testid="tour-save">Save</v-btn>
-            <v-btn type="button" data-testid="tour-cancel" @click="cancel">Cancel</v-btn>
+            <v-btn type="submit" data-testid="tour-save">{{ t('common.save') }}</v-btn>
+            <v-btn type="button" data-testid="tour-cancel" @click="cancel">{{ t('common.cancel') }}</v-btn>
         </form>
     </v-container>
 </template>

@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Both frontends are multilingual: German (default) and English, switchable from the toolbar/app bar and remembered per browser; `docs/BEDIENUNG_TRANSBRAIN_WEB.md` and `docs/BEDIENUNG_TRANSBRAIN_VUEWEB.md` describe the switch
 - Developer guide (`docs/DEVELOPER_GUIDE.md`) and installation guide (`docs/INSTALLATION.md`) covering local Aspire, Docker Compose and Azure Container Apps
 - Dockerfiles for the API and both frontends, `docker-compose.yml`, a Keycloak production image with its own realm template (`deploy/keycloak`) and `infra/main.bicep` for Azure
 - `Database:MigrateOnStartup` setting that applies EF migrations at start outside Development

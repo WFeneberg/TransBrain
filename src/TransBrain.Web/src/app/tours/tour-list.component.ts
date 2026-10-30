@@ -7,6 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { SessionService } from '../auth/session.service';
+import { I18nService } from '../i18n/i18n.service';
 import { Driver, DriverService } from '../drivers/driver.service';
 import { Vehicle, VehicleService } from '../vehicles/vehicle.service';
 import { Tour, TourService } from './tour.service';
@@ -28,12 +29,12 @@ const LIST_PAGE_SIZE = 100;
     imports: [MatTableModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, RouterLink],
     template: `
         @if (session.isAuthenticated()) {
-            <h1>Tours</h1>
+            <h1>{{ i18n.t('nav.tours') }}</h1>
             @if (session.can('dispatch.write')) {
-                <a mat-raised-button routerLink="/tours/new" data-testid="tour-add">Add tour</a>
+                <a mat-raised-button routerLink="/tours/new" data-testid="tour-add">{{ i18n.t('tours.add') }}</a>
             }
             <mat-form-field>
-                <mat-label>Date</mat-label>
+                <mat-label>{{ i18n.t('common.date') }}</mat-label>
                 <input
                     matInput
                     type="date"
@@ -43,26 +44,26 @@ const LIST_PAGE_SIZE = 100;
                 />
             </mat-form-field>
             <mat-form-field>
-                <mat-label>Vehicle</mat-label>
+                <mat-label>{{ i18n.t('common.vehicle') }}</mat-label>
                 <mat-select
                     [value]="vehicleFilter()"
                     (valueChange)="filterByVehicle($event)"
                     data-testid="tour-vehicle-filter"
                 >
-                    <mat-option [value]="''">All</mat-option>
+                    <mat-option [value]="''">{{ i18n.t('common.all') }}</mat-option>
                     @for (vehicle of vehicles(); track vehicle.id) {
                         <mat-option [value]="vehicle.id">{{ vehicle.licensePlate }}</mat-option>
                     }
                 </mat-select>
             </mat-form-field>
             <mat-form-field>
-                <mat-label>Driver</mat-label>
+                <mat-label>{{ i18n.t('common.driver') }}</mat-label>
                 <mat-select
                     [value]="driverFilter()"
                     (valueChange)="filterByDriver($event)"
                     data-testid="tour-driver-filter"
                 >
-                    <mat-option [value]="''">All</mat-option>
+                    <mat-option [value]="''">{{ i18n.t('common.all') }}</mat-option>
                     @for (driver of drivers(); track driver.id) {
                         <mat-option [value]="driver.id">{{ driver.lastName }}, {{ driver.firstName }}</mat-option>
                     }
@@ -73,31 +74,31 @@ const LIST_PAGE_SIZE = 100;
             } @else {
                 <table mat-table [dataSource]="tours()">
                     <ng-container matColumnDef="tourDate">
-                        <th mat-header-cell *matHeaderCellDef>Date</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.date') }}</th>
                         <td mat-cell *matCellDef="let t" data-testid="tour-date">{{ t.tourDate }}</td>
                     </ng-container>
                     <ng-container matColumnDef="vehicle">
-                        <th mat-header-cell *matHeaderCellDef>Vehicle</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.vehicle') }}</th>
                         <td mat-cell *matCellDef="let t" data-testid="tour-vehicle">
                             {{ t.vehicleLicensePlate }}
                         </td>
                     </ng-container>
                     <ng-container matColumnDef="driver">
-                        <th mat-header-cell *matHeaderCellDef>Driver</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.driver') }}</th>
                         <td mat-cell *matCellDef="let t" data-testid="tour-driver">{{ t.driverName }}</td>
                     </ng-container>
                     <ng-container matColumnDef="stops">
-                        <th mat-header-cell *matHeaderCellDef>Stops</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('tours.stops') }}</th>
                         <td mat-cell *matCellDef="let t" data-testid="tour-stops">{{ t.stops.length }}</td>
                     </ng-container>
                     <ng-container matColumnDef="status">
-                        <th mat-header-cell *matHeaderCellDef>Status</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.status') }}</th>
                         <td mat-cell *matCellDef="let t" data-testid="tour-status">{{ t.status }}</td>
                     </ng-container>
                     <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Actions</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.actions') }}</th>
                         <td mat-cell *matCellDef="let t">
-                            <a mat-button [routerLink]="['/tours', t.id]" data-testid="tour-open">Open</a>
+                            <a mat-button [routerLink]="['/tours', t.id]" data-testid="tour-open">{{ i18n.t('common.open') }}</a>
                         </td>
                     </ng-container>
                     <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -105,7 +106,7 @@ const LIST_PAGE_SIZE = 100;
                 </table>
             }
         } @else {
-            <p>Please sign in to see the tours.</p>
+            <p>{{ i18n.t('tours.signIn') }}</p>
         }
     `,
 })
@@ -114,6 +115,7 @@ export class TourListComponent {
     private readonly vehicleService = inject(VehicleService);
     private readonly driverService = inject(DriverService);
     protected readonly session = inject(SessionService);
+    protected readonly i18n = inject(I18nService);
 
     protected readonly columns = ['tourDate', 'vehicle', 'driver', 'stops', 'status', 'actions'];
     protected readonly tours = signal<Tour[]>([]);
@@ -166,7 +168,7 @@ export class TourListComponent {
             .subscribe({
                 next: (page) => this.tours.set(page.items),
                 error: (error: HttpErrorResponse) =>
-                    this.errorMessage.set(this.describe(error, 'The tour list could not be loaded.')),
+                    this.errorMessage.set(this.describe(error, this.i18n.t('tours.error.list'))),
             });
     }
 

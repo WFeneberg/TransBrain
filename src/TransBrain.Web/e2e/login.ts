@@ -19,6 +19,9 @@ const PASSWORDS: Record<TestRole, string> = {
  * different role simply calls this with a different one.
  */
 export async function signIn(page: Page, role: TestRole): Promise<void> {
+    // The specs assert English labels; the app defaults to German. Set the stored locale before
+    // the first load so every page of the run renders in English.
+    await page.addInitScript(() => localStorage.setItem('transbrain.locale', 'en'));
     await page.goto('/');
     await page.getByTestId('login').click();
     // A redirect out to Keycloak is legitimately slower than any assertion against our own

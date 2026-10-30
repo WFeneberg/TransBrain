@@ -7,13 +7,14 @@ import { listVehicles } from '../api/vehicles';
 import { listDrivers } from '../api/drivers';
 import { listOrders, type Order } from '../api/orders';
 import { completeTour, listTours, startTour, type Tour } from '../api/tours';
+import { useI18n, type MessageKey } from '../i18n';
 
 interface AreaTile {
     area: Area;
-    title: string;
-    description: string;
+    title: MessageKey;
+    description: MessageKey;
     route: string;
-    addLabel: string;
+    addLabel: MessageKey;
     addRoute: string;
     addCapability: Capability;
 }
@@ -21,37 +22,37 @@ interface AreaTile {
 const tiles: readonly AreaTile[] = [
     {
         area: 'vehicles',
-        title: 'Vehicles',
-        description: 'Fleet master data: plates, payload, inspections.',
+        title: 'nav.vehicles',
+        description: 'home.tile.vehicles',
         route: '/vehicles',
-        addLabel: 'Add vehicle',
+        addLabel: 'vehicles.add',
         addRoute: '/vehicles/new',
         addCapability: 'masterData.write',
     },
     {
         area: 'drivers',
-        title: 'Drivers',
-        description: 'Driver master data: licences, availability.',
+        title: 'nav.drivers',
+        description: 'home.tile.drivers',
         route: '/drivers',
-        addLabel: 'Add driver',
+        addLabel: 'drivers.add',
         addRoute: '/drivers/new',
         addCapability: 'masterData.write',
     },
     {
         area: 'orders',
-        title: 'Orders',
-        description: 'Transport orders from pickup to delivery.',
+        title: 'nav.orders',
+        description: 'home.tile.orders',
         route: '/orders',
-        addLabel: 'New order',
+        addLabel: 'orders.new',
         addRoute: '/orders/new',
         addCapability: 'dispatch.write',
     },
     {
         area: 'tours',
-        title: 'Tours',
-        description: 'Plan orders onto vehicles and follow execution.',
+        title: 'nav.tours',
+        description: 'home.tile.tours',
         route: '/tours',
-        addLabel: 'Plan tour',
+        addLabel: 'tours.plan',
         addRoute: '/tours/new',
         addCapability: 'dispatch.write',
     },
@@ -73,6 +74,7 @@ function today(): string {
 }
 
 const auth = useAuthStore();
+const { t } = useI18n();
 
 const vehiclesAvailable = ref(0);
 const vehiclesInWorkshop = ref(0);
@@ -108,7 +110,7 @@ async function loadBlocks(): Promise<void> {
                     vehiclesAvailable.value = (await listVehicles(COUNT_ONLY, 'Available')).totalCount;
                     vehiclesInWorkshop.value = (await listVehicles(COUNT_ONLY, 'InWorkshop')).totalCount;
                 } catch (error) {
-                    vehicleError.value = describe(error, 'The vehicle counts could not be loaded.');
+                    vehicleError.value = describe(error, t('home.error.vehicleCounts'));
                 }
             })(),
         );
@@ -120,7 +122,7 @@ async function loadBlocks(): Promise<void> {
                 try {
                     driversAvailable.value = (await listDrivers(COUNT_ONLY, 'Available')).totalCount;
                 } catch (error) {
-                    driverError.value = describe(error, 'The driver counts could not be loaded.');
+                    driverError.value = describe(error, t('home.error.driverCounts'));
                 }
             })(),
         );
@@ -132,7 +134,7 @@ async function loadBlocks(): Promise<void> {
                 try {
                     ordersInDraft.value = (await listOrders('Draft', COUNT_ONLY)).totalCount;
                 } catch (error) {
-                    orderError.value = describe(error, 'The order counts could not be loaded.');
+                    orderError.value = describe(error, t('home.error.orderCounts'));
                 }
             })(),
         );
@@ -149,7 +151,7 @@ async function loadBlocks(): Promise<void> {
                     myTours.value = page.items;
                 }
             } catch (error) {
-                tourError.value = describe(error, "Today's tours could not be loaded.");
+                tourError.value = describe(error, t('home.error.todayTours'));
             }
         })(),
     );
@@ -160,7 +162,7 @@ async function loadBlocks(): Promise<void> {
                 try {
                     draftOrders.value = (await listOrders('Draft', DRAFT_PREVIEW_SIZE)).items;
                 } catch (error) {
-                    draftOrdersError.value = describe(error, 'The draft orders could not be loaded.');
+                    draftOrdersError.value = describe(error, t('home.error.draftOrders'));
                 }
             })(),
         );
@@ -175,7 +177,7 @@ async function reloadMyTours(): Promise<void> {
         myTours.value = page.items;
         toursToday.value = page.totalCount;
     } catch (error) {
-        myToursError.value = describe(error, "Today's tours could not be reloaded.");
+        myToursError.value = describe(error, t('home.error.myToursReload'));
     }
 }
 
@@ -185,7 +187,7 @@ async function start(tour: Tour): Promise<void> {
         await startTour(tour.id);
         await reloadMyTours();
     } catch (error) {
-        myToursError.value = describe(error, 'The tour could not be started.');
+        myToursError.value = describe(error, t('tours.startFailed'));
     }
 }
 
@@ -195,7 +197,7 @@ async function complete(tour: Tour): Promise<void> {
         await completeTour(tour.id);
         await reloadMyTours();
     } catch (error) {
-        myToursError.value = describe(error, 'The tour could not be completed.');
+        myToursError.value = describe(error, t('tours.completeFailed'));
     }
 }
 
@@ -212,22 +214,22 @@ function describe(error: unknown, fallback: string): string {
 <template>
     <v-container>
         <template v-if="auth.isAuthenticated">
-            <h1 data-testid="home-greeting">Welcome, {{ auth.displayName }}</h1>
+            <h1 data-testid="home-greeting">{{ t('home.welcome', { name: auth.displayName }) }}</h1>
             <v-chip v-for="role in auth.roles" :key="role" data-testid="home-role-chip">{{ role }}</v-chip>
 
             <v-row class="mt-4">
                 <v-col v-if="auth.areas.has('vehicles')" cols="12" md="3">
                     <v-card>
-                        <v-card-title>Vehicles</v-card-title>
+                        <v-card-title>{{ t('nav.vehicles') }}</v-card-title>
                         <v-card-text>
                             <p v-if="vehicleError" data-testid="home-kpi-vehicles-error">{{ vehicleError }}</p>
                             <template v-else>
                                 <p>
-                                    Available:
+                                    {{ t('home.available') }}
                                     <strong data-testid="home-kpi-vehicles-available">{{ vehiclesAvailable }}</strong>
                                 </p>
                                 <p>
-                                    In workshop:
+                                    {{ t('home.inWorkshop') }}
                                     <strong data-testid="home-kpi-vehicles-workshop">{{ vehiclesInWorkshop }}</strong>
                                 </p>
                             </template>
@@ -236,11 +238,11 @@ function describe(error: unknown, fallback: string): string {
                 </v-col>
                 <v-col v-if="auth.areas.has('drivers')" cols="12" md="3">
                     <v-card>
-                        <v-card-title>Drivers</v-card-title>
+                        <v-card-title>{{ t('nav.drivers') }}</v-card-title>
                         <v-card-text>
                             <p v-if="driverError" data-testid="home-kpi-drivers-error">{{ driverError }}</p>
                             <p v-else>
-                                Available:
+                                {{ t('home.available') }}
                                 <strong data-testid="home-kpi-drivers-available">{{ driversAvailable }}</strong>
                             </p>
                         </v-card-text>
@@ -248,18 +250,18 @@ function describe(error: unknown, fallback: string): string {
                 </v-col>
                 <v-col v-if="auth.areas.has('orders')" cols="12" md="3">
                     <v-card>
-                        <v-card-title>Orders</v-card-title>
+                        <v-card-title>{{ t('nav.orders') }}</v-card-title>
                         <v-card-text>
                             <p v-if="orderError" data-testid="home-kpi-orders-error">{{ orderError }}</p>
                             <p v-else>
-                                In draft: <strong data-testid="home-kpi-orders-draft">{{ ordersInDraft }}</strong>
+                                {{ t('home.inDraft') }} <strong data-testid="home-kpi-orders-draft">{{ ordersInDraft }}</strong>
                             </p>
                         </v-card-text>
                     </v-card>
                 </v-col>
                 <v-col cols="12" md="3">
                     <v-card>
-                        <v-card-title>Tours today</v-card-title>
+                        <v-card-title>{{ t('home.toursToday') }}</v-card-title>
                         <v-card-text>
                             <p v-if="tourError" data-testid="home-kpi-tours-error">{{ tourError }}</p>
                             <p v-else><strong data-testid="home-kpi-tours-today">{{ toursToday }}</strong></p>
@@ -269,7 +271,7 @@ function describe(error: unknown, fallback: string): string {
             </v-row>
 
             <section v-if="auth.can('dispatch.write')" data-testid="home-draft-orders" class="mt-4">
-                <h2>Orders awaiting a tour</h2>
+                <h2>{{ t('home.draftOrdersTitle') }}</h2>
                 <p v-if="draftOrdersError" data-testid="home-draft-orders-error">{{ draftOrdersError }}</p>
                 <template v-else>
                     <v-list>
@@ -278,32 +280,32 @@ function describe(error: unknown, fallback: string): string {
                                 {{ order.orderNumber }} — {{ order.consignor.city }} → {{ order.consignee.city }}
                             </v-list-item-title>
                             <template #append>
-                                <v-btn :to="`/orders/${order.id}`" data-testid="home-draft-order-open">Open</v-btn>
+                                <v-btn :to="`/orders/${order.id}`" data-testid="home-draft-order-open">{{ t('common.open') }}</v-btn>
                             </template>
                         </v-list-item>
                     </v-list>
                     <!-- No per-row "Plan" button: an order is put onto a tour by the picker on
                          /tours/:id, and no endpoint creates a tour from an order. -->
-                    <v-btn to="/tours/new" data-testid="home-plan-tour">Plan a tour</v-btn>
+                    <v-btn to="/tours/new" data-testid="home-plan-tour">{{ t('home.planTour') }}</v-btn>
                 </template>
             </section>
 
             <section v-if="auth.hasRole('fahrer')" data-testid="home-my-tours" class="mt-4">
-                <h2>My tours today</h2>
+                <h2>{{ t('home.myToursToday') }}</h2>
                 <p v-if="myToursError" data-testid="home-my-tours-error">{{ myToursError }}</p>
                 <v-card v-for="tour in myTours" :key="tour.id" class="mb-2" data-testid="home-my-tour-row">
                     <v-card-title>{{ tour.vehicleLicensePlate }} — {{ tour.status }}</v-card-title>
                     <v-card-actions>
-                        <v-btn :to="`/tours/${tour.id}`">Open</v-btn>
+                        <v-btn :to="`/tours/${tour.id}`">{{ t('common.open') }}</v-btn>
                         <v-btn v-if="tour.status === 'Planned'" data-testid="home-my-tour-start" @click="start(tour)">
-                            Start tour
+                            {{ t('tours.start') }}
                         </v-btn>
                         <v-btn
                             v-if="tour.status === 'InProgress'"
                             data-testid="home-my-tour-complete"
                             @click="complete(tour)"
                         >
-                            Complete tour
+                            {{ t('tours.complete') }}
                         </v-btn>
                     </v-card-actions>
                 </v-card>
@@ -313,15 +315,15 @@ function describe(error: unknown, fallback: string): string {
                 <template v-for="tile in tiles" :key="tile.area">
                     <v-col v-if="auth.areas.has(tile.area)" cols="12" md="3">
                         <v-card :data-testid="`home-tile-${tile.area}`">
-                            <v-card-title>{{ tile.title }}</v-card-title>
-                            <v-card-text>{{ tile.description }}</v-card-text>
+                            <v-card-title>{{ t(tile.title) }}</v-card-title>
+                            <v-card-text>{{ t(tile.description) }}</v-card-text>
                             <v-card-actions>
-                                <v-btn :to="tile.route">Open</v-btn>
+                                <v-btn :to="tile.route">{{ t('common.open') }}</v-btn>
                                 <v-btn
                                     v-if="auth.can(tile.addCapability)"
                                     :to="tile.addRoute"
                                     :data-testid="`home-tile-${tile.area}-add`"
-                                    >{{ tile.addLabel }}</v-btn
+                                    >{{ t(tile.addLabel) }}</v-btn
                                 >
                             </v-card-actions>
                         </v-card>
@@ -329,6 +331,6 @@ function describe(error: unknown, fallback: string): string {
                 </template>
             </v-row>
         </template>
-        <v-btn v-else data-testid="login" @click="auth.login()">Sign in</v-btn>
+        <v-btn v-else data-testid="login" @click="auth.login()">{{ t('common.signIn') }}</v-btn>
     </v-container>
 </template>

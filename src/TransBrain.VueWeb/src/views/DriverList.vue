@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import axios from 'axios';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { deleteDriver, listDrivers, type Driver } from '../api/drivers';
 import { useAuthStore } from '../stores/auth';
+import { useI18n } from '../i18n';
 
 /**
  * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
@@ -14,6 +15,7 @@ import { useAuthStore } from '../stores/auth';
 const LIST_PAGE_SIZE = 100;
 
 const auth = useAuthStore();
+const { t } = useI18n();
 const router = useRouter();
 const drivers = ref<Driver[]>([]);
 const errorMessage = ref<string | null>(null);
@@ -21,13 +23,13 @@ const errorMessage = ref<string | null>(null);
 // load does (mirrors VehicleList.vue's actionError - see that file for why).
 const actionError = ref<string | null>(null);
 
-const headers = [
-    { title: 'Last name', key: 'lastName' },
-    { title: 'First name', key: 'firstName' },
-    { title: 'License classes', key: 'licenseClasses' },
-    { title: 'Status', key: 'status' },
-    { title: 'Actions', key: 'actions', sortable: false },
-];
+const headers = computed(() => [
+    { title: t('drivers.lastName'), key: 'lastName' },
+    { title: t('drivers.firstName'), key: 'firstName' },
+    { title: t('drivers.licenseClasses'), key: 'licenseClasses' },
+    { title: t('common.status'), key: 'status' },
+    { title: t('common.actions'), key: 'actions', sortable: false },
+]);
 
 onMounted(async () => {
     if (auth.isAuthenticated) {
@@ -39,7 +41,7 @@ async function refresh(): Promise<void> {
     try {
         drivers.value = (await listDrivers(LIST_PAGE_SIZE)).items;
     } catch (error) {
-        errorMessage.value = describe(error, 'The driver list could not be loaded.');
+        errorMessage.value = describe(error, t('drivers.listLoadFailed'));
     }
 }
 
@@ -55,7 +57,7 @@ async function remove(driver: Driver): Promise<void> {
         // A policy failure (e.g. a non-admin's 403) is rejected by ASP.NET's authorization
         // middleware before the endpoint runs, so it carries no ProblemDetails body at all -
         // the fallback text is therefore action-specific, not the list-load one.
-        actionError.value = describe(error, 'The driver could not be deleted.');
+        actionError.value = describe(error, t('drivers.deleteFailed'));
     }
 }
 
@@ -76,12 +78,12 @@ function describe(error: unknown, fallback: string): string {
 <template>
     <v-container>
         <template v-if="auth.isAuthenticated">
-            <h1>Drivers</h1>
+            <h1>{{ t('nav.drivers') }}</h1>
             <v-btn
                 v-if="auth.can('masterData.write')"
                 data-testid="driver-add"
                 @click="router.push('/drivers/new')"
-                >Add driver</v-btn
+                >{{ t('drivers.add') }}</v-btn
             >
             <p v-if="actionError" data-testid="driver-action-error">{{ actionError }}</p>
             <p v-if="errorMessage" data-testid="driver-list-error">{{ errorMessage }}</p>
@@ -108,12 +110,12 @@ function describe(error: unknown, fallback: string): string {
                 </template>
                 <template #item.actions="{ item }">
                     <template v-if="auth.can('masterData.write')">
-                        <v-btn data-testid="driver-edit" @click="router.push(`/drivers/${item.id}`)">Edit</v-btn>
-                        <v-btn data-testid="driver-delete" @click="remove(item)">Delete</v-btn>
+                        <v-btn data-testid="driver-edit" @click="router.push(`/drivers/${item.id}`)">{{ t('common.edit') }}</v-btn>
+                        <v-btn data-testid="driver-delete" @click="remove(item)">{{ t('common.delete') }}</v-btn>
                     </template>
                 </template>
             </v-data-table>
         </template>
-        <p v-else>Please sign in to see the drivers.</p>
+        <p v-else>{{ t('drivers.signInHint') }}</p>
     </v-container>
 </template>

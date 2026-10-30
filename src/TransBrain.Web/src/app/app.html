@@ -2,23 +2,28 @@
     <span class="brand">TransBrain</span>
     @if (session.isAuthenticated()) {
         <nav>
-            <a mat-button routerLink="/" data-testid="nav-home">Home</a>
+            <a mat-button routerLink="/" data-testid="nav-home">{{ i18n.t('nav.home') }}</a>
             @if (session.areas().has('vehicles')) {
-                <a mat-button routerLink="/vehicles" data-testid="nav-vehicles">Vehicles</a>
+                <a mat-button routerLink="/vehicles" data-testid="nav-vehicles">{{ i18n.t('nav.vehicles') }}</a>
             }
             @if (session.areas().has('drivers')) {
-                <a mat-button routerLink="/drivers" data-testid="nav-drivers">Drivers</a>
+                <a mat-button routerLink="/drivers" data-testid="nav-drivers">{{ i18n.t('nav.drivers') }}</a>
             }
             @if (session.areas().has('orders')) {
-                <a mat-button routerLink="/orders" data-testid="nav-orders">Orders</a>
+                <a mat-button routerLink="/orders" data-testid="nav-orders">{{ i18n.t('nav.orders') }}</a>
             }
             @if (session.areas().has('tours')) {
-                <a mat-button routerLink="/tours" data-testid="nav-tours">Tours</a>
+                <a mat-button routerLink="/tours" data-testid="nav-tours">{{ i18n.t('nav.tours') }}</a>
             }
         </nav>
         <span class="spacer"></span>
         <span class="user-name" data-testid="nav-user">{{ session.displayName() }}</span>
-        <button mat-button data-testid="logout" (click)="session.logout()">Sign out</button>
+    }
+    <button mat-button data-testid="lang-switch" (click)="toggleLocale()">
+        {{ i18n.locale() === 'de' ? 'EN' : 'DE' }}
+    </button>
+    @if (session.isAuthenticated()) {
+        <button mat-button data-testid="logout" (click)="session.logout()">{{ i18n.t('auth.signOut') }}</button>
     }
 </mat-toolbar>
 

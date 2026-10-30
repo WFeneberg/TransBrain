@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
 import { Area, AppRole, Capability, areasFor, capabilitiesFor, knownRoles } from './capabilities';
+import { I18nService } from '../i18n/i18n.service';
 
 interface UserClaims {
     realm_access?: { roles?: unknown };
@@ -24,13 +25,14 @@ interface UserClaims {
 @Injectable({ providedIn: 'root' })
 export class SessionService {
     private readonly oidc = inject(OidcSecurityService);
+    private readonly i18n = inject(I18nService);
 
     private readonly authenticated = signal(false);
     private readonly claims = signal<UserClaims | null>(null);
-    private readonly checkError = signal<string | null>(null);
+    private readonly checkFailed = signal(false);
 
     readonly isAuthenticated = this.authenticated.asReadonly();
-    readonly error = this.checkError.asReadonly();
+    readonly error = computed(() => (this.checkFailed() ? this.i18n.t('auth.checkFailed') : null));
 
     readonly roles = computed<AppRole[]>(() => {
         const raw = this.claims()?.realm_access?.roles;
@@ -70,7 +72,7 @@ export class SessionService {
         catchError(() => {
             // A checkAuth failure (Keycloak unreachable, a rejected code) must not leave callers
             // hanging on a never-emitting observable - guards would block the router forever.
-            this.checkError.set('Could not verify your sign-in status. Please try signing in again.');
+            this.checkFailed.set(true);
             this.authenticated.set(false);
             return of(false);
         }),

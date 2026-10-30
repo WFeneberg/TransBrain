@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
 import { SessionService } from '../auth/session.service';
+import { I18nService } from '../i18n/i18n.service';
 import {switchMap} from 'rxjs';
 import { Driver, DriverService } from '../drivers/driver.service';
 import { Vehicle, VehicleService } from '../vehicles/vehicle.service';
@@ -27,20 +28,20 @@ interface ProblemDetailsBody {
     standalone: true,
     imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule],
     template: `
-        <h1>New tour</h1>
+        <h1>{{ i18n.t('tours.new') }}</h1>
         @if (formError(); as message) {
             <p data-testid="tour-form-error">{{ message }}</p>
         }
         <form [formGroup]="form" (ngSubmit)="save()">
             <mat-form-field>
-                <mat-label>Tour date</mat-label>
+                <mat-label>{{ i18n.t('tours.tourDate') }}</mat-label>
                 <input matInput type="date" formControlName="tourDate" data-testid="tour-tourDate" />
                 @if (form.controls.tourDate.errors; as errors) {
                     <mat-error data-testid="tour-tourDate-error">{{ fieldErrorText(errors) }}</mat-error>
                 }
             </mat-form-field>
             <mat-form-field>
-                <mat-label>Vehicle</mat-label>
+                <mat-label>{{ i18n.t('common.vehicle') }}</mat-label>
                 <mat-select formControlName="vehicleId" data-testid="tour-vehicleId">
                     @for (vehicle of vehicles(); track vehicle.id) {
                         <mat-option [value]="vehicle.id">{{ vehicle.licensePlate }}</mat-option>
@@ -51,7 +52,7 @@ interface ProblemDetailsBody {
                 }
             </mat-form-field>
             <mat-form-field>
-                <mat-label>Driver</mat-label>
+                <mat-label>{{ i18n.t('common.driver') }}</mat-label>
                 <mat-select formControlName="driverId" data-testid="tour-driverId">
                     @for (driver of drivers(); track driver.id) {
                         <mat-option [value]="driver.id">{{ driver.lastName }}, {{ driver.firstName }}</mat-option>
@@ -61,8 +62,8 @@ interface ProblemDetailsBody {
                     <mat-error data-testid="tour-driverId-error">{{ fieldErrorText(errors) }}</mat-error>
                 }
             </mat-form-field>
-            <button mat-raised-button type="submit" data-testid="tour-save">Save</button>
-            <button mat-button type="button" data-testid="tour-cancel" (click)="cancel()">Cancel</button>
+            <button mat-raised-button type="submit" data-testid="tour-save">{{ i18n.t('common.save') }}</button>
+            <button mat-button type="button" data-testid="tour-cancel" (click)="cancel()">{{ i18n.t('common.cancel') }}</button>
         </form>
     `,
 })
@@ -78,6 +79,7 @@ export class TourFormComponent {
     // lifetime, so without this every request from it answered 401 to a plainly signed-in user.
     // The one checkAuth() behind it runs in the App component.
     protected readonly session = inject(SessionService);
+    protected readonly i18n = inject(I18nService);
 
     protected readonly vehicles = signal<Vehicle[]>([]);
     protected readonly drivers = signal<Driver[]>([]);
@@ -93,13 +95,13 @@ export class TourFormComponent {
         this.session.ready.pipe(switchMap(() => this.vehicleService.list(PICKER_PAGE_SIZE))).subscribe({
             next: (page) => this.vehicles.set(page.items),
             error: (error: HttpErrorResponse) =>
-                this.formError.set(this.describeFailure(error, 'The vehicle list could not be loaded.')),
+                this.formError.set(this.describeFailure(error, this.i18n.t('vehicles.error.list'))),
         });
 
         this.session.ready.pipe(switchMap(() => this.driverService.list(PICKER_PAGE_SIZE))).subscribe({
             next: (page) => this.drivers.set(page.items),
             error: (error: HttpErrorResponse) =>
-                this.formError.set(this.describeFailure(error, 'The driver list could not be loaded.')),
+                this.formError.set(this.describeFailure(error, this.i18n.t('drivers.error.list'))),
         });
     }
 
@@ -109,9 +111,9 @@ export class TourFormComponent {
             return errors['server'] as string;
         }
         if (errors['required']) {
-            return 'This field is required.';
+            return this.i18n.t('common.fieldRequired');
         }
-        return 'This field is invalid.';
+        return this.i18n.t('common.fieldInvalid');
     }
 
     protected save(): void {
@@ -161,7 +163,7 @@ export class TourFormComponent {
         // A double booking, an unavailable vehicle and an expired licence all arrive here as a
         // 409 with a detail message naming the reason - which is exactly what the dispatcher
         // needs to see, so it is shown verbatim rather than replaced with a generic sentence.
-        this.formError.set(this.describeFailure(error, 'The tour could not be saved.'));
+        this.formError.set(this.describeFailure(error, this.i18n.t('tours.error.save')));
     }
 
     private describeFailure(error: HttpErrorResponse, fallback: string): string {

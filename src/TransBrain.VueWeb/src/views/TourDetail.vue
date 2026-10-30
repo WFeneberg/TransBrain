@@ -12,8 +12,10 @@ import {
     type Tour,
 } from '../api/tours';
 import { useAuthStore } from '../stores/auth';
+import { useI18n } from '../i18n';
 
 const auth = useAuthStore();
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -26,12 +28,12 @@ const loadError = ref<string | null>(null);
 // does. This is where a 409 from the capacity or status rules reaches the user.
 const actionError = ref<string | null>(null);
 
-const stopHeaders = [
+const stopHeaders = computed(() => [
     { title: '#', key: 'sequence' },
-    { title: 'Order', key: 'orderNumber' },
-    { title: 'Type', key: 'stopType' },
-    { title: 'Actions', key: 'actions', sortable: false },
-];
+    { title: t('common.order'), key: 'orderNumber' },
+    { title: t('common.type'), key: 'stopType' },
+    { title: t('common.actions'), key: 'actions', sortable: false },
+]);
 
 // Orders already on this tour are no longer Draft, but the picker's list is refreshed only
 // alongside the tour, so filter defensively rather than offering a stale choice.
@@ -49,7 +51,7 @@ async function refresh(): Promise<void> {
     } catch (error) {
         // The load path gets its own wording: "could not be assigned" on a failed get would be
         // plainly wrong.
-        loadError.value = describe(error, 'The tour could not be loaded.');
+        loadError.value = describe(error, t('tours.loadFailed'));
     }
 }
 
@@ -64,29 +66,29 @@ async function loadDraftOrders(): Promise<void> {
         const lastPage = Math.max(1, Math.ceil(first.totalCount / pageSize));
         draftOrders.value = lastPage === 1 ? first.items : (await listOrders('Draft', pageSize, lastPage)).items;
     } catch (error) {
-        actionError.value = describe(error, 'The assignable orders could not be loaded.');
+        actionError.value = describe(error, t('tours.assignableFailed'));
     }
 }
 
 async function assign(): Promise<void> {
     if (!selectedOrderId.value) {
-        actionError.value = 'Choose an order to assign first.';
+        actionError.value = t('tours.chooseOrderFirst');
         return;
     }
 
-    await run(() => assignOrderToTour(tourId, selectedOrderId.value), 'The order could not be assigned.');
+    await run(() => assignOrderToTour(tourId, selectedOrderId.value), t('tours.assignFailed'));
 }
 
 async function remove(transportOrderId: string): Promise<void> {
-    await run(() => removeOrderFromTour(tourId, transportOrderId), 'The order could not be removed.');
+    await run(() => removeOrderFromTour(tourId, transportOrderId), t('tours.removeFailed'));
 }
 
 async function start(): Promise<void> {
-    await run(() => startTour(tourId), 'The tour could not be started.');
+    await run(() => startTour(tourId), t('tours.startFailed'));
 }
 
 async function complete(): Promise<void> {
-    await run(() => completeTour(tourId), 'The tour could not be completed.');
+    await run(() => completeTour(tourId), t('tours.completeFailed'));
 }
 
 async function run(action: () => Promise<Tour>, fallback: string): Promise<void> {
@@ -114,7 +116,7 @@ function describe(error: unknown, fallback: string): string {
 
 <template>
     <v-container>
-        <h1>Tour</h1>
+        <h1>{{ t('tours.detail') }}</h1>
         <p v-if="loadError" data-testid="tour-detail-error">{{ loadError }}</p>
 
         <template v-if="tour">
@@ -122,26 +124,26 @@ function describe(error: unknown, fallback: string): string {
                  cells, and a page-wide locator matching both screens would be ambiguous the
                  moment a test navigated between them. Mirrors the Angular detail page. -->
             <dl>
-                <dt>Date</dt>
+                <dt>{{ t('common.date') }}</dt>
                 <dd data-testid="tour-detail-date">{{ tour.tourDate }}</dd>
-                <dt>Vehicle</dt>
+                <dt>{{ t('common.vehicle') }}</dt>
                 <dd data-testid="tour-detail-vehicle">{{ tour.vehicleLicensePlate }}</dd>
-                <dt>Driver</dt>
+                <dt>{{ t('common.driver') }}</dt>
                 <dd data-testid="tour-detail-driver">{{ tour.driverName }}</dd>
-                <dt>Status</dt>
+                <dt>{{ t('common.status') }}</dt>
                 <dd data-testid="tour-detail-status">{{ tour.status }}</dd>
             </dl>
 
             <!-- The headroom a dispatcher needs before choosing the next order. The API already
                  sends both numbers, so showing them costs nothing extra. -->
             <section>
-                <h2>Capacity</h2>
+                <h2>{{ t('tours.capacity') }}</h2>
                 <p data-testid="tour-capacity-weight">
                     {{ tour.totalWeightKg }} / {{ tour.vehiclePayloadKg }} kg
                 </p>
                 <progress :value="tour.totalWeightKg" :max="tour.vehiclePayloadKg"></progress>
                 <p data-testid="tour-capacity-meters">
-                    {{ tour.totalLoadMeters }} / {{ tour.vehicleLoadMeters }} load meters
+                    {{ tour.totalLoadMeters }} / {{ tour.vehicleLoadMeters }} {{ t('tours.loadMetersUnit') }}
                 </p>
                 <progress :value="tour.totalLoadMeters" :max="tour.vehicleLoadMeters"></progress>
             </section>
@@ -149,7 +151,7 @@ function describe(error: unknown, fallback: string): string {
             <p v-if="actionError" data-testid="tour-action-error">{{ actionError }}</p>
 
             <section>
-                <h2>Stops</h2>
+                <h2>{{ t('tours.stops') }}</h2>
                 <v-data-table
                     :headers="stopHeaders"
                     :items="tour.stops"
@@ -172,18 +174,18 @@ function describe(error: unknown, fallback: string): string {
                             data-testid="tour-remove"
                             @click="remove(item.transportOrderId)"
                         >
-                            Remove
+                            {{ t('tours.remove') }}
                         </v-btn>
                     </template>
                 </v-data-table>
             </section>
 
             <section v-if="auth.can('dispatch.write')">
-                <h2>Assign an order</h2>
+                <h2>{{ t('tours.assignOrder') }}</h2>
                 <!-- Only Draft orders are offered: any other status is refused by the domain,
                      and offering a choice the server will reject is worse than not offering it. -->
                 <div>
-                    <label for="tour-assign-select">Order</label>
+                    <label for="tour-assign-select">{{ t('common.order') }}</label>
                     <select id="tour-assign-select" v-model="selectedOrderId" data-testid="tour-assign-select">
                         <option value="">-</option>
                         <option v-for="order in assignableOrders" :key="order.id" :value="order.id">
@@ -191,7 +193,7 @@ function describe(error: unknown, fallback: string): string {
                         </option>
                     </select>
                 </div>
-                <v-btn data-testid="tour-assign" @click="assign">Assign</v-btn>
+                <v-btn data-testid="tour-assign" @click="assign">{{ t('tours.assign') }}</v-btn>
             </section>
 
             <!-- tourStatus.write, not dispatch.write: a fahrer may run their own tour without
@@ -201,14 +203,14 @@ function describe(error: unknown, fallback: string): string {
                      is noise. Assign and Remove stay visible, matching how the order screens
                      treat Cancel - there the refusal message teaches the rule. -->
                 <v-btn v-if="tour.status === 'Planned'" data-testid="tour-start" @click="start">
-                    Start tour
+                    {{ t('tours.start') }}
                 </v-btn>
                 <v-btn v-if="tour.status === 'InProgress'" data-testid="tour-complete" @click="complete">
-                    Complete tour
+                    {{ t('tours.complete') }}
                 </v-btn>
             </section>
 
-            <v-btn data-testid="tour-back" @click="router.push('/tours')">Back to tours</v-btn>
+            <v-btn data-testid="tour-back" @click="router.push('/tours')">{{ t('tours.back') }}</v-btn>
         </template>
     </v-container>
 </template>

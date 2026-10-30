@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import axios from 'axios';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { deleteVehicle, listVehicles, type Vehicle } from '../api/vehicles';
 import { useAuthStore } from '../stores/auth';
+import { useI18n } from '../i18n';
 
 /**
  * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
@@ -14,6 +15,7 @@ import { useAuthStore } from '../stores/auth';
 const LIST_PAGE_SIZE = 100;
 
 const auth = useAuthStore();
+const { t } = useI18n();
 const router = useRouter();
 const vehicles = ref<Vehicle[]>([]);
 const errorMessage = ref<string | null>(null);
@@ -21,12 +23,12 @@ const errorMessage = ref<string | null>(null);
 // load does.
 const actionError = ref<string | null>(null);
 
-const headers = [
-    { title: 'License plate', key: 'licensePlate' },
-    { title: 'Type', key: 'type' },
-    { title: 'Payload (kg)', key: 'payloadKg' },
-    { title: 'Actions', key: 'actions', sortable: false },
-];
+const headers = computed(() => [
+    { title: t('vehicles.licensePlate'), key: 'licensePlate' },
+    { title: t('common.type'), key: 'type' },
+    { title: t('vehicles.payload'), key: 'payloadKg' },
+    { title: t('common.actions'), key: 'actions', sortable: false },
+]);
 
 onMounted(async () => {
     if (auth.isAuthenticated) {
@@ -38,7 +40,7 @@ async function refresh(): Promise<void> {
     try {
         vehicles.value = (await listVehicles(LIST_PAGE_SIZE)).items;
     } catch (error) {
-        errorMessage.value = describe(error, 'The vehicle list could not be loaded.');
+        errorMessage.value = describe(error, t('vehicles.listLoadFailed'));
     }
 }
 
@@ -51,7 +53,7 @@ async function remove(vehicle: Vehicle): Promise<void> {
         // A policy failure (e.g. a non-admin's 403) is rejected by ASP.NET's authorization
         // middleware before the endpoint runs, so it carries no ProblemDetails body at all -
         // the fallback text is therefore action-specific, not the list-load one.
-        actionError.value = describe(error, 'The vehicle could not be deleted.');
+        actionError.value = describe(error, t('vehicles.deleteFailed'));
     }
 }
 
@@ -72,12 +74,12 @@ function describe(error: unknown, fallback: string): string {
 <template>
     <v-container>
         <template v-if="auth.isAuthenticated">
-            <h1>Vehicles</h1>
+            <h1>{{ t('nav.vehicles') }}</h1>
             <v-btn
                 v-if="auth.can('masterData.write')"
                 data-testid="vehicle-add"
                 @click="router.push('/vehicles/new')"
-                >Add vehicle</v-btn
+                >{{ t('vehicles.add') }}</v-btn
             >
             <p v-if="actionError" data-testid="vehicle-action-error">{{ actionError }}</p>
             <p v-if="errorMessage" data-testid="vehicle-list-error">{{ errorMessage }}</p>
@@ -98,12 +100,12 @@ function describe(error: unknown, fallback: string): string {
                 </template>
                 <template #item.actions="{ item }">
                     <template v-if="auth.can('masterData.write')">
-                        <v-btn data-testid="vehicle-edit" @click="router.push(`/vehicles/${item.id}`)">Edit</v-btn>
-                        <v-btn data-testid="vehicle-delete" @click="remove(item)">Delete</v-btn>
+                        <v-btn data-testid="vehicle-edit" @click="router.push(`/vehicles/${item.id}`)">{{ t('common.edit') }}</v-btn>
+                        <v-btn data-testid="vehicle-delete" @click="remove(item)">{{ t('common.delete') }}</v-btn>
                     </template>
                 </template>
             </v-data-table>
         </template>
-        <p v-else>Please sign in to see the vehicles.</p>
+        <p v-else>{{ t('vehicles.signInHint') }}</p>
     </v-container>
 </template>

@@ -4,6 +4,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { SessionService } from '../auth/session.service';
+import { I18nService } from '../i18n/i18n.service';
 import { Driver, DriverService } from './driver.service';
 
 /**
@@ -20,9 +21,9 @@ const LIST_PAGE_SIZE = 100;
     imports: [MatTableModule, MatButtonModule, RouterLink],
     template: `
         @if (session.isAuthenticated()) {
-            <h1>Drivers</h1>
+            <h1>{{ i18n.t('nav.drivers') }}</h1>
             @if (session.can('masterData.write')) {
-                <a mat-raised-button routerLink="/drivers/new" data-testid="driver-add">Add driver</a>
+                <a mat-raised-button routerLink="/drivers/new" data-testid="driver-add">{{ i18n.t('drivers.add') }}</a>
             }
             @if (actionError(); as message) {
                 <p data-testid="driver-action-error">{{ message }}</p>
@@ -32,26 +33,26 @@ const LIST_PAGE_SIZE = 100;
             } @else {
                 <table mat-table [dataSource]="drivers()">
                     <ng-container matColumnDef="lastName">
-                        <th mat-header-cell *matHeaderCellDef>Last name</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.lastName') }}</th>
                         <td mat-cell *matCellDef="let d" data-testid="driver-lastname">{{ d.lastName }}</td>
                     </ng-container>
                     <ng-container matColumnDef="firstName">
-                        <th mat-header-cell *matHeaderCellDef>First name</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.firstName') }}</th>
                         <td mat-cell *matCellDef="let d" data-testid="driver-firstname">{{ d.firstName }}</td>
                     </ng-container>
                     <ng-container matColumnDef="licenseClasses">
-                        <th mat-header-cell *matHeaderCellDef>License classes</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.licenseClasses') }}</th>
                         <td mat-cell *matCellDef="let d">{{ d.licenseClasses.join(', ') }}</td>
                     </ng-container>
                     <ng-container matColumnDef="status">
-                        <th mat-header-cell *matHeaderCellDef>Status</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.status') }}</th>
                         <td mat-cell *matCellDef="let d">{{ d.status }}</td>
                     </ng-container>
                     <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Actions</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.actions') }}</th>
                         <td mat-cell *matCellDef="let d">
-                            <a mat-button [routerLink]="['/drivers', d.id]" data-testid="driver-edit">Edit</a>
-                            <button mat-button data-testid="driver-delete" (click)="delete(d)">Delete</button>
+                            <a mat-button [routerLink]="['/drivers', d.id]" data-testid="driver-edit">{{ i18n.t('common.edit') }}</a>
+                            <button mat-button data-testid="driver-delete" (click)="delete(d)">{{ i18n.t('common.delete') }}</button>
                         </td>
                     </ng-container>
                     <tr mat-header-row *matHeaderRowDef="columns"></tr>
@@ -59,13 +60,14 @@ const LIST_PAGE_SIZE = 100;
                 </table>
             }
         } @else {
-            <p>Please sign in to see the drivers.</p>
+            <p>{{ i18n.t('drivers.signIn') }}</p>
         }
     `,
 })
 export class DriverListComponent {
     private readonly service = inject(DriverService);
     protected readonly session = inject(SessionService);
+    protected readonly i18n = inject(I18nService);
 
     protected readonly columns = ['lastName', 'firstName', 'licenseClasses', 'status', 'actions'];
     protected readonly drivers = signal<Driver[]>([]);
@@ -93,7 +95,7 @@ export class DriverListComponent {
             // middleware before the endpoint runs, so it carries no ProblemDetails body at all -
             // describe()'s fallback text is therefore action-specific, not the list-load one.
             error: (error: HttpErrorResponse) =>
-                this.actionError.set(this.describe(error, 'The driver could not be deleted.')),
+                this.actionError.set(this.describe(error, this.i18n.t('drivers.error.delete'))),
         });
     }
 
@@ -101,7 +103,7 @@ export class DriverListComponent {
         this.service.list(LIST_PAGE_SIZE).subscribe({
             next: (page) => this.drivers.set(page.items),
             error: (error: HttpErrorResponse) =>
-                this.errorMessage.set(this.describe(error, 'The driver list could not be loaded.')),
+                this.errorMessage.set(this.describe(error, this.i18n.t('drivers.error.list'))),
         });
     }
 

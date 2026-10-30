@@ -3,6 +3,7 @@ import axios from 'axios';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createDriver, getDriver, updateDriver, type DriverWriteRequest } from '../api/drivers';
+import { useI18n } from '../i18n';
 
 interface ProblemDetailsBody {
     errors?: Record<string, string[]>;
@@ -11,6 +12,7 @@ interface ProblemDetailsBody {
     errorCode?: string;
 }
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -53,7 +55,7 @@ onMounted(async () => {
         } catch (error) {
             // A failed load is not a failed save - give it its own wording so a dispatcher
             // opening a deleted driver isn't told a save just failed.
-            formError.value = describeFailure(error, 'The driver could not be loaded.');
+            formError.value = describeFailure(error, t('drivers.loadFailed'));
         }
     }
 });
@@ -69,10 +71,10 @@ function toggleLicenseClass(licenseClass: string): void {
 }
 
 function validateRequired(): boolean {
-    fieldErrors.firstName = form.firstName ? null : 'This field is required.';
-    fieldErrors.lastName = form.lastName ? null : 'This field is required.';
-    fieldErrors.licenseClasses = form.licenseClasses.length > 0 ? null : 'This field is required.';
-    fieldErrors.licenseValidUntil = form.licenseValidUntil ? null : 'This field is required.';
+    fieldErrors.firstName = form.firstName ? null : t('common.required');
+    fieldErrors.lastName = form.lastName ? null : t('common.required');
+    fieldErrors.licenseClasses = form.licenseClasses.length > 0 ? null : t('common.required');
+    fieldErrors.licenseValidUntil = form.licenseValidUntil ? null : t('common.required');
     return Object.values(fieldErrors).every((message) => message === null);
 }
 
@@ -133,11 +135,11 @@ function applyServerErrors(error: unknown): void {
             return;
         }
 
-        formError.value = describeFailure(error, 'The driver could not be saved.');
+        formError.value = describeFailure(error, t('drivers.saveFailed'));
         return;
     }
 
-    formError.value = 'The driver could not be saved.';
+    formError.value = t('drivers.saveFailed');
 }
 
 // No `errors` dictionary means this was not a per-field validation failure but a domain-level
@@ -158,7 +160,7 @@ function describeFailure(error: unknown, fallback: string): string {
 
 <template>
     <v-container>
-        <h1>{{ isEditMode ? 'Edit driver' : 'New driver' }}</h1>
+        <h1>{{ isEditMode ? t('drivers.edit') : t('drivers.new') }}</h1>
         <p v-if="formError" data-testid="driver-form-error">{{ formError }}</p>
         <!-- novalidate: see VehicleForm.vue for why - Angular's [formGroup] directive sets this
              automatically, and without the Vue equivalent a native input constraint (e.g. a
@@ -172,7 +174,7 @@ function describeFailure(error: unknown, fallback: string): string {
                  the native input directly keeps fill()/toHaveValue() working the same way they
                  do against Angular's matInput-decorated <input>. -->
             <div>
-                <label for="driver-firstName">First name</label>
+                <label for="driver-firstName">{{ t('drivers.firstName') }}</label>
                 <input id="driver-firstName" v-model="form.firstName" data-testid="driver-firstName" />
             </div>
             <p v-if="attemptedSubmit && fieldErrors.firstName" data-testid="driver-firstName-error">
@@ -180,7 +182,7 @@ function describeFailure(error: unknown, fallback: string): string {
             </p>
 
             <div>
-                <label for="driver-lastName">Last name</label>
+                <label for="driver-lastName">{{ t('drivers.lastName') }}</label>
                 <input id="driver-lastName" v-model="form.lastName" data-testid="driver-lastName" />
             </div>
             <p v-if="attemptedSubmit && fieldErrors.lastName" data-testid="driver-lastName-error">
@@ -188,7 +190,7 @@ function describeFailure(error: unknown, fallback: string): string {
             </p>
 
             <fieldset>
-                <legend>License classes</legend>
+                <legend>{{ t('drivers.licenseClasses') }}</legend>
                 <label v-for="licenseClass in licenseClassOptions" :key="licenseClass">
                     <input
                         type="checkbox"
@@ -204,7 +206,7 @@ function describeFailure(error: unknown, fallback: string): string {
             </fieldset>
 
             <div>
-                <label for="driver-licenseValidUntil">License valid until</label>
+                <label for="driver-licenseValidUntil">{{ t('drivers.licenseValidUntil') }}</label>
                 <input
                     id="driver-licenseValidUntil"
                     v-model="form.licenseValidUntil"
@@ -216,8 +218,8 @@ function describeFailure(error: unknown, fallback: string): string {
                 {{ fieldErrors.licenseValidUntil }}
             </p>
 
-            <v-btn type="submit" data-testid="driver-save">Save</v-btn>
-            <v-btn type="button" data-testid="driver-cancel" @click="cancel">Cancel</v-btn>
+            <v-btn type="submit" data-testid="driver-save">{{ t('common.save') }}</v-btn>
+            <v-btn type="button" data-testid="driver-cancel" @click="cancel">{{ t('common.cancel') }}</v-btn>
         </form>
     </v-container>
 </template>

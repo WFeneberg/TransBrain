@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SessionService } from '../auth/session.service';
+import { I18nService } from '../i18n/i18n.service';
 import {switchMap} from 'rxjs';
 import { Driver, DriverService, DriverWriteRequest } from './driver.service';
 
@@ -21,27 +22,27 @@ interface ProblemDetailsBody {
     standalone: true,
     imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
     template: `
-        <h1>{{ isEditMode ? 'Edit driver' : 'New driver' }}</h1>
+        <h1>{{ isEditMode ? i18n.t('drivers.edit') : i18n.t('drivers.new') }}</h1>
         @if (formError(); as message) {
             <p data-testid="driver-form-error">{{ message }}</p>
         }
         <form [formGroup]="form" (ngSubmit)="save()">
             <mat-form-field>
-                <mat-label>First name</mat-label>
+                <mat-label>{{ i18n.t('common.firstName') }}</mat-label>
                 <input matInput formControlName="firstName" data-testid="driver-firstName" />
                 @if (form.controls.firstName.errors; as errors) {
                     <mat-error data-testid="driver-firstName-error">{{ fieldErrorText(errors) }}</mat-error>
                 }
             </mat-form-field>
             <mat-form-field>
-                <mat-label>Last name</mat-label>
+                <mat-label>{{ i18n.t('common.lastName') }}</mat-label>
                 <input matInput formControlName="lastName" data-testid="driver-lastName" />
                 @if (form.controls.lastName.errors; as errors) {
                     <mat-error data-testid="driver-lastName-error">{{ fieldErrorText(errors) }}</mat-error>
                 }
             </mat-form-field>
             <fieldset>
-                <legend>License classes</legend>
+                <legend>{{ i18n.t('common.licenseClasses') }}</legend>
                 @for (licenseClass of licenseClassOptions; track licenseClass) {
                     <label>
                         <input
@@ -64,7 +65,7 @@ interface ProblemDetailsBody {
                 }
             </fieldset>
             <mat-form-field>
-                <mat-label>License valid until</mat-label>
+                <mat-label>{{ i18n.t('drivers.licenseValidUntil') }}</mat-label>
                 <input
                     matInput
                     type="date"
@@ -75,8 +76,8 @@ interface ProblemDetailsBody {
                     <mat-error data-testid="driver-licenseValidUntil-error">{{ fieldErrorText(errors) }}</mat-error>
                 }
             </mat-form-field>
-            <button mat-raised-button type="submit" data-testid="driver-save">Save</button>
-            <button mat-button type="button" data-testid="driver-cancel" (click)="cancel()">Cancel</button>
+            <button mat-raised-button type="submit" data-testid="driver-save">{{ i18n.t('common.save') }}</button>
+            <button mat-button type="button" data-testid="driver-cancel" (click)="cancel()">{{ i18n.t('common.cancel') }}</button>
         </form>
     `,
 })
@@ -91,6 +92,7 @@ export class DriverFormComponent {
     // lifetime, so without this every request from it answered 401 to a plainly signed-in user.
     // The one checkAuth() behind it runs in the App component.
     protected readonly session = inject(SessionService);
+    protected readonly i18n = inject(I18nService);
 
     protected readonly licenseClassOptions = ['B', 'C1', 'C', 'CE'];
     protected readonly driverId = this.route.snapshot.paramMap.get('id');
@@ -121,7 +123,7 @@ export class DriverFormComponent {
                     });
                 },
                 error: (error: HttpErrorResponse) =>
-                    this.formError.set(this.describeFailure(error, 'The driver could not be loaded.')),
+                    this.formError.set(this.describeFailure(error, this.i18n.t('drivers.error.load'))),
             });
         }
     }
@@ -132,9 +134,9 @@ export class DriverFormComponent {
             return errors['server'] as string;
         }
         if (errors['required']) {
-            return 'This field is required.';
+            return this.i18n.t('common.fieldRequired');
         }
-        return 'This field is invalid.';
+        return this.i18n.t('common.fieldInvalid');
     }
 
     protected isLicenseClassSelected(licenseClass: string): boolean {
@@ -196,7 +198,7 @@ export class DriverFormComponent {
             return;
         }
 
-        this.formError.set(this.describeFailure(error, 'The driver could not be saved.'));
+        this.formError.set(this.describeFailure(error, this.i18n.t('drivers.error.save')));
     }
 
     // No `errors` dictionary means a domain-level failure (404, 409, or a rejected domain

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createOrder, getOrder, updateOrder, type OrderWriteRequest } from '../api/orders';
+import { useI18n, type MessageKey } from '../i18n';
 
 interface ProblemDetailsBody {
     errors?: Record<string, string[]>;
@@ -11,6 +12,7 @@ interface ProblemDetailsBody {
     errorCode?: string;
 }
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -20,7 +22,7 @@ const isEditMode = computed(() => orderId !== undefined);
 const parties = ['consignor', 'consignee'] as const;
 type Party = (typeof parties)[number];
 
-const partyLabels: Record<Party, string> = { consignor: 'Consignor', consignee: 'Consignee' };
+const partyLabels: Record<Party, MessageKey> = { consignor: 'orders.consignor', consignee: 'orders.consignee' };
 
 const form = reactive({
     consignor: { name: '', street: '', postalCode: '', city: '', country: 'DE' },
@@ -78,27 +80,27 @@ onMounted(async () => {
         } catch (error) {
             // A failed load is not a failed save - give it its own wording so a dispatcher
             // opening a deleted order isn't told a save just failed.
-            formError.value = describeFailure(error, 'The order could not be loaded.');
+            formError.value = describeFailure(error, t('orders.loadFailed'));
         }
     }
 });
 
 function validateRequired(): boolean {
     for (const party of parties) {
-        fieldErrors[`${party}.name`] = form[party].name ? null : 'This field is required.';
-        fieldErrors[`${party}.street`] = form[party].street ? null : 'This field is required.';
-        fieldErrors[`${party}.postalCode`] = form[party].postalCode ? null : 'This field is required.';
-        fieldErrors[`${party}.city`] = form[party].city ? null : 'This field is required.';
-        fieldErrors[`${party}.country`] = form[party].country ? null : 'This field is required.';
+        fieldErrors[`${party}.name`] = form[party].name ? null : t('common.required');
+        fieldErrors[`${party}.street`] = form[party].street ? null : t('common.required');
+        fieldErrors[`${party}.postalCode`] = form[party].postalCode ? null : t('common.required');
+        fieldErrors[`${party}.city`] = form[party].city ? null : t('common.required');
+        fieldErrors[`${party}.country`] = form[party].country ? null : t('common.required');
     }
 
-    fieldErrors.cargoDescription = form.cargoDescription ? null : 'This field is required.';
-    fieldErrors.cargoWeightKg = Number(form.cargoWeightKg) > 0 ? null : 'This value must be greater than zero.';
-    fieldErrors.cargoLoadMeters = Number(form.cargoLoadMeters) > 0 ? null : 'This value must be greater than zero.';
-    fieldErrors.pickupFrom = form.pickupFrom ? null : 'This field is required.';
-    fieldErrors.pickupTo = form.pickupTo ? null : 'This field is required.';
-    fieldErrors.deliveryFrom = form.deliveryFrom ? null : 'This field is required.';
-    fieldErrors.deliveryTo = form.deliveryTo ? null : 'This field is required.';
+    fieldErrors.cargoDescription = form.cargoDescription ? null : t('common.required');
+    fieldErrors.cargoWeightKg = Number(form.cargoWeightKg) > 0 ? null : t('common.mustBePositive');
+    fieldErrors.cargoLoadMeters = Number(form.cargoLoadMeters) > 0 ? null : t('common.mustBePositive');
+    fieldErrors.pickupFrom = form.pickupFrom ? null : t('common.required');
+    fieldErrors.pickupTo = form.pickupTo ? null : t('common.required');
+    fieldErrors.deliveryFrom = form.deliveryFrom ? null : t('common.required');
+    fieldErrors.deliveryTo = form.deliveryTo ? null : t('common.required');
 
     return Object.values(fieldErrors).every((message) => message === null);
 }
@@ -181,11 +183,11 @@ function applyServerErrors(error: unknown): void {
             return;
         }
 
-        formError.value = describeFailure(error, 'The order could not be saved.');
+        formError.value = describeFailure(error, t('orders.saveFailed'));
         return;
     }
 
-    formError.value = 'The order could not be saved.';
+    formError.value = t('orders.saveFailed');
 }
 
 // No `errors` dictionary means this was not a per-field validation failure but a domain-level
@@ -203,7 +205,7 @@ function describeFailure(error: unknown, fallback: string): string {
 
 <template>
     <v-container>
-        <h1>{{ isEditMode ? 'Edit order' : 'New order' }}</h1>
+        <h1>{{ isEditMode ? t('orders.edit') : t('orders.new') }}</h1>
         <p v-if="formError" data-testid="order-form-error">{{ formError }}</p>
         <!-- novalidate: see VehicleForm.vue for why - Angular's [formGroup] directive sets this
              automatically, and without the Vue equivalent a native input constraint (e.g. a
@@ -214,9 +216,9 @@ function describeFailure(error: unknown, fallback: string): string {
                  <input> in a root <div>, and a data-testid on the component lands on that div,
                  which makes Playwright's fill() fail. See DriverForm.vue. -->
             <fieldset v-for="party in parties" :key="party">
-                <legend>{{ partyLabels[party] }}</legend>
+                <legend>{{ t(partyLabels[party]) }}</legend>
                 <div>
-                    <label :for="`order-${party}-name`">Name</label>
+                    <label :for="`order-${party}-name`">{{ t('common.name') }}</label>
                     <input
                         :id="`order-${party}-name`"
                         v-model="form[party].name"
@@ -231,7 +233,7 @@ function describeFailure(error: unknown, fallback: string): string {
                 </p>
 
                 <div>
-                    <label :for="`order-${party}-street`">Street</label>
+                    <label :for="`order-${party}-street`">{{ t('orders.street') }}</label>
                     <input
                         :id="`order-${party}-street`"
                         v-model="form[party].street"
@@ -246,7 +248,7 @@ function describeFailure(error: unknown, fallback: string): string {
                 </p>
 
                 <div>
-                    <label :for="`order-${party}-postalCode`">Postal code</label>
+                    <label :for="`order-${party}-postalCode`">{{ t('orders.postalCode') }}</label>
                     <input
                         :id="`order-${party}-postalCode`"
                         v-model="form[party].postalCode"
@@ -261,7 +263,7 @@ function describeFailure(error: unknown, fallback: string): string {
                 </p>
 
                 <div>
-                    <label :for="`order-${party}-city`">City</label>
+                    <label :for="`order-${party}-city`">{{ t('orders.city') }}</label>
                     <input
                         :id="`order-${party}-city`"
                         v-model="form[party].city"
@@ -276,7 +278,7 @@ function describeFailure(error: unknown, fallback: string): string {
                 </p>
 
                 <div>
-                    <label :for="`order-${party}-country`">Country</label>
+                    <label :for="`order-${party}-country`">{{ t('orders.country') }}</label>
                     <input
                         :id="`order-${party}-country`"
                         v-model="form[party].country"
@@ -292,9 +294,9 @@ function describeFailure(error: unknown, fallback: string): string {
             </fieldset>
 
             <fieldset>
-                <legend>Cargo</legend>
+                <legend>{{ t('orders.cargo') }}</legend>
                 <div>
-                    <label for="order-cargoDescription">Description</label>
+                    <label for="order-cargoDescription">{{ t('orders.description') }}</label>
                     <input
                         id="order-cargoDescription"
                         v-model="form.cargoDescription"
@@ -306,7 +308,7 @@ function describeFailure(error: unknown, fallback: string): string {
                 </p>
 
                 <div>
-                    <label for="order-cargoWeightKg">Weight (kg)</label>
+                    <label for="order-cargoWeightKg">{{ t('orders.weight') }}</label>
                     <input
                         id="order-cargoWeightKg"
                         v-model="form.cargoWeightKg"
@@ -319,7 +321,7 @@ function describeFailure(error: unknown, fallback: string): string {
                 </p>
 
                 <div>
-                    <label for="order-cargoLoadMeters">Load meters</label>
+                    <label for="order-cargoLoadMeters">{{ t('common.loadMeters') }}</label>
                     <!-- step="any" as well as the form's novalidate: the default step=1 makes a
                          native number input reject a decimal like 8.4 outright. -->
                     <input
@@ -336,9 +338,9 @@ function describeFailure(error: unknown, fallback: string): string {
             </fieldset>
 
             <fieldset>
-                <legend>Pickup window</legend>
+                <legend>{{ t('orders.pickupWindow') }}</legend>
                 <div>
-                    <label for="order-pickupFrom">From</label>
+                    <label for="order-pickupFrom">{{ t('common.from') }}</label>
                     <input
                         id="order-pickupFrom"
                         v-model="form.pickupFrom"
@@ -351,7 +353,7 @@ function describeFailure(error: unknown, fallback: string): string {
                 </p>
 
                 <div>
-                    <label for="order-pickupTo">To</label>
+                    <label for="order-pickupTo">{{ t('common.to') }}</label>
                     <input
                         id="order-pickupTo"
                         v-model="form.pickupTo"
@@ -365,9 +367,9 @@ function describeFailure(error: unknown, fallback: string): string {
             </fieldset>
 
             <fieldset>
-                <legend>Delivery window</legend>
+                <legend>{{ t('orders.deliveryWindow') }}</legend>
                 <div>
-                    <label for="order-deliveryFrom">From</label>
+                    <label for="order-deliveryFrom">{{ t('common.from') }}</label>
                     <input
                         id="order-deliveryFrom"
                         v-model="form.deliveryFrom"
@@ -380,7 +382,7 @@ function describeFailure(error: unknown, fallback: string): string {
                 </p>
 
                 <div>
-                    <label for="order-deliveryTo">To</label>
+                    <label for="order-deliveryTo">{{ t('common.to') }}</label>
                     <input
                         id="order-deliveryTo"
                         v-model="form.deliveryTo"
@@ -393,8 +395,8 @@ function describeFailure(error: unknown, fallback: string): string {
                 </p>
             </fieldset>
 
-            <v-btn type="submit" data-testid="order-save">Save</v-btn>
-            <v-btn type="button" data-testid="order-cancel-edit" @click="cancel">Cancel</v-btn>
+            <v-btn type="submit" data-testid="order-save">{{ t('common.save') }}</v-btn>
+            <v-btn type="button" data-testid="order-cancel-edit" @click="cancel">{{ t('common.cancel') }}</v-btn>
         </form>
     </v-container>
 </template>

@@ -30,6 +30,15 @@ was auf dem Bildschirm zu sehen ist.
 - Die Anwendung ist unter `http://localhost:4200` erreichbar (Port siehe Aspire-Dashboard,
   falls abweichend).
 
+## Sprache
+
+Die Oberfläche ist auf **Deutsch** (Standard) und **Englisch** verfügbar. Die Umschaltung
+erfolgt über die Schaltfläche **„EN“** bzw. **„DE“** in der Kopfleiste; sie ist auch vor der
+Anmeldung sichtbar. Die gewählte Sprache wird im Browser gespeichert und gilt bei jedem
+weiteren Besuch auf diesem Gerät. Andere Browser oder Geräte beginnen wieder mit Deutsch.
+
+> Hinweis: Die Screenshots in dieser Anleitung zeigen noch die englische Oberfläche.
+
 ## Anmeldung
 
 1. `http://localhost:4200` im Browser öffnen.
@@ -39,7 +48,7 @@ was auf dem Bildschirm zu sehen ist.
 4. Nach erfolgreicher Anmeldung erfolgt die Rückleitung zu TransBrain.Web, und die
    **Startseite** wird angezeigt — siehe das gleichnamige Kapitel unten.
 5. Schlägt die Anmeldung fehl oder ist Keycloak nicht erreichbar, erscheint die Meldung
-   „Could not verify your sign-in status. Please try signing in again.“
+   „Der Anmeldestatus konnte nicht geprüft werden. Bitte erneut anmelden.“ (auf Englisch: „Could not verify your sign-in status. Please try signing in again.“)
 
 **Hinweis für die Fehlersuche:** Wenn die Anmeldung überhaupt nicht bis zur
 Keycloak-Login-Seite kommt, ist meist das lokale HTTPS-Entwicklungszertifikat nicht als

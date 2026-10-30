@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { SessionService } from './auth/session.service';
+import { I18nService } from './i18n/i18n.service';
 
 @Component({
     imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule],
@@ -12,6 +13,11 @@ import { SessionService } from './auth/session.service';
 })
 export class App {
     protected readonly session = inject(SessionService);
+    protected readonly i18n = inject(I18nService);
+
+    protected toggleLocale(): void {
+        this.i18n.setLocale(this.i18n.locale() === 'de' ? 'en' : 'de');
+    }
 
     constructor() {
         // The one checkAuth() of the whole SPA. It must run from a component that is mounted at

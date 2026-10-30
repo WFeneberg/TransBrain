@@ -5,10 +5,9 @@ Vuetify). Sie bietet denselben Funktionsumfang wie die Angular-Oberfläche gegen
 API — siehe `docs/BEDIENUNG_TRANSBRAIN_WEB.md` für die Angular-Variante. Wo sich das
 Verhalten nicht unterscheidet, ist der Text hier bewusst wortgleich zu jener Anleitung.
 
-Die Beschriftungen der Oberfläche selbst (Schaltflächen, Feldnamen, Fehlermeldungen) sind
-auf Englisch, da die Anwendung noch nicht lokalisiert ist. Diese Anleitung ist auf Deutsch
-verfasst, nennt aber die tatsächlichen englischen Beschriftungen, damit sie zu dem passt,
-was auf dem Bildschirm zu sehen ist.
+Die Oberfläche ist in Deutsch und Englisch verfügbar (siehe Kapitel „Sprache“). Die
+Beschriftungen in dieser Anleitung sind die englischen Bezeichnungen; die deutschen
+Entsprechungen stehen jeweils dabei, soweit sie hilfreich sind.
 
 > **Achtung — Entwicklungsumgebung, keine Daten bleiben erhalten:** Bei jedem Neustart
 > von `dotnet run --project src/TransBrain.AppHost` beginnt die Anwendung mit einer
@@ -30,6 +29,16 @@ was auf dem Bildschirm zu sehen ist.
   (`admin`, `disponent`, `fahrer`, `viewer`).
 - Die Anwendung ist unter `http://localhost:4300` erreichbar (Port siehe Aspire-Dashboard,
   falls abweichend).
+
+## Sprache
+
+Die Oberfläche startet auf **Deutsch**. Über die Schaltfläche ganz rechts in der Kopfleiste
+wechseln Sie auf Englisch: Sie zeigt die jeweils andere Sprache an (**„EN“** bei deutscher,
+**„DE“** bei englischer Oberfläche). Der Wechsel wirkt sofort, ohne Neuladen.
+
+Die Wahl wird im Browser gespeichert (lokaler Speicher, Schlüssel `transbrain.locale`). Sie
+gilt daher pro Browser und Gerät, nicht für Ihr Benutzerkonto, und bleibt beim nächsten Aufruf
+erhalten. Wenn der Browser den Speicher blockiert, gilt die Wahl nur bis zum nächsten Neuladen.
 
 ## Anmeldung
 

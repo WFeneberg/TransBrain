@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { createVuetify } from 'vuetify';
 import * as components from 'vuetify/components';
 import * as directives from 'vuetify/directives';
+import { de, en as vuetifyEn } from 'vuetify/locale';
 import 'vuetify/styles';
 import App from './App.vue';
 import Home from './views/Home.vue';
@@ -18,6 +19,7 @@ import TourForm from './views/TourForm.vue';
 import TourDetail from './views/TourDetail.vue';
 import AuthCallback from './views/AuthCallback.vue';
 import { useAuthStore } from './stores/auth';
+import { useI18n } from './i18n';
 import type { Capability } from './auth/capabilities';
 
 const router = createRouter({
@@ -78,5 +80,11 @@ router.beforeEach(async (to) => {
 createApp(App)
     .use(createPinia())
     .use(router)
-    .use(createVuetify({ components, directives }))
+    .use(
+        createVuetify({
+            components,
+            directives,
+            locale: { locale: useI18n().locale.value, fallback: 'en', messages: { de, en: vuetifyEn } },
+        }),
+    )
     .mount('#app');

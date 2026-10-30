@@ -7,6 +7,7 @@ import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { Area, Capability } from '../auth/capabilities';
 import { SessionService } from '../auth/session.service';
+import { I18nService, TranslationKey } from '../i18n/i18n.service';
 import { DriverService } from '../drivers/driver.service';
 import { Order, OrderService } from '../orders/order.service';
 import { Tour, TourService } from '../tours/tour.service';
@@ -14,10 +15,10 @@ import { VehicleService } from '../vehicles/vehicle.service';
 
 interface AreaTile {
     area: Area;
-    title: string;
-    description: string;
+    title: TranslationKey;
+    description: TranslationKey;
     route: string;
-    addLabel: string;
+    addLabel: TranslationKey;
     addRoute: string;
     addCapability: Capability;
 }
@@ -25,37 +26,37 @@ interface AreaTile {
 const TILES: readonly AreaTile[] = [
     {
         area: 'vehicles',
-        title: 'Vehicles',
-        description: 'Fleet master data: plates, payload, inspections.',
+        title: 'nav.vehicles',
+        description: 'home.tile.vehicles',
         route: '/vehicles',
-        addLabel: 'Add vehicle',
+        addLabel: 'home.tile.addVehicle',
         addRoute: '/vehicles/new',
         addCapability: 'masterData.write',
     },
     {
         area: 'drivers',
-        title: 'Drivers',
-        description: 'Driver master data: licences, availability.',
+        title: 'nav.drivers',
+        description: 'home.tile.drivers',
         route: '/drivers',
-        addLabel: 'Add driver',
+        addLabel: 'home.tile.addDriver',
         addRoute: '/drivers/new',
         addCapability: 'masterData.write',
     },
     {
         area: 'orders',
-        title: 'Orders',
-        description: 'Transport orders from pickup to delivery.',
+        title: 'nav.orders',
+        description: 'home.tile.orders',
         route: '/orders',
-        addLabel: 'New order',
+        addLabel: 'home.tile.addOrder',
         addRoute: '/orders/new',
         addCapability: 'dispatch.write',
     },
     {
         area: 'tours',
-        title: 'Tours',
-        description: 'Plan orders onto vehicles and follow execution.',
+        title: 'nav.tours',
+        description: 'home.tile.tours',
         route: '/tours',
-        addLabel: 'Plan tour',
+        addLabel: 'home.tile.addTour',
         addRoute: '/tours/new',
         addCapability: 'dispatch.write',
     },
@@ -82,7 +83,7 @@ function today(): string {
     imports: [MatButtonModule, MatCardModule, MatChipsModule, MatTableModule, RouterLink],
     template: `
         @if (session.isAuthenticated()) {
-            <h1 data-testid="home-greeting">Welcome, {{ session.displayName() }}</h1>
+            <h1 data-testid="home-greeting">{{ i18n.t('home.welcome', { name: session.displayName() }) }}</h1>
             <mat-chip-set>
                 @for (role of session.roles(); track role) {
                     <mat-chip data-testid="home-role-chip">{{ role }}</mat-chip>
@@ -92,17 +93,17 @@ function today(): string {
             <section class="kpis">
                 @if (session.areas().has('vehicles')) {
                     <mat-card>
-                        <mat-card-title>Vehicles</mat-card-title>
+                        <mat-card-title>{{ i18n.t('nav.vehicles') }}</mat-card-title>
                         <mat-card-content>
                             @if (vehicleError(); as message) {
                                 <p data-testid="home-kpi-vehicles-error">{{ message }}</p>
                             } @else {
                                 <p>
-                                    Available:
+                                    {{ i18n.t('home.available') }}
                                     <strong data-testid="home-kpi-vehicles-available">{{ vehiclesAvailable() }}</strong>
                                 </p>
                                 <p>
-                                    In workshop:
+                                    {{ i18n.t('home.inWorkshop') }}
                                     <strong data-testid="home-kpi-vehicles-workshop">{{ vehiclesInWorkshop() }}</strong>
                                 </p>
                             }
@@ -111,13 +112,13 @@ function today(): string {
                 }
                 @if (session.areas().has('drivers')) {
                     <mat-card>
-                        <mat-card-title>Drivers</mat-card-title>
+                        <mat-card-title>{{ i18n.t('nav.drivers') }}</mat-card-title>
                         <mat-card-content>
                             @if (driverError(); as message) {
                                 <p data-testid="home-kpi-drivers-error">{{ message }}</p>
                             } @else {
                                 <p>
-                                    Available:
+                                    {{ i18n.t('home.available') }}
                                     <strong data-testid="home-kpi-drivers-available">{{ driversAvailable() }}</strong>
                                 </p>
                             }
@@ -126,13 +127,13 @@ function today(): string {
                 }
                 @if (session.areas().has('orders')) {
                     <mat-card>
-                        <mat-card-title>Orders</mat-card-title>
+                        <mat-card-title>{{ i18n.t('nav.orders') }}</mat-card-title>
                         <mat-card-content>
                             @if (orderError(); as message) {
                                 <p data-testid="home-kpi-orders-error">{{ message }}</p>
                             } @else {
                                 <p>
-                                    In draft:
+                                    {{ i18n.t('home.inDraft') }}
                                     <strong data-testid="home-kpi-orders-draft">{{ ordersInDraft() }}</strong>
                                 </p>
                             }
@@ -140,7 +141,7 @@ function today(): string {
                     </mat-card>
                 }
                 <mat-card>
-                    <mat-card-title>Tours today</mat-card-title>
+                    <mat-card-title>{{ i18n.t('home.toursToday') }}</mat-card-title>
                     <mat-card-content>
                         @if (tourError(); as message) {
                             <p data-testid="home-kpi-tours-error">{{ message }}</p>
@@ -153,26 +154,26 @@ function today(): string {
 
             @if (session.can('dispatch.write')) {
                 <section data-testid="home-draft-orders">
-                    <h2>Orders awaiting a tour</h2>
+                    <h2>{{ i18n.t('home.draftOrders') }}</h2>
                     @if (draftOrdersError(); as message) {
                         <p data-testid="home-draft-orders-error">{{ message }}</p>
                     } @else {
                         <table mat-table [dataSource]="draftOrders()">
                             <ng-container matColumnDef="orderNumber">
-                                <th mat-header-cell *matHeaderCellDef>Order</th>
+                                <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.order') }}</th>
                                 <td mat-cell *matCellDef="let o" data-testid="home-draft-order-row">
                                     {{ o.orderNumber }}
                                 </td>
                             </ng-container>
                             <ng-container matColumnDef="route">
-                                <th mat-header-cell *matHeaderCellDef>Route</th>
+                                <th mat-header-cell *matHeaderCellDef>{{ i18n.t('home.route') }}</th>
                                 <td mat-cell *matCellDef="let o">{{ o.consignor.city }} → {{ o.consignee.city }}</td>
                             </ng-container>
                             <ng-container matColumnDef="actions">
-                                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                                <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.actions') }}</th>
                                 <td mat-cell *matCellDef="let o">
                                     <a mat-button [routerLink]="['/orders', o.id]" data-testid="home-draft-order-open">
-                                        Open
+                                        {{ i18n.t('common.open') }}
                                     </a>
                                 </td>
                             </ng-container>
@@ -182,14 +183,14 @@ function today(): string {
                         <!-- No per-row "Plan" button: an order is put onto a tour by the picker on
                              /tours/:id, and no endpoint creates a tour from an order. The honest
                              action here is to start a tour and assign from there. -->
-                        <a mat-raised-button routerLink="/tours/new" data-testid="home-plan-tour">Plan a tour</a>
+                        <a mat-raised-button routerLink="/tours/new" data-testid="home-plan-tour">{{ i18n.t('home.planTour') }}</a>
                     }
                 </section>
             }
 
             @if (session.hasRole('fahrer')) {
                 <section data-testid="home-my-tours">
-                    <h2>My tours today</h2>
+                    <h2>{{ i18n.t('home.myTours') }}</h2>
                     @if (myToursError(); as message) {
                         <p data-testid="home-my-tours-error">{{ message }}</p>
                     }
@@ -197,10 +198,10 @@ function today(): string {
                         <mat-card data-testid="home-my-tour-row">
                             <mat-card-title>{{ tour.vehicleLicensePlate }} — {{ tour.status }}</mat-card-title>
                             <mat-card-actions>
-                                <a mat-button [routerLink]="['/tours', tour.id]">Open</a>
+                                <a mat-button [routerLink]="['/tours', tour.id]">{{ i18n.t('common.open') }}</a>
                                 @if (tour.status === 'Planned') {
                                     <button mat-raised-button data-testid="home-my-tour-start" (click)="startTour(tour)">
-                                        Start tour
+                                        {{ i18n.t('tours.start') }}
                                     </button>
                                 }
                                 @if (tour.status === 'InProgress') {
@@ -209,7 +210,7 @@ function today(): string {
                                         data-testid="home-my-tour-complete"
                                         (click)="completeTour(tour)"
                                     >
-                                        Complete tour
+                                        {{ i18n.t('tours.complete') }}
                                     </button>
                                 }
                             </mat-card-actions>
@@ -222,16 +223,16 @@ function today(): string {
                 @for (tile of tiles; track tile.area) {
                     @if (session.areas().has(tile.area)) {
                         <mat-card [attr.data-testid]="'home-tile-' + tile.area">
-                            <mat-card-title>{{ tile.title }}</mat-card-title>
-                            <mat-card-content>{{ tile.description }}</mat-card-content>
+                            <mat-card-title>{{ i18n.t(tile.title) }}</mat-card-title>
+                            <mat-card-content>{{ i18n.t(tile.description) }}</mat-card-content>
                             <mat-card-actions>
-                                <a mat-button [routerLink]="tile.route">Open</a>
+                                <a mat-button [routerLink]="tile.route">{{ i18n.t('common.open') }}</a>
                                 @if (session.can(tile.addCapability)) {
                                     <a
                                         mat-raised-button
                                         [routerLink]="tile.addRoute"
                                         [attr.data-testid]="'home-tile-' + tile.area + '-add'"
-                                        >{{ tile.addLabel }}</a
+                                        >{{ i18n.t(tile.addLabel) }}</a
                                     >
                                 }
                             </mat-card-actions>
@@ -243,7 +244,7 @@ function today(): string {
             @if (session.error(); as message) {
                 <p data-testid="home-error">{{ message }}</p>
             }
-            <button mat-raised-button data-testid="login" (click)="session.login()">Sign in</button>
+            <button mat-raised-button data-testid="login" (click)="session.login()">{{ i18n.t('auth.signIn') }}</button>
         }
     `,
     styles: `
@@ -266,6 +267,7 @@ function today(): string {
 })
 export class HomeComponent {
     protected readonly session = inject(SessionService);
+    protected readonly i18n = inject(I18nService);
     private readonly vehicles = inject(VehicleService);
     private readonly drivers = inject(DriverService);
     private readonly orders = inject(OrderService);
@@ -305,7 +307,7 @@ export class HomeComponent {
         this.tours.start(tour.id).subscribe({
             next: () => this.loadMyTours(),
             error: (error: HttpErrorResponse) =>
-                this.myToursError.set(this.describe(error, 'The tour could not be started.')),
+                this.myToursError.set(this.describe(error, this.i18n.t('tours.error.start'))),
         });
     }
 
@@ -314,7 +316,7 @@ export class HomeComponent {
         this.tours.complete(tour.id).subscribe({
             next: () => this.loadMyTours(),
             error: (error: HttpErrorResponse) =>
-                this.myToursError.set(this.describe(error, 'The tour could not be completed.')),
+                this.myToursError.set(this.describe(error, this.i18n.t('tours.error.complete'))),
         });
     }
 
@@ -325,12 +327,12 @@ export class HomeComponent {
             this.vehicles.list(COUNT_ONLY, 'Available').subscribe({
                 next: (page) => this.vehiclesAvailable.set(page.totalCount),
                 error: (error: HttpErrorResponse) =>
-                    this.vehicleError.set(this.describe(error, 'The vehicle counts could not be loaded.')),
+                    this.vehicleError.set(this.describe(error, this.i18n.t('home.error.vehicleCounts'))),
             });
             this.vehicles.list(COUNT_ONLY, 'InWorkshop').subscribe({
                 next: (page) => this.vehiclesInWorkshop.set(page.totalCount),
                 error: (error: HttpErrorResponse) =>
-                    this.vehicleError.set(this.describe(error, 'The vehicle counts could not be loaded.')),
+                    this.vehicleError.set(this.describe(error, this.i18n.t('home.error.vehicleCounts'))),
             });
         }
 
@@ -338,7 +340,7 @@ export class HomeComponent {
             this.drivers.list(COUNT_ONLY, 'Available').subscribe({
                 next: (page) => this.driversAvailable.set(page.totalCount),
                 error: (error: HttpErrorResponse) =>
-                    this.driverError.set(this.describe(error, 'The driver counts could not be loaded.')),
+                    this.driverError.set(this.describe(error, this.i18n.t('home.error.driverCounts'))),
             });
         }
 
@@ -346,7 +348,7 @@ export class HomeComponent {
             this.orders.list('Draft', COUNT_ONLY).subscribe({
                 next: (page) => this.ordersInDraft.set(page.totalCount),
                 error: (error: HttpErrorResponse) =>
-                    this.orderError.set(this.describe(error, 'The order counts could not be loaded.')),
+                    this.orderError.set(this.describe(error, this.i18n.t('home.error.orderCounts'))),
             });
         }
 
@@ -361,14 +363,14 @@ export class HomeComponent {
                 }
             },
             error: (error: HttpErrorResponse) =>
-                this.tourError.set(this.describe(error, "Today's tours could not be loaded.")),
+                this.tourError.set(this.describe(error, this.i18n.t('home.error.toursToday'))),
         });
 
         if (this.session.can('dispatch.write')) {
             this.orders.list('Draft', DRAFT_PREVIEW_SIZE).subscribe({
                 next: (page) => this.draftOrders.set(page.items),
                 error: (error: HttpErrorResponse) =>
-                    this.draftOrdersError.set(this.describe(error, 'The draft orders could not be loaded.')),
+                    this.draftOrdersError.set(this.describe(error, this.i18n.t('home.error.draftOrders'))),
             });
         }
     }
@@ -380,7 +382,7 @@ export class HomeComponent {
                 this.toursToday.set(page.totalCount);
             },
             error: (error: HttpErrorResponse) =>
-                this.myToursError.set(this.describe(error, "Today's tours could not be reloaded.")),
+                this.myToursError.set(this.describe(error, this.i18n.t('home.error.toursReload'))),
         });
     }
 

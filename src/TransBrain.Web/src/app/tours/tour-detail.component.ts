@@ -6,6 +6,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SessionService } from '../auth/session.service';
+import { I18nService } from '../i18n/i18n.service';
 import { Observable, of, switchMap } from 'rxjs';
 import { Order, OrderService } from '../orders/order.service';
 import { Tour, TourService } from './tour.service';
@@ -15,7 +16,7 @@ import { Tour, TourService } from './tour.service';
     standalone: true,
     imports: [MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, RouterLink],
     template: `
-        <h1>Tour</h1>
+        <h1>{{ i18n.t('tours.detail') }}</h1>
         @if (loadError(); as message) {
             <p data-testid="tour-detail-error">{{ message }}</p>
         }
@@ -24,24 +25,24 @@ import { Tour, TourService } from './tour.service';
                  cells, and a page-wide locator that matched both screens would be ambiguous the
                  moment a test navigated between them. -->
             <dl>
-                <dt>Date</dt>
+                <dt>{{ i18n.t('common.date') }}</dt>
                 <dd data-testid="tour-detail-date">{{ t.tourDate }}</dd>
-                <dt>Vehicle</dt>
+                <dt>{{ i18n.t('common.vehicle') }}</dt>
                 <dd data-testid="tour-detail-vehicle">{{ t.vehicleLicensePlate }}</dd>
-                <dt>Driver</dt>
+                <dt>{{ i18n.t('common.driver') }}</dt>
                 <dd data-testid="tour-detail-driver">{{ t.driverName }}</dd>
-                <dt>Status</dt>
+                <dt>{{ i18n.t('common.status') }}</dt>
                 <dd data-testid="tour-detail-status">{{ t.status }}</dd>
             </dl>
 
             <!-- The headroom a dispatcher needs before choosing the next order. The API already
                  sends both numbers, so showing them costs nothing extra. -->
             <section>
-                <h2>Capacity</h2>
+                <h2>{{ i18n.t('tours.capacity') }}</h2>
                 <p data-testid="tour-capacity-weight">{{ t.totalWeightKg }} / {{ t.vehiclePayloadKg }} kg</p>
                 <progress [value]="t.totalWeightKg" [max]="t.vehiclePayloadKg"></progress>
                 <p data-testid="tour-capacity-meters">
-                    {{ t.totalLoadMeters }} / {{ t.vehicleLoadMeters }} load meters
+                    {{ t.totalLoadMeters }} / {{ t.vehicleLoadMeters }} {{ i18n.t('tours.loadMetersUnit') }}
                 </p>
                 <progress [value]="t.totalLoadMeters" [max]="t.vehicleLoadMeters"></progress>
             </section>
@@ -51,22 +52,22 @@ import { Tour, TourService } from './tour.service';
             }
 
             <section>
-                <h2>Stops</h2>
+                <h2>{{ i18n.t('tours.stops') }}</h2>
                 <table mat-table [dataSource]="t.stops">
                     <ng-container matColumnDef="sequence">
                         <th mat-header-cell *matHeaderCellDef>#</th>
                         <td mat-cell *matCellDef="let s" data-testid="tour-stop-sequence">{{ s.sequence }}</td>
                     </ng-container>
                     <ng-container matColumnDef="orderNumber">
-                        <th mat-header-cell *matHeaderCellDef>Order</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.order') }}</th>
                         <td mat-cell *matCellDef="let s" data-testid="tour-stop-order">{{ s.orderNumber }}</td>
                     </ng-container>
                     <ng-container matColumnDef="stopType">
-                        <th mat-header-cell *matHeaderCellDef>Type</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.type') }}</th>
                         <td mat-cell *matCellDef="let s" data-testid="tour-stop-type">{{ s.stopType }}</td>
                     </ng-container>
                     <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Actions</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.actions') }}</th>
                         <td mat-cell *matCellDef="let s">
                             @if (s.stopType === 'Pickup' && session.can('dispatch.write')) {
                                 <button
@@ -74,7 +75,7 @@ import { Tour, TourService } from './tour.service';
                                     data-testid="tour-remove"
                                     (click)="removeOrder(s.transportOrderId)"
                                 >
-                                    Remove
+                                    {{ i18n.t('tours.remove') }}
                                 </button>
                             }
                         </td>
@@ -86,11 +87,11 @@ import { Tour, TourService } from './tour.service';
 
             @if (session.can('dispatch.write')) {
             <section>
-                <h2>Assign an order</h2>
+                <h2>{{ i18n.t('tours.assignTitle') }}</h2>
                 <!-- Only Draft orders are offered: any other status is refused by the domain,
                      and offering a choice the server will reject is worse than not offering it. -->
                 <mat-form-field>
-                    <mat-label>Order</mat-label>
+                    <mat-label>{{ i18n.t('common.order') }}</mat-label>
                     <mat-select
                         [value]="selectedOrderId()"
                         (valueChange)="selectedOrderId.set($event)"
@@ -104,7 +105,7 @@ import { Tour, TourService } from './tour.service';
                         }
                     </mat-select>
                 </mat-form-field>
-                <button mat-raised-button data-testid="tour-assign" (click)="assign()">Assign</button>
+                <button mat-raised-button data-testid="tour-assign" (click)="assign()">{{ i18n.t('tours.assign') }}</button>
             </section>
             }
 
@@ -113,17 +114,17 @@ import { Tour, TourService } from './tour.service';
             @if (session.can('tourStatus.write')) {
                 <section>
                     @if (t.status === 'Planned') {
-                        <button mat-raised-button data-testid="tour-start" (click)="start()">Start tour</button>
+                        <button mat-raised-button data-testid="tour-start" (click)="start()">{{ i18n.t('tours.start') }}</button>
                     }
                     @if (t.status === 'InProgress') {
                         <button mat-raised-button data-testid="tour-complete" (click)="complete()">
-                            Complete tour
+                            {{ i18n.t('tours.complete') }}
                         </button>
                     }
                 </section>
             }
 
-            <a mat-button routerLink="/tours" data-testid="tour-back">Back to tours</a>
+            <a mat-button routerLink="/tours" data-testid="tour-back">{{ i18n.t('tours.backToTours') }}</a>
         }
     `,
 })
@@ -137,6 +138,7 @@ export class TourDetailComponent {
     // otherwise send every request without a bearer token. The one checkAuth() behind it runs in
     // the App component.
     protected readonly session = inject(SessionService);
+    protected readonly i18n = inject(I18nService);
 
     protected readonly tourId = this.route.snapshot.paramMap.get('id')!;
     protected readonly stopColumns = ['sequence', 'orderNumber', 'stopType', 'actions'];
@@ -162,27 +164,27 @@ export class TourDetailComponent {
     protected assign(): void {
         const orderId = this.selectedOrderId();
         if (!orderId) {
-            this.actionError.set('Choose an order to assign first.');
+            this.actionError.set(this.i18n.t('tours.error.chooseOrder'));
             return;
         }
 
         this.actionError.set(null);
-        this.run(this.service.assignOrder(this.tourId, orderId), 'The order could not be assigned.');
+        this.run(this.service.assignOrder(this.tourId, orderId), this.i18n.t('tours.error.assign'));
     }
 
     protected removeOrder(transportOrderId: string): void {
         this.actionError.set(null);
-        this.run(this.service.removeOrder(this.tourId, transportOrderId), 'The order could not be removed.');
+        this.run(this.service.removeOrder(this.tourId, transportOrderId), this.i18n.t('tours.error.remove'));
     }
 
     protected start(): void {
         this.actionError.set(null);
-        this.run(this.service.start(this.tourId), 'The tour could not be started.');
+        this.run(this.service.start(this.tourId), this.i18n.t('tours.error.start'));
     }
 
     protected complete(): void {
         this.actionError.set(null);
-        this.run(this.service.complete(this.tourId), 'The tour could not be completed.');
+        this.run(this.service.complete(this.tourId), this.i18n.t('tours.error.complete'));
     }
 
     private run(action: Observable<Tour>, fallback: string): void {
@@ -205,7 +207,7 @@ export class TourDetailComponent {
             // The load path gets its own wording: "could not be assigned" on a failed getById
             // would be plainly wrong.
             error: (error: HttpErrorResponse) =>
-                this.loadError.set(this.describe(error, 'The tour could not be loaded.')),
+                this.loadError.set(this.describe(error, this.i18n.t('tours.error.load'))),
         });
     }
 
@@ -228,7 +230,7 @@ export class TourDetailComponent {
             .subscribe({
                 next: (page) => this.draftOrders.set(page.items),
                 error: (error: HttpErrorResponse) =>
-                    this.actionError.set(this.describe(error, 'The assignable orders could not be loaded.')),
+                    this.actionError.set(this.describe(error, this.i18n.t('tours.error.assignable'))),
             });
     }
 

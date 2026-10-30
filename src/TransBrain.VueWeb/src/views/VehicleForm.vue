@@ -3,6 +3,7 @@ import axios from 'axios';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createVehicle, getVehicle, updateVehicle, type VehicleWriteRequest } from '../api/vehicles';
+import { useI18n } from '../i18n';
 
 interface ProblemDetailsBody {
     errors?: Record<string, string[]>;
@@ -11,6 +12,7 @@ interface ProblemDetailsBody {
     errorCode?: string;
 }
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -53,17 +55,17 @@ onMounted(async () => {
         } catch (error) {
             // A failed load is not a failed save - give it its own wording so a dispatcher
             // opening a deleted vehicle isn't told a save just failed.
-            formError.value = describeFailure(error, 'The vehicle could not be loaded.');
+            formError.value = describeFailure(error, t('vehicles.loadFailed'));
         }
     }
 });
 
 function validateRequired(): boolean {
-    fieldErrors.licensePlate = form.licensePlate ? null : 'This field is required.';
-    fieldErrors.type = form.type ? null : 'This field is required.';
-    fieldErrors.payloadKg = form.payloadKg !== '' ? null : 'This field is required.';
-    fieldErrors.loadMeters = form.loadMeters !== '' ? null : 'This field is required.';
-    fieldErrors.nextInspectionDue = form.nextInspectionDue ? null : 'This field is required.';
+    fieldErrors.licensePlate = form.licensePlate ? null : t('common.required');
+    fieldErrors.type = form.type ? null : t('common.required');
+    fieldErrors.payloadKg = form.payloadKg !== '' ? null : t('common.required');
+    fieldErrors.loadMeters = form.loadMeters !== '' ? null : t('common.required');
+    fieldErrors.nextInspectionDue = form.nextInspectionDue ? null : t('common.required');
     return Object.values(fieldErrors).every((message) => message === null);
 }
 
@@ -124,11 +126,11 @@ function applyServerErrors(error: unknown): void {
             return;
         }
 
-        formError.value = describeFailure(error, 'The vehicle could not be saved.');
+        formError.value = describeFailure(error, t('vehicles.saveFailed'));
         return;
     }
 
-    formError.value = 'The vehicle could not be saved.';
+    formError.value = t('vehicles.saveFailed');
 }
 
 // No `errors` dictionary means this was not a per-field validation failure but a domain-level
@@ -150,7 +152,7 @@ function describeFailure(error: unknown, fallback: string): string {
 
 <template>
     <v-container>
-        <h1>{{ isEditMode ? 'Edit vehicle' : 'New vehicle' }}</h1>
+        <h1>{{ isEditMode ? t('vehicles.edit') : t('vehicles.new') }}</h1>
         <p v-if="formError" data-testid="vehicle-form-error">{{ formError }}</p>
         <!-- novalidate: Angular's [formGroup] directive sets this automatically so its own
              reactive-forms validation is the only validation that runs; without the Vue
@@ -166,20 +168,20 @@ function describeFailure(error: unknown, fallback: string): string {
                  the native input directly keeps fill()/toHaveValue() working the same way they
                  do against Angular's matInput-decorated <input>. -->
             <div>
-                <label for="vehicle-licensePlate">License plate</label>
+                <label for="vehicle-licensePlate">{{ t('vehicles.licensePlate') }}</label>
                 <input id="vehicle-licensePlate" v-model="form.licensePlate" data-testid="vehicle-licensePlate" />
             </div>
             <p v-if="attemptedSubmit && fieldErrors.licensePlate" data-testid="vehicle-licensePlate-error">
                 {{ fieldErrors.licensePlate }}
             </p>
 
-            <v-select v-model="form.type" label="Type" :items="vehicleTypes" data-testid="vehicle-type" />
+            <v-select v-model="form.type" :label="t('common.type')" :items="vehicleTypes" data-testid="vehicle-type" />
             <p v-if="attemptedSubmit && fieldErrors.type" data-testid="vehicle-type-error">
                 {{ fieldErrors.type }}
             </p>
 
             <div>
-                <label for="vehicle-payloadKg">Payload (kg)</label>
+                <label for="vehicle-payloadKg">{{ t('vehicles.payload') }}</label>
                 <input
                     id="vehicle-payloadKg"
                     v-model="form.payloadKg"
@@ -192,7 +194,7 @@ function describeFailure(error: unknown, fallback: string): string {
             </p>
 
             <div>
-                <label for="vehicle-loadMeters">Load meters</label>
+                <label for="vehicle-loadMeters">{{ t('common.loadMeters') }}</label>
                 <input
                     id="vehicle-loadMeters"
                     v-model="form.loadMeters"
@@ -205,7 +207,7 @@ function describeFailure(error: unknown, fallback: string): string {
             </p>
 
             <div>
-                <label for="vehicle-nextInspectionDue">Next inspection due</label>
+                <label for="vehicle-nextInspectionDue">{{ t('vehicles.nextInspectionDue') }}</label>
                 <input
                     id="vehicle-nextInspectionDue"
                     v-model="form.nextInspectionDue"
@@ -217,8 +219,8 @@ function describeFailure(error: unknown, fallback: string): string {
                 {{ fieldErrors.nextInspectionDue }}
             </p>
 
-            <v-btn type="submit" data-testid="vehicle-save">Save</v-btn>
-            <v-btn type="button" data-testid="vehicle-cancel" @click="cancel">Cancel</v-btn>
+            <v-btn type="submit" data-testid="vehicle-save">{{ t('common.save') }}</v-btn>
+            <v-btn type="button" data-testid="vehicle-cancel" @click="cancel">{{ t('common.cancel') }}</v-btn>
         </form>
     </v-container>
 </template>

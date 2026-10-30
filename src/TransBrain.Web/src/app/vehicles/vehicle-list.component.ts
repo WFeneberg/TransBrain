@@ -4,6 +4,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { SessionService } from '../auth/session.service';
+import { I18nService } from '../i18n/i18n.service';
 import { Vehicle, VehicleService } from './vehicle.service';
 
 /**
@@ -20,9 +21,9 @@ const LIST_PAGE_SIZE = 100;
     imports: [MatTableModule, MatButtonModule, RouterLink],
     template: `
         @if (session.isAuthenticated()) {
-            <h1>Vehicles</h1>
+            <h1>{{ i18n.t('nav.vehicles') }}</h1>
             @if (session.can('masterData.write')) {
-                <a mat-raised-button routerLink="/vehicles/new" data-testid="vehicle-add">Add vehicle</a>
+                <a mat-raised-button routerLink="/vehicles/new" data-testid="vehicle-add">{{ i18n.t('vehicles.add') }}</a>
             }
             @if (actionError(); as message) {
                 <p data-testid="vehicle-action-error">{{ message }}</p>
@@ -32,23 +33,23 @@ const LIST_PAGE_SIZE = 100;
             } @else {
                 <table mat-table [dataSource]="vehicles()">
                     <ng-container matColumnDef="licensePlate">
-                        <th mat-header-cell *matHeaderCellDef>License plate</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('vehicles.licensePlate') }}</th>
                         <td mat-cell *matCellDef="let v" data-testid="vehicle-plate">{{ v.licensePlate }}</td>
                     </ng-container>
                     <ng-container matColumnDef="type">
-                        <th mat-header-cell *matHeaderCellDef>Type</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.type') }}</th>
                         <td mat-cell *matCellDef="let v">{{ v.type }}</td>
                     </ng-container>
                     <ng-container matColumnDef="payloadKg">
-                        <th mat-header-cell *matHeaderCellDef>Payload (kg)</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('vehicles.payloadKg') }}</th>
                         <td mat-cell *matCellDef="let v">{{ v.payloadKg }}</td>
                     </ng-container>
                     <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Actions</th>
+                        <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.actions') }}</th>
                         <td mat-cell *matCellDef="let v">
                             @if (session.can('masterData.write')) {
-                                <a mat-button [routerLink]="['/vehicles', v.id]" data-testid="vehicle-edit">Edit</a>
-                                <button mat-button data-testid="vehicle-delete" (click)="delete(v)">Delete</button>
+                                <a mat-button [routerLink]="['/vehicles', v.id]" data-testid="vehicle-edit">{{ i18n.t('common.edit') }}</a>
+                                <button mat-button data-testid="vehicle-delete" (click)="delete(v)">{{ i18n.t('common.delete') }}</button>
                             }
                         </td>
                     </ng-container>
@@ -57,13 +58,14 @@ const LIST_PAGE_SIZE = 100;
                 </table>
             }
         } @else {
-            <p>Please sign in to see the vehicles.</p>
+            <p>{{ i18n.t('vehicles.signIn') }}</p>
         }
     `,
 })
 export class VehicleListComponent {
     private readonly service = inject(VehicleService);
     protected readonly session = inject(SessionService);
+    protected readonly i18n = inject(I18nService);
 
     protected readonly columns = ['licensePlate', 'type', 'payloadKg', 'actions'];
     protected readonly vehicles = signal<Vehicle[]>([]);
@@ -89,7 +91,7 @@ export class VehicleListComponent {
             // middleware before the endpoint runs, so it carries no ProblemDetails body at all -
             // describe()'s fallback text is therefore action-specific, not the list-load one.
             error: (error: HttpErrorResponse) =>
-                this.actionError.set(this.describe(error, 'The vehicle could not be deleted.')),
+                this.actionError.set(this.describe(error, this.i18n.t('vehicles.error.delete'))),
         });
     }
 
@@ -97,7 +99,7 @@ export class VehicleListComponent {
         this.service.list(LIST_PAGE_SIZE).subscribe({
             next: (page) => this.vehicles.set(page.items),
             error: (error: HttpErrorResponse) =>
-                this.errorMessage.set(this.describe(error, 'The vehicle list could not be loaded.')),
+                this.errorMessage.set(this.describe(error, this.i18n.t('vehicles.error.list'))),
         });
     }
 

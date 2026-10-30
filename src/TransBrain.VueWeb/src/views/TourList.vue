@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import axios from 'axios';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { listDrivers, type Driver } from '../api/drivers';
 import { listTours, type Tour } from '../api/tours';
 import { listVehicles, type Vehicle } from '../api/vehicles';
 import { useAuthStore } from '../stores/auth';
+import { useI18n } from '../i18n';
 
 /**
  * The API's maximum page size. Neither frontend has pagination controls yet, so whatever one
@@ -16,6 +17,7 @@ import { useAuthStore } from '../stores/auth';
 const LIST_PAGE_SIZE = 100;
 
 const auth = useAuthStore();
+const { t } = useI18n();
 /** The API's maximum page size. A picker must offer every choice, not the first twenty. */
 const PICKER_PAGE_SIZE = 100;
 
@@ -28,14 +30,14 @@ const dateFilter = ref('');
 const vehicleFilter = ref('');
 const driverFilter = ref('');
 
-const headers = [
-    { title: 'Date', key: 'tourDate' },
-    { title: 'Vehicle', key: 'vehicleLicensePlate' },
-    { title: 'Driver', key: 'driverName' },
-    { title: 'Stops', key: 'stops', sortable: false },
-    { title: 'Status', key: 'status' },
-    { title: 'Actions', key: 'actions', sortable: false },
-];
+const headers = computed(() => [
+    { title: t('common.date'), key: 'tourDate' },
+    { title: t('common.vehicle'), key: 'vehicleLicensePlate' },
+    { title: t('common.driver'), key: 'driverName' },
+    { title: t('tours.stops'), key: 'stops', sortable: false },
+    { title: t('common.status'), key: 'status' },
+    { title: t('common.actions'), key: 'actions', sortable: false },
+]);
 
 onMounted(async () => {
     if (auth.isAuthenticated) {
@@ -55,7 +57,7 @@ async function refresh(): Promise<void> {
             })
         ).items;
     } catch (error) {
-        errorMessage.value = describe(error, 'The tour list could not be loaded.');
+        errorMessage.value = describe(error, t('tours.listLoadFailed'));
     }
 }
 
@@ -84,19 +86,19 @@ function describe(error: unknown, fallback: string): string {
 <template>
     <v-container>
         <template v-if="auth.isAuthenticated">
-            <h1>Tours</h1>
+            <h1>{{ t('nav.tours') }}</h1>
             <v-btn
                 v-if="auth.can('dispatch.write')"
                 data-testid="tour-add"
                 @click="router.push('/tours/new')"
-                >Add tour</v-btn
+                >{{ t('tours.add') }}</v-btn
             >
 
             <!-- Plain <input>/<select>, not Vuetify controls: a data-testid on a Vuetify field
                  lands on its wrapper div and Playwright's fill()/selectOption() then fail.
                  See DriverForm.vue. -->
             <div>
-                <label for="tour-date-filter">Date</label>
+                <label for="tour-date-filter">{{ t('common.date') }}</label>
                 <input
                     id="tour-date-filter"
                     v-model="dateFilter"
@@ -106,28 +108,28 @@ function describe(error: unknown, fallback: string): string {
                 />
             </div>
             <div>
-                <label for="tour-vehicle-filter">Vehicle</label>
+                <label for="tour-vehicle-filter">{{ t('common.vehicle') }}</label>
                 <select
                     id="tour-vehicle-filter"
                     v-model="vehicleFilter"
                     data-testid="tour-vehicle-filter"
                     @change="refresh"
                 >
-                    <option value="">All</option>
+                    <option value="">{{ t('common.all') }}</option>
                     <option v-for="vehicle in vehicles" :key="vehicle.id" :value="vehicle.id">
                         {{ vehicle.licensePlate }}
                     </option>
                 </select>
             </div>
             <div>
-                <label for="tour-driver-filter">Driver</label>
+                <label for="tour-driver-filter">{{ t('common.driver') }}</label>
                 <select
                     id="tour-driver-filter"
                     v-model="driverFilter"
                     data-testid="tour-driver-filter"
                     @change="refresh"
                 >
-                    <option value="">All</option>
+                    <option value="">{{ t('common.all') }}</option>
                     <option v-for="driver in drivers" :key="driver.id" :value="driver.id">
                         {{ driver.lastName }}, {{ driver.firstName }}
                     </option>
@@ -163,10 +165,10 @@ function describe(error: unknown, fallback: string): string {
                     <span data-testid="tour-status">{{ item.status }}</span>
                 </template>
                 <template #item.actions="{ item }">
-                    <v-btn data-testid="tour-open" @click="router.push(`/tours/${item.id}`)">Open</v-btn>
+                    <v-btn data-testid="tour-open" @click="router.push(`/tours/${item.id}`)">{{ t('common.open') }}</v-btn>
                 </template>
             </v-data-table>
         </template>
-        <p v-else>Please sign in to see the tours.</p>
+        <p v-else>{{ t('tours.signInHint') }}</p>
     </v-container>
 </template>

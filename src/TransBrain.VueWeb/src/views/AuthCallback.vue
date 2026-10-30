@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { useI18n } from '../i18n';
 
 // This dedicated route exists because oidc-client-ts requires signinRedirectCallback() to run
 // on a route matching the configured redirect_uri (see auth/userManager.ts) - it will not
@@ -13,6 +14,7 @@ import { useAuthStore } from '../stores/auth';
 // because the two OIDC libraries genuinely differ, not by oversight.
 const auth = useAuthStore();
 const router = useRouter();
+const { t } = useI18n();
 const errorMessage = ref<string | null>(null);
 
 onMounted(async () => {
@@ -25,7 +27,7 @@ onMounted(async () => {
         // forever, with no explanation and no way back - the same failure the vehicle list guards
         // against, just one screen earlier. No retry loop, no toast: just a message and a way to
         // restart the flow. The raw error is deliberately not logged or displayed.
-        errorMessage.value = 'Sign-in could not be completed. Please try again.';
+        errorMessage.value = t('callback.error');
     }
 });
 </script>
@@ -33,7 +35,7 @@ onMounted(async () => {
 <template>
     <v-container v-if="errorMessage">
         <p data-testid="callback-error">{{ errorMessage }}</p>
-        <v-btn data-testid="login" @click="auth.login()">Sign in</v-btn>
+        <v-btn data-testid="login" @click="auth.login()">{{ t('common.signIn') }}</v-btn>
     </v-container>
     <v-progress-circular v-else indeterminate />
 </template>

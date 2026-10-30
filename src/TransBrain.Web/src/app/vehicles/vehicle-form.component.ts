@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SessionService } from '../auth/session.service';
+import { I18nService } from '../i18n/i18n.service';
 import {switchMap} from 'rxjs';
 import { Vehicle, VehicleService, VehicleWriteRequest } from './vehicle.service';
 
@@ -22,20 +23,20 @@ interface ProblemDetailsBody {
     standalone: true,
     imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule],
     template: `
-        <h1>{{ isEditMode ? 'Edit vehicle' : 'New vehicle' }}</h1>
+        <h1>{{ isEditMode ? i18n.t('vehicles.edit') : i18n.t('vehicles.new') }}</h1>
         @if (formError(); as message) {
             <p data-testid="vehicle-form-error">{{ message }}</p>
         }
         <form [formGroup]="form" (ngSubmit)="save()">
             <mat-form-field>
-                <mat-label>License plate</mat-label>
+                <mat-label>{{ i18n.t('vehicles.licensePlate') }}</mat-label>
                 <input matInput formControlName="licensePlate" data-testid="vehicle-licensePlate" />
                 @if (form.controls.licensePlate.errors; as errors) {
                     <mat-error data-testid="vehicle-licensePlate-error">{{ fieldErrorText(errors) }}</mat-error>
                 }
             </mat-form-field>
             <mat-form-field>
-                <mat-label>Type</mat-label>
+                <mat-label>{{ i18n.t('common.type') }}</mat-label>
                 <mat-select formControlName="type" data-testid="vehicle-type">
                     @for (option of vehicleTypes; track option) {
                         <mat-option [value]="option">{{ option }}</mat-option>
@@ -46,21 +47,21 @@ interface ProblemDetailsBody {
                 }
             </mat-form-field>
             <mat-form-field>
-                <mat-label>Payload (kg)</mat-label>
+                <mat-label>{{ i18n.t('vehicles.payloadKg') }}</mat-label>
                 <input matInput type="number" formControlName="payloadKg" data-testid="vehicle-payloadKg" />
                 @if (form.controls.payloadKg.errors; as errors) {
                     <mat-error data-testid="vehicle-payloadKg-error">{{ fieldErrorText(errors) }}</mat-error>
                 }
             </mat-form-field>
             <mat-form-field>
-                <mat-label>Load meters</mat-label>
+                <mat-label>{{ i18n.t('common.loadMeters') }}</mat-label>
                 <input matInput type="number" formControlName="loadMeters" data-testid="vehicle-loadMeters" />
                 @if (form.controls.loadMeters.errors; as errors) {
                     <mat-error data-testid="vehicle-loadMeters-error">{{ fieldErrorText(errors) }}</mat-error>
                 }
             </mat-form-field>
             <mat-form-field>
-                <mat-label>Next inspection due</mat-label>
+                <mat-label>{{ i18n.t('vehicles.nextInspection') }}</mat-label>
                 <input
                     matInput
                     type="date"
@@ -71,8 +72,8 @@ interface ProblemDetailsBody {
                     <mat-error data-testid="vehicle-nextInspectionDue-error">{{ fieldErrorText(errors) }}</mat-error>
                 }
             </mat-form-field>
-            <button mat-raised-button type="submit" data-testid="vehicle-save">Save</button>
-            <button mat-button type="button" data-testid="vehicle-cancel" (click)="cancel()">Cancel</button>
+            <button mat-raised-button type="submit" data-testid="vehicle-save">{{ i18n.t('common.save') }}</button>
+            <button mat-button type="button" data-testid="vehicle-cancel" (click)="cancel()">{{ i18n.t('common.cancel') }}</button>
         </form>
     `,
 })
@@ -87,6 +88,7 @@ export class VehicleFormComponent {
     // lifetime, so without this every request from it answered 401 to a plainly signed-in user.
     // The one checkAuth() behind it runs in the App component.
     protected readonly session = inject(SessionService);
+    protected readonly i18n = inject(I18nService);
 
     protected readonly vehicleTypes = ['Tractor', 'RigidTruck', 'Van'];
     protected readonly vehicleId = this.route.snapshot.paramMap.get('id');
@@ -113,7 +115,7 @@ export class VehicleFormComponent {
                         nextInspectionDue: vehicle.nextInspectionDue,
                     }),
                 error: (error: HttpErrorResponse) =>
-                    this.formError.set(this.describeFailure(error, 'The vehicle could not be loaded.')),
+                    this.formError.set(this.describeFailure(error, this.i18n.t('vehicles.error.load'))),
             });
         }
     }
@@ -127,9 +129,9 @@ export class VehicleFormComponent {
             return errors['server'] as string;
         }
         if (errors['required']) {
-            return 'This field is required.';
+            return this.i18n.t('common.fieldRequired');
         }
-        return 'This field is invalid.';
+        return this.i18n.t('common.fieldInvalid');
     }
 
     protected save(): void {
@@ -183,7 +185,7 @@ export class VehicleFormComponent {
             return;
         }
 
-        this.formError.set(this.describeFailure(error, 'The vehicle could not be saved.'));
+        this.formError.set(this.describeFailure(error, this.i18n.t('vehicles.error.save')));
     }
 
     // No `errors` dictionary means this was not a per-field validation failure but a
