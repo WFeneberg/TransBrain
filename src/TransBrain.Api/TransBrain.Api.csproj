@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <ProjectReference Include="..\TransBrain.Application\TransBrain.Application.csproj" />
+    <ProjectReference Include="..\TransBrain.Domain\TransBrain.Domain.csproj" />
     <ProjectReference Include="..\TransBrain.Infrastructure\TransBrain.Infrastructure.csproj" />
     <ProjectReference Include="..\TransBrain.ServiceDefaults\TransBrain.ServiceDefaults.csproj" />
   </ItemGroup>
@@ -20,6 +22,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
     <PackageReference Include="Scalar.AspNetCore" />
   </ItemGroup>
 
