@@ -218,6 +218,29 @@ unauthenticated `404` would let a caller probe which routes exist; a uniform `40
 not. The price is that a typo'd URL also comes back as `401` rather than the usually more
 informative `404`.
 
+### Route planning and driving times
+
+`GET /api/tours/{id}/route` plans the truck route through the tour's stops in sequence and lays the
+driver's day on a timeline. `GET /api/orders/{id}/locations` places the consignor and consignee on a
+map. Both use OpenRouteService: geocoding, and the `driving-hgv` profile so trucks avoid roads closed
+to them. Set the key in configuration, for example with user secrets or the environment variable
+`OpenRouteService__ApiKey`:
+
+```json
+"OpenRouteService": { "ApiKey": "<your key>", "BaseUrl": "https://api.openrouteservice.org/" }
+```
+
+Without a key both endpoints answer `503` with `Routing.NotConfigured`. A route is never estimated
+from straight-line distances, because that would ignore truck restrictions.
+
+The timeline follows Regulation (EC) No 561/2006: a 45-minute break after 4 h 30 min of continuous
+driving, 9 h daily driving (10 h is flagged as an extension, allowed twice a week), and the 11 h
+daily rest that follows. Countries outside the EU, EEA, Switzerland and Great Britain are reported
+as not modelled, not planned as if EU rules applied. Two national rules are modelled: the Sunday
+truck driving ban in Germany and Austria, for vehicles that are not vans. Holidays and weekly
+driving and rest limits are not modelled because a single tour cannot see them. The values in
+`DrivingRules` need checking against current law before anyone relies on them for compliance.
+
 ## Caching
 
 List and get-by-id reads on both aggregates are cached in Redis; every write invalidates

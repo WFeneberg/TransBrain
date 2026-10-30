@@ -1,20 +1,30 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SessionService } from '../auth/session.service';
-import { I18nService } from '../i18n/i18n.service';
-import { Observable, of, switchMap } from 'rxjs';
+import { I18nService, TranslationKey } from '../i18n/i18n.service';
+import { LocationMapComponent, MapMarker } from '../shared/location-map.component';
+import { Observable, of, Subscription, switchMap } from 'rxjs';
 import { Order, OrderService } from '../orders/order.service';
-import { Tour, TourService } from './tour.service';
+import { Tour, TourRoute, TourService } from './tour.service';
 
 @Component({
     selector: 'app-tour-detail',
     standalone: true,
-    imports: [MatTableModule, MatButtonModule, MatFormFieldModule, MatSelectModule, RouterLink],
+    imports: [
+        MatTableModule,
+        MatButtonModule,
+        MatFormFieldModule,
+        MatSelectModule,
+        RouterLink,
+        DatePipe,
+        LocationMapComponent,
+    ],
     template: `
         <h1>{{ i18n.t('tours.detail') }}</h1>
         @if (loadError(); as message) {
@@ -85,6 +95,66 @@ import { Tour, TourService } from './tour.service';
                 </table>
             </section>
 
+            <section data-testid="tour-route">
+                <h2>{{ i18n.t('tours.route.title') }}</h2>
+                @if (routeError(); as message) {
+                    <p data-testid="tour-route-error">{{ message }}</p>
+                }
+                @if (tourRoute(); as r) {
+                    <p>
+                        {{ i18n.t('tours.route.distance') }}:
+                        <span data-testid="tour-route-distance">{{ formatKm(r.distanceMeters) }} km</span>
+                        &middot; {{ i18n.t('tours.route.drivingTime') }}:
+                        <span data-testid="tour-route-duration">{{ formatDuration(r.drivingSeconds) }} h</span>
+                    </p>
+                    @if (r.earliestNextStart; as next) {
+                        <p data-testid="tour-route-next-start">
+                            {{ i18n.t('tours.route.earliestNextStart') }}: {{ next | date: 'short' }}
+                        </p>
+                    }
+                    <app-location-map [markers]="stopMarkers()" [route]="r.geometry" />
+
+                    <h3>{{ i18n.t('tours.route.schedule') }}</h3>
+                    <table data-testid="tour-route-schedule">
+                        <thead>
+                            <tr>
+                                <th>{{ i18n.t('common.type') }}</th>
+                                <th>{{ i18n.t('common.from') }}</th>
+                                <th>{{ i18n.t('common.to') }}</th>
+                                <th>{{ i18n.t('common.country') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (entry of r.schedule; track $index) {
+                                <tr>
+                                    <td>{{ enumText('tours.route.kind', entry.kind) }}</td>
+                                    <td>{{ entry.start | date: 'short' }}</td>
+                                    <td>{{ entry.end | date: 'short' }}</td>
+                                    <td>{{ entry.countryCode ?? '' }}</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <h3>{{ i18n.t('tours.route.violations') }}</h3>
+                    @if (r.violations.length) {
+                        <ul data-testid="tour-route-violations">
+                            @for (violation of r.violations; track $index) {
+                                <li
+                                    [class.violation]="violation.severity === 'Violation'"
+                                    [class.warning]="violation.severity === 'Warning'"
+                                >
+                                    <strong>{{ enumText('tours.route.severity', violation.severity) }}:</strong>
+                                    {{ violation.message }}
+                                </li>
+                            }
+                        </ul>
+                    } @else {
+                        <p data-testid="tour-route-no-violations">{{ i18n.t('tours.route.noViolations') }}</p>
+                    }
+                }
+            </section>
+
             @if (session.can('dispatch.write')) {
             <section>
                 <h2>{{ i18n.t('tours.assignTitle') }}</h2>
@@ -127,6 +197,16 @@ import { Tour, TourService } from './tour.service';
             <a mat-button routerLink="/tours" data-testid="tour-back">{{ i18n.t('tours.backToTours') }}</a>
         }
     `,
+    styles: [
+        `
+            .violation {
+                color: #b3261e;
+            }
+            .warning {
+                color: #b26a00;
+            }
+        `,
+    ],
 })
 export class TourDetailComponent {
     private readonly service = inject(TourService);
@@ -149,6 +229,17 @@ export class TourDetailComponent {
     // Separate from loadError: a refused assignment must not blank the page the way a failed
     // load does. This is where a 409 from the capacity or status rules reaches the user.
     protected readonly actionError = signal<string | null>(null);
+    protected readonly tourRoute = signal<TourRoute | null>(null);
+    protected readonly routeError = signal<string | null>(null);
+    protected readonly stopMarkers = computed<MapMarker[]>(() =>
+        (this.tourRoute()?.stops ?? []).map((stop) => ({
+            latitude: stop.latitude,
+            longitude: stop.longitude,
+            label: String(stop.sequence),
+            title: `${this.enumText('tours.route.stopType', stop.stopType)} ${stop.orderNumber}, ${stop.place}`,
+        })),
+    );
+    private routeSub?: Subscription;
 
     // Orders already on this tour are no longer Draft, but the picker's list is only refreshed
     // alongside the tour, so filter defensively rather than offering a stale choice.
@@ -187,12 +278,26 @@ export class TourDetailComponent {
         this.run(this.service.complete(this.tourId), this.i18n.t('tours.error.complete'));
     }
 
+    protected formatKm(meters: number): string {
+        return new Intl.NumberFormat(this.i18n.locale(), { maximumFractionDigits: 1 }).format(meters / 1000);
+    }
+
+    protected formatDuration(seconds: number): string {
+        const minutes = Math.round(seconds / 60);
+        return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
+    }
+
+    protected enumText(prefix: string, value: string): string {
+        return this.i18n.t(`${prefix}.${value}` as TranslationKey) ?? value;
+    }
+
     private run(action: Observable<Tour>, fallback: string): void {
         this.session.ready.pipe(switchMap(() => action)).subscribe({
             next: (tour) => {
                 this.tour.set(tour);
                 this.selectedOrderId.set('');
                 this.loadDraftOrders();
+                this.loadRoute();
             },
             error: (error: HttpErrorResponse) => this.actionError.set(this.describe(error, fallback)),
         });
@@ -203,11 +308,32 @@ export class TourDetailComponent {
             next: (tour) => {
                 this.tour.set(tour);
                 this.loadDraftOrders();
+                this.loadRoute();
             },
             // The load path gets its own wording: "could not be assigned" on a failed getById
             // would be plainly wrong.
             error: (error: HttpErrorResponse) =>
                 this.loadError.set(this.describe(error, this.i18n.t('tours.error.load'))),
+        });
+    }
+
+    // Stops change with every assign or remove, so the route is refetched after each one. A
+    // refetch supersedes one still in flight, so a slow earlier answer cannot overwrite a newer.
+    private loadRoute(): void {
+        this.routeSub?.unsubscribe();
+        this.routeSub = this.session.ready.pipe(switchMap(() => this.service.getRoute(this.tourId))).subscribe({
+            next: (route) => {
+                this.tourRoute.set(route);
+                this.routeError.set(null);
+            },
+            error: (error: HttpErrorResponse) => {
+                this.tourRoute.set(null);
+                this.routeError.set(
+                    error.status === 503
+                        ? this.i18n.t('tours.route.error.unavailable')
+                        : this.describe(error, this.i18n.t('tours.route.error.load')),
+                );
+            },
         });
     }
 

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -7,8 +7,9 @@ import { MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SessionService } from '../auth/session.service';
 import { I18nService } from '../i18n/i18n.service';
+import { LocationMapComponent, MapMarker } from '../shared/location-map.component';
 import {Observable, switchMap} from 'rxjs';
-import { Order, OrderService, OrderWriteRequest } from './order.service';
+import { LocatedParty, Order, OrderLocations, OrderService, OrderWriteRequest } from './order.service';
 
 interface ProblemDetailsBody {
     errors?: Record<string, string[]>;
@@ -20,7 +21,7 @@ interface ProblemDetailsBody {
 @Component({
     selector: 'app-order-form',
     standalone: true,
-    imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+    imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, LocationMapComponent],
     template: `
         <h1>{{ isEditMode ? i18n.t('orders.edit') : i18n.t('orders.new') }}</h1>
         @if (formError(); as message) {
@@ -193,6 +194,25 @@ interface ProblemDetailsBody {
                     }
                 </mat-form-field>
             </fieldset>
+            @if (isEditMode) {
+                <fieldset data-testid="order-map">
+                    <legend>{{ i18n.t('orders.map') }}</legend>
+                    @if (locationError(); as message) {
+                        <p data-testid="order-map-error">{{ message }}</p>
+                    }
+                    @if (locations(); as located) {
+                        @if (mapMarkers().length) {
+                            <app-location-map [markers]="mapMarkers()" />
+                        }
+                        @if (!located.consignor) {
+                            <p data-testid="order-map-consignor-missing">{{ i18n.t('orders.map.consignorMissing') }}</p>
+                        }
+                        @if (!located.consignee) {
+                            <p data-testid="order-map-consignee-missing">{{ i18n.t('orders.map.consigneeMissing') }}</p>
+                        }
+                    }
+                </fieldset>
+            }
             <button mat-raised-button type="submit" data-testid="order-save">{{ i18n.t('common.save') }}</button>
             <button mat-button type="button" data-testid="order-cancel-edit" (click)="cancel()">{{ i18n.t('common.cancel') }}</button>
         </form>
@@ -214,6 +234,18 @@ export class OrderFormComponent {
     protected readonly orderId = this.route.snapshot.paramMap.get('id');
     protected readonly isEditMode = this.orderId !== null;
     protected readonly formError = signal<string | null>(null);
+    protected readonly locations = signal<OrderLocations | null>(null);
+    protected readonly locationError = signal<string | null>(null);
+    protected readonly mapMarkers = computed<MapMarker[]>(() => {
+        const located = this.locations();
+        if (!located) {
+            return [];
+        }
+        return [
+            this.marker(located.consignor, 'A', this.i18n.t('orders.consignor')),
+            this.marker(located.consignee, 'B', this.i18n.t('orders.consignee')),
+        ].filter((marker): marker is MapMarker => marker !== null);
+    });
 
     protected readonly form = this.fb.nonNullable.group({
         consignor: this.addressGroup(),
@@ -236,7 +268,34 @@ export class OrderFormComponent {
                 error: (error: HttpErrorResponse) =>
                     this.formError.set(this.describeFailure(error, this.i18n.t('orders.error.load'))),
             });
+            this.loadLocations();
         }
+    }
+
+    // The map is advisory: a failure here must never block the form, so it has its own error.
+    // 503 means routing/geocoding is not configured or unreachable, which deserves its own wording.
+    private loadLocations(): void {
+        this.session.ready.pipe(switchMap(() => this.service.getLocations(this.orderId!))).subscribe({
+            next: (located) => this.locations.set(located),
+            error: (error: HttpErrorResponse) =>
+                this.locationError.set(
+                    error.status === 503
+                        ? this.i18n.t('map.unavailable')
+                        : this.describeFailure(error, this.i18n.t('map.error.load')),
+                ),
+        });
+    }
+
+    private marker(party: LocatedParty | null, label: string, role: string): MapMarker | null {
+        if (!party) {
+            return null;
+        }
+        return {
+            latitude: party.latitude,
+            longitude: party.longitude,
+            label,
+            title: `${role}: ${party.name}, ${party.address}`,
+        };
     }
 
     // See DriverFormComponent.fieldErrorText for the full reasoning.

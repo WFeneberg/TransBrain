@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Route planning for tours: `GET /api/tours/{id}/route` returns the truck route through the stops in sequence (OpenRouteService, `driving-hgv` profile), with distance, driving time and a timeline of driving, breaks and stop services
+- Driving-time planning under Regulation (EC) No 561/2006: 45-minute break after 4 h 30 min of continuous driving, 9 h daily driving with a 10 h extension warning, 11 h daily rest, and the Sunday truck driving bans in Germany and Austria; countries outside the EU/EEA/CH/GB regime are reported as not modelled
+- Customer map: `GET /api/orders/{id}/locations` geocodes the consignor and consignee; both frontends show them on the order form, and the tour detail shows the route, the timeline and the rule violations
+- `ErrorType.Unavailable` mapped to HTTP `503`, for an external service that is unconfigured or unreachable
 - Both frontends are multilingual: German (default) and English, switchable from the toolbar/app bar and remembered per browser; `docs/BEDIENUNG_TRANSBRAIN_WEB.md` and `docs/BEDIENUNG_TRANSBRAIN_VUEWEB.md` describe the switch
 - Developer guide (`docs/DEVELOPER_GUIDE.md`) and installation guide (`docs/INSTALLATION.md`) covering local Aspire, Docker Compose and Azure Container Apps
 - Dockerfiles for the API and both frontends, `docker-compose.yml`, a Keycloak production image with its own realm template (`deploy/keycloak`) and `infra/main.bicep` for Azure

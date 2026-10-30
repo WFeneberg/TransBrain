@@ -12,6 +12,7 @@ using TransBrain.Application;
 using TransBrain.Application.Abstractions;
 using TransBrain.Infrastructure;
 using TransBrain.Infrastructure.Persistence;
+using TransBrain.Infrastructure.Routing;
 using TransBrain.ServiceDefaults;
 
 // FluentValidation resolves its built-in error messages from the ambient thread culture, so
@@ -47,6 +48,7 @@ else
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
+builder.Services.Configure<OpenRouteServiceOptions>(builder.Configuration.GetSection(OpenRouteServiceOptions.SectionName));
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 builder.Services.AddOpenApi();

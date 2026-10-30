@@ -112,3 +112,51 @@ export async function completeTour(id: string): Promise<Tour> {
     const response = await client.post<Tour>(`/tours/${id}/complete`);
     return response.data;
 }
+
+export interface GeoPoint {
+    latitude: number;
+    longitude: number;
+}
+
+export interface RouteStop extends GeoPoint {
+    sequence: number;
+    orderNumber: string;
+    stopType: 'Pickup' | 'Delivery';
+    countryCode: string;
+    place: string;
+}
+
+export interface ScheduleEntry {
+    kind: 'Driving' | 'Break' | 'Service';
+    start: string;
+    end: string;
+    countryCode: string | null;
+}
+
+export interface RouteViolation {
+    severity: 'Warning' | 'Violation';
+    code: string;
+    message: string;
+    countryCode: string | null;
+}
+
+export interface TourRoute {
+    tourId: string;
+    departure: string;
+    end: string;
+    earliestNextStart: string;
+    distanceMeters: number;
+    drivingSeconds: number;
+    stops: RouteStop[];
+    geometry: GeoPoint[];
+    schedule: ScheduleEntry[];
+    violations: RouteViolation[];
+}
+
+/** Optional departure (ISO datetime) changes the planning start; omitted, the API picks its default. */
+export async function getTourRoute(id: string, departure?: string): Promise<TourRoute> {
+    const response = await client.get<TourRoute>(`/tours/${id}/route`, {
+        params: departure ? { departure } : undefined,
+    });
+    return response.data;
+}

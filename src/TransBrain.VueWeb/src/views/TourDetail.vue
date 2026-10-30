@@ -7,15 +7,19 @@ import {
     assignOrderToTour,
     completeTour,
     getTour,
+    getTourRoute,
     removeOrderFromTour,
     startTour,
+    type ScheduleEntry,
     type Tour,
+    type TourRoute,
 } from '../api/tours';
+import LocationMap from '../components/LocationMap.vue';
 import { useAuthStore } from '../stores/auth';
-import { useI18n } from '../i18n';
+import { useI18n, type MessageKey } from '../i18n';
 
 const auth = useAuthStore();
-const { t } = useI18n();
+const { locale, t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -27,6 +31,9 @@ const loadError = ref<string | null>(null);
 // Separate from loadError: a refused assignment must not blank the page the way a failed load
 // does. This is where a 409 from the capacity or status rules reaches the user.
 const actionError = ref<string | null>(null);
+const tourRoute = ref<TourRoute | null>(null);
+// Its own slot like actionError: a route the service cannot compute must not blank the tour.
+const routeError = ref<string | null>(null);
 
 const stopHeaders = computed(() => [
     { title: '#', key: 'sequence' },
@@ -34,6 +41,33 @@ const stopHeaders = computed(() => [
     { title: t('common.type'), key: 'stopType' },
     { title: t('common.actions'), key: 'actions', sortable: false },
 ]);
+
+const scheduleHeaders = computed(() => [
+    { title: t('common.type'), key: 'kind' },
+    { title: t('route.start'), key: 'start' },
+    { title: t('route.end'), key: 'end' },
+    { title: t('orders.country'), key: 'countryCode' },
+]);
+
+const kindLabels: Record<ScheduleEntry['kind'], MessageKey> = {
+    Driving: 'route.kind.Driving',
+    Break: 'route.kind.Break',
+    Service: 'route.kind.Service',
+};
+
+const stopTypeLabels: Record<'Pickup' | 'Delivery', MessageKey> = {
+    Pickup: 'route.stopType.Pickup',
+    Delivery: 'route.stopType.Delivery',
+};
+
+const routeMarkers = computed(() =>
+    (tourRoute.value?.stops ?? []).map((stop) => ({
+        latitude: stop.latitude,
+        longitude: stop.longitude,
+        text: String(stop.sequence),
+        title: `${stop.sequence}. ${stop.orderNumber} (${t(stopTypeLabels[stop.stopType])}, ${stop.place})`,
+    })),
+);
 
 // Orders already on this tour are no longer Draft, but the picker's list is refreshed only
 // alongside the tour, so filter defensively rather than offering a stale choice.
@@ -48,11 +82,41 @@ async function refresh(): Promise<void> {
     try {
         tour.value = await getTour(tourId);
         await loadDraftOrders();
+        await loadRoute();
     } catch (error) {
         // The load path gets its own wording: "could not be assigned" on a failed get would be
         // plainly wrong.
         loadError.value = describe(error, t('tours.loadFailed'));
     }
+}
+
+// The route depends on what is assigned, so it is reloaded after every change to the stops.
+// 503 means the routing service is not configured or unreachable - a friendly message, not the raw error.
+async function loadRoute(): Promise<void> {
+    try {
+        tourRoute.value = await getTourRoute(tourId);
+        routeError.value = null;
+    } catch (error) {
+        tourRoute.value = null;
+        routeError.value =
+            axios.isAxiosError(error) && error.response?.status === 503
+                ? t('map.unavailable')
+                : describe(error, t('route.loadFailed'));
+    }
+}
+
+function formatKm(meters: number): string {
+    return (meters / 1000).toLocaleString(locale.value, { maximumFractionDigits: 1 });
+}
+
+// h:mm, not decimal hours: dispatchers read driving time as a clock value.
+function formatDuration(seconds: number): string {
+    const totalMinutes = Math.round(seconds / 60);
+    return `${Math.floor(totalMinutes / 60)}:${String(totalMinutes % 60).padStart(2, '0')}`;
+}
+
+function formatDateTime(iso: string): string {
+    return new Date(iso).toLocaleString(locale.value, { dateStyle: 'short', timeStyle: 'short' });
 }
 
 // Orders come back sorted by order number ASCENDING, so page 1 is the OLDEST drafts - in a
@@ -97,6 +161,7 @@ async function run(action: () => Promise<Tour>, fallback: string): Promise<void>
         tour.value = await action();
         selectedOrderId.value = '';
         await loadDraftOrders();
+        await loadRoute();
     } catch (error) {
         actionError.value = describe(error, fallback);
     }
@@ -178,6 +243,51 @@ function describe(error: unknown, fallback: string): string {
                         </v-btn>
                     </template>
                 </v-data-table>
+            </section>
+
+            <section data-testid="tour-route-section">
+                <h2>{{ t('common.route') }}</h2>
+                <p v-if="routeError" data-testid="tour-route-error">{{ routeError }}</p>
+                <template v-if="tourRoute">
+                    <dl>
+                        <dt>{{ t('route.distance') }}</dt>
+                        <dd data-testid="tour-route-distance">{{ formatKm(tourRoute.distanceMeters) }}</dd>
+                        <dt>{{ t('route.drivingTime') }}</dt>
+                        <dd data-testid="tour-route-driving">{{ formatDuration(tourRoute.drivingSeconds) }}</dd>
+                        <dt>{{ t('route.earliestNextStart') }}</dt>
+                        <dd data-testid="tour-route-earliest">{{ formatDateTime(tourRoute.earliestNextStart) }}</dd>
+                    </dl>
+
+                    <LocationMap :markers="routeMarkers" :polyline="tourRoute.geometry" data-testid="tour-route-map" />
+
+                    <h3>{{ t('route.schedule') }}</h3>
+                    <v-data-table
+                        :headers="scheduleHeaders"
+                        :items="tourRoute.schedule"
+                        :items-per-page="-1"
+                        item-value="start"
+                        data-testid="tour-route-schedule"
+                    >
+                        <template #item.kind="{ item }">{{ t(kindLabels[item.kind]) }}</template>
+                        <template #item.start="{ item }">{{ formatDateTime(item.start) }}</template>
+                        <template #item.end="{ item }">{{ formatDateTime(item.end) }}</template>
+                        <template #item.countryCode="{ item }">{{ item.countryCode ?? '' }}</template>
+                    </v-data-table>
+
+                    <h3>{{ t('route.violations') }}</h3>
+                    <p v-if="tourRoute.violations.length === 0" data-testid="tour-route-no-violations">
+                        {{ t('route.noViolations') }}
+                    </p>
+                    <v-alert
+                        v-for="(violation, index) in tourRoute.violations"
+                        :key="index"
+                        :type="violation.severity === 'Violation' ? 'error' : 'warning'"
+                        variant="tonal"
+                        data-testid="tour-route-violation"
+                    >
+                        {{ violation.message }}
+                    </v-alert>
+                </template>
             </section>
 
             <section v-if="auth.can('dispatch.write')">

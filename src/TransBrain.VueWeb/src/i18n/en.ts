@@ -123,6 +123,26 @@ export const en = {
     'tours.assignFailed': 'The order could not be assigned.',
     'tours.removeFailed': 'The order could not be removed.',
 
+    'map.title': 'Map',
+    'map.unavailable': 'The map and routing service is not available. It may not be configured or may be unreachable.',
+    'map.loadFailed': 'The map data could not be loaded.',
+    'map.notLocated': '{party} could not be placed on the map: the address was not found.',
+
+    'route.start': 'Start',
+    'route.end': 'End',
+    'route.distance': 'Total distance (km)',
+    'route.drivingTime': 'Driving time (h:mm)',
+    'route.earliestNextStart': 'Earliest next start',
+    'route.schedule': 'Schedule',
+    'route.violations': 'Driving and rest time notes',
+    'route.noViolations': 'No violations or warnings.',
+    'route.loadFailed': 'The route could not be loaded.',
+    'route.kind.Driving': 'Driving',
+    'route.kind.Break': 'Break',
+    'route.kind.Service': 'Stop time (loading and unloading)',
+    'route.stopType.Pickup': 'Pickup',
+    'route.stopType.Delivery': 'Delivery',
+
     'callback.error': 'Sign-in could not be completed. Please try again.',
 };
 

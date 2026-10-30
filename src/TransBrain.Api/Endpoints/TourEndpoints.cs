@@ -7,6 +7,7 @@ using TransBrain.Application.Features.Tours.AssignOrder;
 using TransBrain.Application.Features.Tours.CompleteTour;
 using TransBrain.Application.Features.Tours.CreateTour;
 using TransBrain.Application.Features.Tours.GetTourById;
+using TransBrain.Application.Features.Tours.GetTourRoute;
 using TransBrain.Application.Features.Tours.ListTours;
 using TransBrain.Application.Features.Tours.RemoveOrder;
 using TransBrain.Application.Features.Tours.StartTour;
@@ -66,6 +67,20 @@ public sealed class TourEndpoints : IEndpointGroup
             .Produces<TourResponse>()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/route", async (
+                Guid id, ISender sender, CancellationToken ct, DateTimeOffset? departure = null) =>
+            {
+                Result<TourRouteResponse> result = await sender.Send(new GetTourRouteQuery(id, departure), ct);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.Read)
+            .WithName("GetTourRoute")
+            .Produces<TourRouteResponse>()
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         group.MapPost("/{id:guid}/orders", async (
                 Guid id, AssignOrderRequest request, ISender sender, CancellationToken ct) =>

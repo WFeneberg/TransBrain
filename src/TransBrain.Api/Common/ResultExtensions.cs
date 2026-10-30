@@ -27,6 +27,7 @@ public static class ResultExtensions
             ErrorType.NotFound => Results.Problem(title: error.Code, detail: error.Message, statusCode: 404),
             ErrorType.Conflict => Results.Problem(title: error.Code, detail: error.Message, statusCode: 409),
             ErrorType.Forbidden => Results.Problem(title: error.Code, detail: error.Message, statusCode: 403),
+            ErrorType.Unavailable => Results.Problem(title: error.Code, detail: error.Message, statusCode: 503),
             _ => Results.Problem(title: error.Code, detail: error.Message, statusCode: 500)
         };
     }

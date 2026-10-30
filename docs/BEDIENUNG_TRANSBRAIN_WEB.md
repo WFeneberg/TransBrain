@@ -224,6 +224,22 @@ Das Formular ist in fünf Abschnitte gegliedert:
 - Validierungsfehler werden direkt am betroffenen Feld angezeigt, auch bei den
   verschachtelten Adressfeldern (z. B. eine Meldung unter „Consignor → Name“).
 
+### Lage auf der Karte
+
+Beim Bearbeiten eines bestehenden Auftrags zeigt das Formular unterhalb der Felder eine Karte
+mit Absender (Pin **A**) und Empfänger (Pin **B**). Ein Tooltip am Pin nennt Rolle, Name und
+Adresse. Die Karte zeigt den zuletzt gespeicherten Stand des Auftrags und ist beim Anlegen eines
+neuen Auftrags noch nicht vorhanden. Kartenkacheln: © OpenStreetMap contributors.
+
+- **Adresse nicht gefunden:** Lässt sich eine Adresse nicht auf der Karte verorten, fehlt ihr Pin,
+  und darunter erscheint ein Hinweis, z. B. „Die Adresse des Empfängers konnte nicht auf der Karte
+  verortet werden.“ Der andere Pin bleibt sichtbar.
+- **Routing-Dienst nicht verfügbar:** Die Karte und das Verorten der Adressen nutzen den
+  Routing-Dienst OpenRouteService. Auf dem Server muss dafür ein **OpenRouteService-API-Schlüssel**
+  konfiguriert sein. Ist der Dienst nicht konfiguriert oder nicht erreichbar, erscheint anstelle
+  der Karte die Meldung „Die Karte ist derzeit nicht verfügbar …“. Die Auftragsdaten lassen sich
+  trotzdem bearbeiten und speichern.
+
 ## Auftragsstatus: welche Schritte abgelehnt werden
 
 Dies ist der Teil, der im Alltag am ehesten für Verwirrung sorgt: Nicht jede Aktion ist in
@@ -320,7 +336,7 @@ Erreichbar über „Open“ in der Liste (`/tours/{id}`).
 
 ![Tourendetail](img/web/tourendetail.png)
 
-Die Seite gliedert sich in vier Bereiche:
+Die Seite gliedert sich in fünf Bereiche:
 
 **1. Kopfdaten** — Datum, Fahrzeug, Fahrer und Status der Tour.
 
@@ -337,7 +353,10 @@ zwei** Stopps: ein `Pickup` (Abholung) und ein `Delivery` (Zustellung), wobei di
 die kleinere Nummer trägt. Die Schaltfläche **„Remove“** an der Abholzeile nimmt den ganzen
 Auftrag wieder von der Tour; die verbleibenden Stopps werden lückenlos neu nummeriert.
 
-**4. Assign an order (Auftrag zuordnen)** — ein Auswahlfeld mit den zuordenbaren Aufträgen und
+**4. Route** — Strecke, Fahrzeit, Karte mit den Stopps und die Lenk- und Ruhezeiten der Tour.
+Der Bereich wird unten unter „Route der Tour“ beschrieben.
+
+**5. Assign an order (Auftrag zuordnen)** — ein Auswahlfeld mit den zuordenbaren Aufträgen und
 die Schaltfläche **„Assign“**.
 
 **Angeboten werden nur Aufträge im Status `Draft`.** Jeder andere Status würde vom Server
@@ -349,6 +368,30 @@ Darunter erscheinen je nach Status die Schaltflächen **„Start tour“** (nur 
 **„Complete tour“** (nur bei `InProgress`). Schaltflächen, die im aktuellen Status ohnehin
 abgelehnt würden, werden hier ausgeblendet — anders als beim Stornieren eines Auftrags, wo die
 Ablehnung die Regel erklärt.
+
+### Route der Tour
+
+Die Route wird beim Öffnen der Seite berechnet und nach jedem Zuordnen oder Entfernen eines
+Auftrags neu geladen. Sie besteht aus:
+
+- **Strecke** und **Fahrzeit** (Stunden:Minuten) der gesamten Tour.
+- **Karte** mit der Fahrstrecke als blaue Linie und den nummerierten Stopps (1, 2, …) in
+  Reihenfolge. Ein Tooltip am Stopp zeigt Typ (Abholung oder Zustellung), Auftragsnummer und Ort.
+- **Frühester nächster Start:** der früheste Zeitpunkt, zu dem nach dieser Tour wieder gefahren
+  werden darf.
+- **Lenk- und Ruhezeiten:** Tabelle mit Fahrt, Pause und Service, jeweils mit Beginn, Ende und
+  Land.
+- **Verstöße und Warnungen:** Verstöße werden rot, Warnungen bernsteinfarben angezeigt. Der Text
+  stammt vom Server.
+
+**Hinweis:** Die Route wird über den Routing-Dienst OpenRouteService berechnet. Damit der Bereich
+„Route“ mit Karte und Zeitplan erscheint, muss auf dem Server ein **OpenRouteService-API-Schlüssel**
+konfiguriert sein. Fehlt der Schlüssel oder ist der Dienst nicht erreichbar, zeigt der Bereich die
+Meldung „Die Routenberechnung ist derzeit nicht verfügbar …“ an; die übrige Seite bleibt benutzbar.
+
+Kann die Route nicht berechnet werden (z. B. weil die Tour keine berechenbaren Stopps hat), zeigt
+der Bereich die Meldung des Servers mit dem HTTP-Statuscode an, statt stillschweigend leer zu
+bleiben.
 
 ### Was beim Zuordnen abgelehnt wird
 

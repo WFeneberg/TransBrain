@@ -105,3 +105,22 @@ export async function cancelOrder(id: string): Promise<Order> {
     const response = await client.post<Order>(`/orders/${id}/cancel`);
     return response.data;
 }
+
+export interface OrderLocation {
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+}
+
+/** A party is null when its address could not be located - the rest of the order still renders. */
+export interface OrderLocations {
+    consignor: OrderLocation | null;
+    consignee: OrderLocation | null;
+}
+
+/** Fails with 503 when the routing/geocoding service is not configured or unreachable. */
+export async function getOrderLocations(id: string): Promise<OrderLocations> {
+    const response = await client.get<OrderLocations>(`/orders/${id}/locations`);
+    return response.data;
+}

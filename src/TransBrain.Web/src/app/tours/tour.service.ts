@@ -30,6 +30,43 @@ export interface TourWriteRequest {
     driverId: string;
 }
 
+export interface TourRouteStop {
+    sequence: number;
+    orderNumber: string;
+    stopType: string;
+    countryCode: string;
+    place: string;
+    latitude: number;
+    longitude: number;
+}
+
+export interface TourRouteScheduleEntry {
+    kind: string;
+    start: string;
+    end: string;
+    countryCode: string | null;
+}
+
+export interface TourRouteViolation {
+    severity: string;
+    code: string;
+    message: string;
+    countryCode: string | null;
+}
+
+export interface TourRoute {
+    tourId: string;
+    departure: string;
+    end: string;
+    earliestNextStart: string | null;
+    distanceMeters: number;
+    drivingSeconds: number;
+    stops: TourRouteStop[];
+    geometry: { latitude: number; longitude: number }[];
+    schedule: TourRouteScheduleEntry[];
+    violations: TourRouteViolation[];
+}
+
 export interface TourFilters {
     tourDate?: string | null;
     vehicleId?: string | null;
@@ -90,6 +127,11 @@ export class TourService {
      */
     removeOrder(tourId: string, transportOrderId: string): Observable<Tour> {
         return this.http.delete<Tour>(`/api/tours/${tourId}/orders/${transportOrderId}`);
+    }
+
+    /** 409 when the tour cannot be routed, 404 when unknown, 503 when routing is not configured or unreachable. */
+    getRoute(id: string): Observable<TourRoute> {
+        return this.http.get<TourRoute>(`/api/tours/${id}/route`);
     }
 
     start(id: string): Observable<Tour> {

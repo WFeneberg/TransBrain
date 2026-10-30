@@ -125,5 +125,25 @@ export const de: Record<MessageKey, string> = {
     'tours.assignFailed': 'Der Auftrag konnte nicht zugewiesen werden.',
     'tours.removeFailed': 'Der Auftrag konnte nicht entfernt werden.',
 
+    'map.title': 'Karte',
+    'map.unavailable': 'Der Karten- und Routingdienst ist nicht verfügbar. Er ist möglicherweise nicht konfiguriert oder nicht erreichbar.',
+    'map.loadFailed': 'Die Kartendaten konnten nicht geladen werden.',
+    'map.notLocated': '{party} konnte nicht auf der Karte platziert werden: Die Adresse wurde nicht gefunden.',
+
+    'route.start': 'Beginn',
+    'route.end': 'Ende',
+    'route.distance': 'Gesamtstrecke (km)',
+    'route.drivingTime': 'Fahrzeit (h:mm)',
+    'route.earliestNextStart': 'Frühester nächster Start',
+    'route.schedule': 'Fahrplan',
+    'route.violations': 'Hinweise zu Lenk- und Ruhezeiten',
+    'route.noViolations': 'Keine Verstöße oder Warnungen.',
+    'route.loadFailed': 'Die Route konnte nicht geladen werden.',
+    'route.kind.Driving': 'Fahrt',
+    'route.kind.Break': 'Pause',
+    'route.kind.Service': 'Standzeit (Be- und Entladung)',
+    'route.stopType.Pickup': 'Abholung',
+    'route.stopType.Delivery': 'Lieferung',
+
     'callback.error': 'Die Anmeldung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.',
 };

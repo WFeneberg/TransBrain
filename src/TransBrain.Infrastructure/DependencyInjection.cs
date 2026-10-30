@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using TransBrain.Application.Abstractions;
 using TransBrain.Infrastructure.Persistence.Caching;
 using TransBrain.Infrastructure.Persistence.OrderNumbering;
 using TransBrain.Infrastructure.Persistence.Repositories;
+using TransBrain.Infrastructure.Routing;
 
 namespace TransBrain.Infrastructure;
 
@@ -16,6 +18,10 @@ public static class DependencyInjection
         services.AddScoped<IOrderNumberGenerator, SequentialOrderNumberGenerator>();
         services.AddScoped<ITourRepository, TourRepository>();
         services.AddScoped<ICacheService, RedisCacheService>();
+        services.AddHttpClient<OpenRouteServiceClient>((provider, client) =>
+            client.BaseAddress = new Uri(provider.GetRequiredService<IOptions<OpenRouteServiceOptions>>().Value.BaseUrl));
+        services.AddTransient<IGeocoder>(provider => provider.GetRequiredService<OpenRouteServiceClient>());
+        services.AddTransient<IRoutePlanner>(provider => provider.GetRequiredService<OpenRouteServiceClient>());
         return services;
     }
 }

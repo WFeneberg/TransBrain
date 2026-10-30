@@ -218,6 +218,17 @@ Das Formular ist in fünf Abschnitte gegliedert:
 - Validierungsfehler werden direkt am betroffenen Feld angezeigt, auch bei den
   verschachtelten Adressfeldern (z. B. eine Meldung unter „Consignor → Name“).
 
+**Karte (nur beim Bearbeiten)** — Unterhalb des Formulars zeigt der Abschnitt „Karte“ Absender
+(Markierung `A`) und Empfänger (Markierung `B`) auf einer OpenStreetMap-Karte. Der Mauszeiger auf
+einer Markierung zeigt Name und Adresse. Die Karte erscheint erst für gespeicherte Aufträge, also
+nicht beim Anlegen eines neuen Auftrags.
+
+- Lässt sich eine Adresse nicht finden, steht darunter der Hinweis „… konnte nicht auf der Karte
+  platziert werden: Die Adresse wurde nicht gefunden.“ Der Auftrag selbst ist davon nicht betroffen.
+- Die Kartenfunktion benötigt einen auf dem Server konfigurierten **OpenRouteService-Schlüssel**.
+  Ist er nicht eingerichtet oder der Dienst nicht erreichbar, erscheint anstelle der Karte die
+  Meldung „Der Karten- und Routingdienst ist nicht verfügbar …“. Das Formular bleibt voll nutzbar.
+
 ## Auftragsstatus: welche Schritte abgelehnt werden
 
 Dies ist der Teil, der im Alltag am ehesten für Verwirrung sorgt: Nicht jede Aktion ist in
@@ -314,7 +325,7 @@ Erreichbar über „Open“ in der Liste (`/tours/{id}`).
 
 ![Tourendetail](img/vueweb/tourendetail.png)
 
-Die Seite gliedert sich in vier Bereiche:
+Die Seite gliedert sich in fünf Bereiche:
 
 **1. Kopfdaten** — Datum, Fahrzeug, Fahrer und Status der Tour.
 
@@ -331,7 +342,23 @@ zwei** Stopps: ein `Pickup` (Abholung) und ein `Delivery` (Zustellung), wobei di
 die kleinere Nummer trägt. Die Schaltfläche **„Remove“** an der Abholzeile nimmt den ganzen
 Auftrag wieder von der Tour; die verbleibenden Stopps werden lückenlos neu nummeriert.
 
-**4. Assign an order (Auftrag zuordnen)** — ein Auswahlfeld mit den zuordenbaren Aufträgen und
+**4. Route (Strecke)** — eine Karte mit der Fahrstrecke (blaue Linie) und den nummerierten
+Stopps. Darunter stehen:
+
+- **Gesamtstrecke** in km und **Fahrzeit** im Format `h:mm`
+- **Frühester nächster Start** — der früheste Zeitpunkt, zu dem die Tour nach den Lenk- und
+  Ruhezeiten wieder beginnen kann
+- **Fahrplan** — Fahrten, Pausen und Standzeiten (Be- und Entladung) mit Beginn und Ende
+- **Hinweise zu Lenk- und Ruhezeiten** — ein Verstoß erscheint rot, eine Warnung gelb. Ohne
+  Befund steht dort „Keine Verstöße oder Warnungen.“
+
+Die Route berechnet der Server neu, sobald sich die Stopps ändern. Sie benötigt einen auf dem
+Server konfigurierten **OpenRouteService-Schlüssel**. Ist der Dienst nicht eingerichtet oder nicht
+erreichbar, erscheint anstelle der Route die Meldung „Der Karten- und Routingdienst ist nicht
+verfügbar …“. Schlägt die Berechnung aus einem anderen Grund fehl, wird der Grund angezeigt. Die
+übrige Tourseite bleibt in beiden Fällen nutzbar.
+
+**5. Assign an order (Auftrag zuordnen)** — ein Auswahlfeld mit den zuordenbaren Aufträgen und
 die Schaltfläche **„Assign“**.
 
 **Angeboten werden nur Aufträge im Status `Draft`.** Jeder andere Status würde vom Server

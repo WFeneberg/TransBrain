@@ -5,7 +5,8 @@ public enum ErrorType
     Validation,
     NotFound,
     Conflict,
-    Forbidden
+    Forbidden,
+    Unavailable
 }
 
 public sealed record Error(string Code, string Message, ErrorType Type)
@@ -31,4 +32,7 @@ public sealed record Error(string Code, string Message, ErrorType Type)
     public static Error Conflict(string code, string message) => new(code, message, ErrorType.Conflict);
 
     public static Error Forbidden(string code, string message) => new(code, message, ErrorType.Forbidden);
+
+    /// <summary>An external dependency could not answer. Distinct from a Conflict: retrying later may succeed.</summary>
+    public static Error Unavailable(string code, string message) => new(code, message, ErrorType.Unavailable);
 }

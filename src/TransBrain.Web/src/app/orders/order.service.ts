@@ -39,6 +39,19 @@ export interface OrderWriteRequest {
     deliveryTo: string;
 }
 
+/** One party's location; `null` in OrderLocations means its address could not be geocoded. */
+export interface LocatedParty {
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+}
+
+export interface OrderLocations {
+    consignor: LocatedParty | null;
+    consignee: LocatedParty | null;
+}
+
 export interface PagedResult<T> {
     items: T[];
     page: number;
@@ -74,6 +87,11 @@ export class OrderService {
 
     getById(id: string): Observable<Order> {
         return this.http.get<Order>(`/api/orders/${id}`);
+    }
+
+    /** 503 when routing/geocoding is not configured or unreachable. */
+    getLocations(id: string): Observable<OrderLocations> {
+        return this.http.get<OrderLocations>(`/api/orders/${id}/locations`);
     }
 
     create(request: OrderWriteRequest): Observable<Order> {

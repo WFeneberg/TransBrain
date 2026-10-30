@@ -6,6 +6,7 @@ using TransBrain.Application.Features.Orders;
 using TransBrain.Application.Features.Orders.CancelOrder;
 using TransBrain.Application.Features.Orders.CreateOrder;
 using TransBrain.Application.Features.Orders.GetOrderById;
+using TransBrain.Application.Features.Orders.GetOrderLocations;
 using TransBrain.Application.Features.Orders.ListOrders;
 using TransBrain.Application.Features.Orders.UpdateOrder;
 using TransBrain.Domain.Common;
@@ -59,6 +60,17 @@ public sealed class OrderEndpoints : IEndpointGroup
             .WithName("GetOrderById")
             .Produces<OrderResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/locations", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                Result<OrderLocationsResponse> result = await sender.Send(new GetOrderLocationsQuery(id), ct);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.Read)
+            .WithName("GetOrderLocations")
+            .Produces<OrderLocationsResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         group.MapPut("/{id:guid}", async (
                 Guid id, UpdateOrderRequest request, ISender sender, CancellationToken ct) =>

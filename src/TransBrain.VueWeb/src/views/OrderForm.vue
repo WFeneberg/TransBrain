@@ -2,7 +2,15 @@
 import axios from 'axios';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { createOrder, getOrder, updateOrder, type OrderWriteRequest } from '../api/orders';
+import {
+    createOrder,
+    getOrder,
+    getOrderLocations,
+    updateOrder,
+    type OrderLocations,
+    type OrderWriteRequest,
+} from '../api/orders';
+import LocationMap from '../components/LocationMap.vue';
 import { useI18n, type MessageKey } from '../i18n';
 
 interface ProblemDetailsBody {
@@ -23,6 +31,7 @@ const parties = ['consignor', 'consignee'] as const;
 type Party = (typeof parties)[number];
 
 const partyLabels: Record<Party, MessageKey> = { consignor: 'orders.consignor', consignee: 'orders.consignee' };
+const partyPinLabels: Record<Party, string> = { consignor: 'A', consignee: 'B' };
 
 const form = reactive({
     consignor: { name: '', street: '', postalCode: '', city: '', country: 'DE' },
@@ -63,6 +72,26 @@ const fieldErrors = reactive<Record<string, string | null>>({
 // before the user has done anything. Set once on the first submit attempt and never reset.
 const attemptedSubmit = ref(false);
 const formError = ref<string | null>(null);
+const locations = ref<OrderLocations | null>(null);
+const locationsError = ref<string | null>(null);
+
+const unlocatedParties = computed(() => parties.filter((party) => locations.value?.[party] === null));
+
+const mapMarkers = computed(() =>
+    parties.flatMap((party) => {
+        const location = locations.value?.[party];
+        return location
+            ? [
+                  {
+                      latitude: location.latitude,
+                      longitude: location.longitude,
+                      text: partyPinLabels[party],
+                      title: `${t(partyLabels[party])}: ${location.name}, ${location.address}`,
+                  },
+              ]
+            : [];
+    }),
+);
 
 onMounted(async () => {
     if (isEditMode.value) {
@@ -82,8 +111,23 @@ onMounted(async () => {
             // opening a deleted order isn't told a save just failed.
             formError.value = describeFailure(error, t('orders.loadFailed'));
         }
+
+        await loadLocations();
     }
 });
+
+// The map is an aid, not part of the order: a failure here must not block editing, so it gets
+// its own error slot. 503 means the routing/geocoding service is not configured or unreachable.
+async function loadLocations(): Promise<void> {
+    try {
+        locations.value = await getOrderLocations(orderId!);
+    } catch (error) {
+        locationsError.value =
+            axios.isAxiosError(error) && error.response?.status === 503
+                ? t('map.unavailable')
+                : describeFailure(error, t('map.loadFailed'));
+    }
+}
 
 function validateRequired(): boolean {
     for (const party of parties) {
@@ -398,5 +442,14 @@ function describeFailure(error: unknown, fallback: string): string {
             <v-btn type="submit" data-testid="order-save">{{ t('common.save') }}</v-btn>
             <v-btn type="button" data-testid="order-cancel-edit" @click="cancel">{{ t('common.cancel') }}</v-btn>
         </form>
+
+        <section v-if="isEditMode" data-testid="order-map-section">
+            <h2>{{ t('map.title') }}</h2>
+            <p v-if="locationsError" data-testid="order-map-error">{{ locationsError }}</p>
+            <p v-for="party in unlocatedParties" :key="party" data-testid="order-map-not-located">
+                {{ t('map.notLocated', { party: t(partyLabels[party]) }) }}
+            </p>
+            <LocationMap v-if="mapMarkers.length" :markers="mapMarkers" data-testid="order-map" />
+        </section>
     </v-container>
 </template>
