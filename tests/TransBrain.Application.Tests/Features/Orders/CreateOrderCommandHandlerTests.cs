@@ -24,7 +24,7 @@ public class CreateOrderCommandHandlerTests
     private static CreateOrderCommandHandler Handler(
         InMemoryTransportOrderRepository repository,
         int firstSequence = 1)
-        => new(repository, new StubOrderNumberGenerator(firstSequence), TimeProvider.System);
+        => new(repository, new StubOrderNumberGenerator(firstSequence), new InMemoryCustomerRepository(), TimeProvider.System);
 
     [Fact]
     public async Task Handle_ValidCommand_PersistsOrderAndReturnsResponse()

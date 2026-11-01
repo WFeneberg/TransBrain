@@ -2,6 +2,7 @@
 import axios from 'axios';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { listAllCustomerLocations, type CustomerLocationOption } from '../api/customerLocations';
 import {
     createOrder,
     getOrder,
@@ -43,6 +44,7 @@ const form = reactive({
     pickupTo: '',
     deliveryFrom: '',
     deliveryTo: '',
+    consigneeLocationId: '',
 });
 
 // Keyed by the same dotted path the API's nested validator rules produce ("Consignor.Name"
@@ -74,6 +76,8 @@ const attemptedSubmit = ref(false);
 const formError = ref<string | null>(null);
 const locations = ref<OrderLocations | null>(null);
 const locationsError = ref<string | null>(null);
+const locationOptions = ref<CustomerLocationOption[]>([]);
+const locationPickerError = ref<string | null>(null);
 
 const unlocatedParties = computed(() => parties.filter((party) => locations.value?.[party] === null));
 
@@ -94,6 +98,7 @@ const mapMarkers = computed(() =>
 );
 
 onMounted(async () => {
+    await loadLocationOptions();
     if (isEditMode.value) {
         try {
             const order = await getOrder(orderId!);
@@ -106,6 +111,7 @@ onMounted(async () => {
             form.pickupTo = toLocalInput(order.pickupTo);
             form.deliveryFrom = toLocalInput(order.deliveryFrom);
             form.deliveryTo = toLocalInput(order.deliveryTo);
+            form.consigneeLocationId = order.consigneeLocationId ?? '';
         } catch (error) {
             // A failed load is not a failed save - give it its own wording so a dispatcher
             // opening a deleted order isn't told a save just failed.
@@ -149,6 +155,31 @@ function validateRequired(): boolean {
     return Object.values(fieldErrors).every((message) => message === null);
 }
 
+async function loadLocationOptions(): Promise<void> {
+    try {
+        locationOptions.value = (await listAllCustomerLocations()).items;
+    } catch (error) {
+        locationPickerError.value = t('orders.consigneeLocation.error');
+    }
+}
+
+// Picking a location only copies its address into the consignee fields. The order keeps that
+// copy and the reference, so later edits to the location do not change this order.
+function onLocationChange(event: Event): void {
+    const id = (event.target as HTMLSelectElement).value;
+    const option = locationOptions.value.find((o) => o.id === id);
+    if (!option) {
+        return;
+    }
+    form.consignee = {
+        name: option.name,
+        street: option.street,
+        postalCode: option.postalCode,
+        city: option.city,
+        country: option.country,
+    };
+}
+
 async function save(): Promise<void> {
     formError.value = null;
     attemptedSubmit.value = true;
@@ -166,6 +197,7 @@ async function save(): Promise<void> {
         pickupTo: toIso(form.pickupTo),
         deliveryFrom: toIso(form.deliveryFrom),
         deliveryTo: toIso(form.deliveryTo),
+        consigneeLocationId: form.consigneeLocationId || null,
     };
 
     try {
@@ -259,6 +291,25 @@ function describeFailure(error: unknown, fallback: string): string {
             <!-- Plain <input> elements, not <v-text-field>: Vuetify's control wraps the real
                  <input> in a root <div>, and a data-testid on the component lands on that div,
                  which makes Playwright's fill() fail. See DriverForm.vue. -->
+            <fieldset>
+                <legend>{{ t('orders.consigneeLocation') }}</legend>
+                <div>
+                    <label for="order-consigneeLocation">{{ t('orders.consigneeLocation') }}</label>
+                    <select
+                        id="order-consigneeLocation"
+                        v-model="form.consigneeLocationId"
+                        data-testid="order-consigneeLocation"
+                        @change="onLocationChange"
+                    >
+                        <option value="">{{ t('orders.consigneeLocation.none') }}</option>
+                        <option v-for="option in locationOptions" :key="option.id" :value="option.id">
+                            {{ option.customerName }}: {{ option.name }}, {{ option.city }}
+                        </option>
+                    </select>
+                </div>
+                <p v-if="locationPickerError" data-testid="order-consigneeLocation-error">{{ locationPickerError }}</p>
+            </fieldset>
+
             <fieldset v-for="party in parties" :key="party">
                 <legend>{{ t(partyLabels[party]) }}</legend>
                 <div>

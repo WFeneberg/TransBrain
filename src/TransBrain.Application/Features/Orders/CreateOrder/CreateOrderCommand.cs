@@ -11,4 +11,5 @@ public sealed record CreateOrderCommand(
     DateTimeOffset PickupFrom,
     DateTimeOffset PickupTo,
     DateTimeOffset DeliveryFrom,
-    DateTimeOffset DeliveryTo) : ICommand<OrderResponse>;
+    DateTimeOffset DeliveryTo,
+    Guid? ConsigneeLocationId = null) : ICommand<OrderResponse>;

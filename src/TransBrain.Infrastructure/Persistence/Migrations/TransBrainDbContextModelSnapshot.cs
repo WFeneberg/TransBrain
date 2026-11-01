@@ -17,10 +17,81 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("TransBrain.Domain.Customers.Customer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContactPerson")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .UseCollation("C");
+
+                    b.Property<int>("PaymentTermDays")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("VatId")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("customers", (string)null);
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Customers.CustomerLocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContactPerson")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("customer_locations", (string)null);
+                });
 
             modelBuilder.Entity("TransBrain.Domain.Drivers.Driver", b =>
                 {
@@ -75,6 +146,9 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ConsigneeLocationId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -91,6 +165,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ConsigneeLocationId");
 
                     b.HasIndex("OrderNumber")
                         .IsUnique();
@@ -174,8 +250,117 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.ToTable("vehicles", (string)null);
                 });
 
+            modelBuilder.Entity("TransBrain.Domain.Customers.Customer", b =>
+                {
+                    b.OwnsOne("TransBrain.Domain.Common.Address", "Address", b1 =>
+                        {
+                            b1.Property<Guid>("CustomerId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("City")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("address_city");
+
+                            b1.Property<string>("Country")
+                                .IsRequired()
+                                .HasMaxLength(2)
+                                .HasColumnType("character varying(2)")
+                                .HasColumnName("address_country");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("address_name");
+
+                            b1.Property<string>("PostalCode")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("address_postal_code");
+
+                            b1.Property<string>("Street")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("address_street");
+
+                            b1.HasKey("CustomerId");
+
+                            b1.ToTable("customers");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CustomerId");
+                        });
+
+                    b.Navigation("Address")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Customers.CustomerLocation", b =>
+                {
+                    b.HasOne("TransBrain.Domain.Customers.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("TransBrain.Domain.Common.Address", "Address", b1 =>
+                        {
+                            b1.Property<Guid>("CustomerLocationId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("City")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("address_city");
+
+                            b1.Property<string>("Country")
+                                .IsRequired()
+                                .HasMaxLength(2)
+                                .HasColumnType("character varying(2)")
+                                .HasColumnName("address_country");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("address_name");
+
+                            b1.Property<string>("PostalCode")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("address_postal_code");
+
+                            b1.Property<string>("Street")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("address_street");
+
+                            b1.HasKey("CustomerLocationId");
+
+                            b1.ToTable("customer_locations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CustomerLocationId");
+                        });
+
+                    b.Navigation("Address")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("TransBrain.Domain.Orders.TransportOrder", b =>
                 {
+                    b.HasOne("TransBrain.Domain.Customers.CustomerLocation", null)
+                        .WithMany()
+                        .HasForeignKey("ConsigneeLocationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.OwnsOne("TransBrain.Domain.Common.Cargo", "Cargo", b1 =>
                         {
                             b1.Property<Guid>("TransportOrderId")

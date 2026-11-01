@@ -12,6 +12,9 @@ import VehicleList from './views/VehicleList.vue';
 import VehicleForm from './views/VehicleForm.vue';
 import DriverList from './views/DriverList.vue';
 import DriverForm from './views/DriverForm.vue';
+import CustomerList from './views/CustomerList.vue';
+import CustomerForm from './views/CustomerForm.vue';
+import CustomerLocationForm from './views/CustomerLocationForm.vue';
 import OrderList from './views/OrderList.vue';
 import OrderForm from './views/OrderForm.vue';
 import TourList from './views/TourList.vue';
@@ -35,6 +38,11 @@ const router = createRouter({
         { path: '/drivers', component: DriverList },
         { path: '/drivers/new', component: DriverForm, meta: { capability: 'masterData.write' } },
         { path: '/drivers/:id', component: DriverForm, meta: { capability: 'masterData.write' } },
+        { path: '/customers', component: CustomerList },
+        { path: '/customers/new', component: CustomerForm, meta: { capability: 'masterData.write' } },
+        { path: '/customers/:id', component: CustomerForm, meta: { capability: 'masterData.write' } },
+        { path: '/customers/:id/locations/new', component: CustomerLocationForm, meta: { capability: 'masterData.write' } },
+        { path: '/customers/:id/locations/:locationId', component: CustomerLocationForm, meta: { capability: 'masterData.write' } },
         { path: '/orders', component: OrderList },
         { path: '/orders/new', component: OrderForm, meta: { capability: 'dispatch.write' } },
         { path: '/orders/:id', component: OrderForm, meta: { capability: 'dispatch.write' } },

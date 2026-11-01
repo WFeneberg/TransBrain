@@ -23,6 +23,7 @@ export interface Order {
     deliveryTo: string;
     status: string;
     createdAt: string;
+    consigneeLocationId: string | null;
 }
 
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
@@ -36,6 +37,7 @@ export interface OrderWriteRequest {
     pickupTo: string;
     deliveryFrom: string;
     deliveryTo: string;
+    consigneeLocationId: string | null;
 }
 
 export interface PagedResult<T> {

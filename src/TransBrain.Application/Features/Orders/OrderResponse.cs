@@ -27,7 +27,8 @@ public sealed record OrderResponse(
     DateTimeOffset DeliveryFrom,
     DateTimeOffset DeliveryTo,
     string Status,
-    DateTimeOffset CreatedAt)
+    DateTimeOffset CreatedAt,
+    Guid? ConsigneeLocationId)
 {
     public static OrderResponse From(TransportOrder order) => new(
         order.Id,
@@ -42,5 +43,6 @@ public sealed record OrderResponse(
         order.DeliveryWindow.From,
         order.DeliveryWindow.To,
         order.Status.ToString(),
-        order.CreatedAt);
+        order.CreatedAt,
+        order.ConsigneeLocationId);
 }

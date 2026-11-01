@@ -7,43 +7,17 @@ using TransBrain.Domain.Routing;
 namespace TransBrain.Infrastructure.Routing;
 
 /// <remarks>
-/// OpenRouteService answers both geocoding and truck routing behind one API key. Routing uses the
-/// driving-hgv profile, so the road network excludes roads closed to heavy goods vehicles.
-/// Without a key every call answers Unavailable instead of guessing, so the map shows an honest
-/// error rather than a route that ignores truck restrictions.
+/// OpenRouteService answers truck routing behind an API key. Routing uses the driving-hgv profile,
+/// so the road network excludes roads closed to heavy goods vehicles. Without a key every call
+/// answers Unavailable instead of guessing, so the map shows an honest error rather than a route
+/// that ignores truck restrictions. Geocoding is handled by NominatimGeocoder instead.
 /// </remarks>
 internal sealed class OpenRouteServiceClient(HttpClient httpClient, IOptions<OpenRouteServiceOptions> options)
-    : IGeocoder, IRoutePlanner
+    : IRoutePlanner
 {
     private const string TruckProfile = "driving-hgv";
 
     private readonly OpenRouteServiceOptions _options = options.Value;
-
-    public async Task<Result<GeoPoint>> GeocodeAsync(Address address, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(_options.ApiKey))
-        {
-            return NotConfigured();
-        }
-
-        string text = $"{address.Street}, {address.PostalCode} {address.City}, {address.Country}";
-        Result<GeocodeResponse> response = await GetAsync<GeocodeResponse>(
-            $"geocode/search?text={Uri.EscapeDataString(text)}&size=1",
-            cancellationToken);
-
-        if (!response.IsSuccess)
-        {
-            return response.Error!;
-        }
-
-        if (response.Value.Features.Count == 0)
-        {
-            return Error.NotFound("Geocoding.NoMatch", $"No place found for '{text}'.");
-        }
-
-        double[] coordinates = response.Value.Features[0].Geometry.Coordinates;
-        return GeoPoint.Create(latitude: coordinates[1], longitude: coordinates[0]);
-    }
 
     public async Task<Result<RoadRoute>> PlanAsync(IReadOnlyList<GeoPoint> waypoints, CancellationToken cancellationToken)
     {
@@ -144,12 +118,6 @@ internal sealed class OpenRouteServiceClient(HttpClient httpClient, IOptions<Ope
     private static Error NotConfigured() => Error.Unavailable(
         "Routing.NotConfigured",
         "Routing is not configured. Set OpenRouteService:ApiKey.");
-
-    private sealed record GeocodeResponse(IReadOnlyList<PointFeature> Features);
-
-    private sealed record PointFeature(PointGeometry Geometry);
-
-    private sealed record PointGeometry(double[] Coordinates);
 
     private sealed record DirectionsResponse(IReadOnlyList<LineFeature> Features);
 

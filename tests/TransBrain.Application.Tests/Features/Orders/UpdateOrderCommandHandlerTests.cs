@@ -45,7 +45,7 @@ public class UpdateOrderCommandHandlerTests
         InMemoryTransportOrderRepository repository = new();
         TransportOrder order = ADraftOrder();
         repository.Seed(order);
-        UpdateOrderCommandHandler handler = new(repository);
+        UpdateOrderCommandHandler handler = new(repository, new InMemoryCustomerRepository());
 
         Result<OrderResponse> result = await handler.Handle(CommandFor(order.Id), CancellationToken.None);
 
@@ -61,7 +61,7 @@ public class UpdateOrderCommandHandlerTests
     public async Task Handle_UnknownOrder_ReturnsNotFoundAndDoesNotSave()
     {
         InMemoryTransportOrderRepository repository = new();
-        UpdateOrderCommandHandler handler = new(repository);
+        UpdateOrderCommandHandler handler = new(repository, new InMemoryCustomerRepository());
 
         Result<OrderResponse> result = await handler.Handle(
             CommandFor(Guid.CreateVersion7()), CancellationToken.None);
@@ -79,7 +79,7 @@ public class UpdateOrderCommandHandlerTests
         TransportOrder order = ADraftOrder();
         order.MarkPlanned();
         repository.Seed(order);
-        UpdateOrderCommandHandler handler = new(repository);
+        UpdateOrderCommandHandler handler = new(repository, new InMemoryCustomerRepository());
 
         Result<OrderResponse> result = await handler.Handle(CommandFor(order.Id), CancellationToken.None);
 
@@ -95,7 +95,7 @@ public class UpdateOrderCommandHandlerTests
         InMemoryTransportOrderRepository repository = new();
         TransportOrder order = ADraftOrder();
         repository.Seed(order);
-        UpdateOrderCommandHandler handler = new(repository);
+        UpdateOrderCommandHandler handler = new(repository, new InMemoryCustomerRepository());
 
         UpdateOrderCommand command = CommandFor(order.Id) with { Consignor = AnAddress("   ") };
 
@@ -112,7 +112,7 @@ public class UpdateOrderCommandHandlerTests
         InMemoryTransportOrderRepository repository = new();
         TransportOrder order = ADraftOrder();
         repository.Seed(order);
-        UpdateOrderCommandHandler handler = new(repository);
+        UpdateOrderCommandHandler handler = new(repository, new InMemoryCustomerRepository());
 
         // Delivery starts an hour before the pickup window ends.
         UpdateOrderCommand command = CommandFor(order.Id) with

@@ -86,7 +86,8 @@ public sealed class OrderEndpoints : IEndpointGroup
                         request.PickupFrom,
                         request.PickupTo,
                         request.DeliveryFrom,
-                        request.DeliveryTo),
+                        request.DeliveryTo,
+                        request.ConsigneeLocationId),
                     ct);
                 return result.ToHttpResult();
             })
@@ -122,4 +123,5 @@ public sealed record UpdateOrderRequest(
     DateTimeOffset PickupFrom,
     DateTimeOffset PickupTo,
     DateTimeOffset DeliveryFrom,
-    DateTimeOffset DeliveryTo);
+    DateTimeOffset DeliveryTo,
+    Guid? ConsigneeLocationId = null);

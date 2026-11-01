@@ -9,6 +9,9 @@
             @if (session.areas().has('drivers')) {
                 <a mat-button routerLink="/drivers" data-testid="nav-drivers">{{ i18n.t('nav.drivers') }}</a>
             }
+            @if (session.areas().has('customers')) {
+                <a mat-button routerLink="/customers" data-testid="nav-customers">{{ i18n.t('nav.customers') }}</a>
+            }
             @if (session.areas().has('orders')) {
                 <a mat-button routerLink="/orders" data-testid="nav-orders">{{ i18n.t('nav.orders') }}</a>
             }

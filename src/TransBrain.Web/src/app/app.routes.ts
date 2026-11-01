@@ -5,6 +5,10 @@ const loadVehicleList = () => import('./vehicles/vehicle-list.component').then((
 const loadVehicleForm = () => import('./vehicles/vehicle-form.component').then((m) => m.VehicleFormComponent);
 const loadDriverList = () => import('./drivers/driver-list.component').then((m) => m.DriverListComponent);
 const loadDriverForm = () => import('./drivers/driver-form.component').then((m) => m.DriverFormComponent);
+const loadCustomerList = () => import('./customers/customer-list.component').then((m) => m.CustomerListComponent);
+const loadCustomerForm = () => import('./customers/customer-form.component').then((m) => m.CustomerFormComponent);
+const loadCustomerLocationForm = () =>
+    import('./customers/customer-location-form.component').then((m) => m.CustomerLocationFormComponent);
 const loadOrderList = () => import('./orders/order-list.component').then((m) => m.OrderListComponent);
 const loadOrderForm = () => import('./orders/order-form.component').then((m) => m.OrderFormComponent);
 const loadTourList = () => import('./tours/tour-list.component').then((m) => m.TourListComponent);
@@ -27,6 +31,11 @@ export const routes: Routes = [
     { path: 'drivers', loadComponent: loadDriverList, canActivate: [requireAuthentication] },
     { path: 'drivers/new', loadComponent: loadDriverForm, canActivate: [requireCapability('masterData.write')] },
     { path: 'drivers/:id', loadComponent: loadDriverForm, canActivate: [requireCapability('masterData.write')] },
+    { path: 'customers', loadComponent: loadCustomerList, canActivate: [requireAuthentication] },
+    { path: 'customers/new', loadComponent: loadCustomerForm, canActivate: [requireCapability('masterData.write')] },
+    { path: 'customers/:id', loadComponent: loadCustomerForm, canActivate: [requireCapability('masterData.write')] },
+    { path: 'customers/:id/locations/new', loadComponent: loadCustomerLocationForm, canActivate: [requireCapability('masterData.write')] },
+    { path: 'customers/:id/locations/:locationId', loadComponent: loadCustomerLocationForm, canActivate: [requireCapability('masterData.write')] },
     { path: 'orders', loadComponent: loadOrderList, canActivate: [requireAuthentication] },
     { path: 'orders/new', loadComponent: loadOrderForm, canActivate: [requireCapability('dispatch.write')] },
     { path: 'orders/:id', loadComponent: loadOrderForm, canActivate: [requireCapability('dispatch.write')] },

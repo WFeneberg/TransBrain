@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using TransBrain.Domain.Customers;
 using TransBrain.Domain.Orders;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
@@ -50,6 +51,11 @@ internal sealed class TransportOrderConfiguration : IEntityTypeConfiguration<Tra
             window.Property(w => w.From).HasColumnName("delivery_from").IsRequired();
             window.Property(w => w.To).HasColumnName("delivery_to").IsRequired();
         });
+
+        builder.HasOne<CustomerLocation>()
+            .WithMany()
+            .HasForeignKey(o => o.ConsigneeLocationId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(o => o.CreatedAt).IsRequired();

@@ -5,7 +5,7 @@ using TransBrain.Domain.Orders;
 
 namespace TransBrain.Application.Features.Orders.UpdateOrder;
 
-internal sealed class UpdateOrderCommandHandler(ITransportOrderRepository repository)
+internal sealed class UpdateOrderCommandHandler(ITransportOrderRepository repository, ICustomerRepository customers)
     : ICommandHandler<UpdateOrderCommand, OrderResponse>
 {
     public async Task<Result<OrderResponse>> Handle(
@@ -62,11 +62,17 @@ internal sealed class UpdateOrderCommandHandler(ITransportOrderRepository reposi
             return delivery.Error!;
         }
 
+        if (command.ConsigneeLocationId is { } locationId
+            && await customers.GetLocationByIdAsync(locationId, cancellationToken) is null)
+        {
+            return Error.NotFound("CustomerLocation.NotFound", $"No delivery location with id '{locationId}'.");
+        }
+
         // TransportOrder.Update refuses a non-draft order with a Conflict, so the handler does
         // not re-check the status: the rule lives in the entity, and duplicating it here would
         // be the same mistake a validator duplicating a domain invariant makes.
         Result<TransportOrder> updated = order.Update(
-            consignor.Value, consignee.Value, cargo.Value, pickup.Value, delivery.Value);
+            consignor.Value, consignee.Value, cargo.Value, pickup.Value, delivery.Value, command.ConsigneeLocationId);
 
         if (!updated.IsSuccess)
         {

@@ -8,6 +8,7 @@ namespace TransBrain.Application.Features.Orders.CreateOrder;
 internal sealed class CreateOrderCommandHandler(
     ITransportOrderRepository repository,
     IOrderNumberGenerator orderNumbers,
+    ICustomerRepository customers,
     TimeProvider timeProvider)
     : ICommandHandler<CreateOrderCommand, OrderResponse>
 {
@@ -59,6 +60,12 @@ internal sealed class CreateOrderCommandHandler(
             return delivery.Error!;
         }
 
+        if (command.ConsigneeLocationId is { } locationId
+            && await customers.GetLocationByIdAsync(locationId, cancellationToken) is null)
+        {
+            return Error.NotFound("CustomerLocation.NotFound", $"No delivery location with id '{locationId}'.");
+        }
+
         DateTimeOffset now = timeProvider.GetUtcNow();
         OrderNumber orderNumber = await orderNumbers.NextAsync(now.Year, cancellationToken);
 
@@ -69,7 +76,8 @@ internal sealed class CreateOrderCommandHandler(
             cargo.Value,
             pickup.Value,
             delivery.Value,
-            now);
+            now,
+            command.ConsigneeLocationId);
 
         if (!order.IsSuccess)
         {

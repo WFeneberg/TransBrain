@@ -23,7 +23,8 @@ public sealed class TransportOrder
         Cargo cargo,
         TimeWindow pickupWindow,
         TimeWindow deliveryWindow,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        Guid? consigneeLocationId)
     {
         Id = id;
         OrderNumber = orderNumber;
@@ -33,6 +34,7 @@ public sealed class TransportOrder
         PickupWindow = pickupWindow;
         DeliveryWindow = deliveryWindow;
         CreatedAt = createdAt;
+        ConsigneeLocationId = consigneeLocationId;
         Status = OrderStatus.Draft;
     }
 
@@ -54,6 +56,12 @@ public sealed class TransportOrder
 
     public DateTimeOffset CreatedAt { get; private set; }
 
+    /// <summary>
+    /// The customer delivery location the consignee was picked from, if any. The consignee
+    /// address stays a copy on the order: editing the location later does not rewrite past orders.
+    /// </summary>
+    public Guid? ConsigneeLocationId { get; private set; }
+
     public static Result<TransportOrder> Create(
         OrderNumber orderNumber,
         Address consignor,
@@ -61,7 +69,8 @@ public sealed class TransportOrder
         Cargo cargo,
         TimeWindow pickupWindow,
         TimeWindow deliveryWindow,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        Guid? consigneeLocationId = null)
     {
         Result<Unit> windows = ValidateWindows(pickupWindow, deliveryWindow);
         if (!windows.IsSuccess)
@@ -77,7 +86,8 @@ public sealed class TransportOrder
             cargo,
             pickupWindow,
             deliveryWindow,
-            createdAt.ToUniversalTime());
+            createdAt.ToUniversalTime(),
+            consigneeLocationId);
     }
 
     /// <remarks>Editable only while the order is still a draft; spec §6.4.</remarks>
@@ -86,7 +96,8 @@ public sealed class TransportOrder
         Address consignee,
         Cargo cargo,
         TimeWindow pickupWindow,
-        TimeWindow deliveryWindow)
+        TimeWindow deliveryWindow,
+        Guid? consigneeLocationId = null)
     {
         if (Status != OrderStatus.Draft)
         {
@@ -106,6 +117,7 @@ public sealed class TransportOrder
         Cargo = cargo;
         PickupWindow = pickupWindow;
         DeliveryWindow = deliveryWindow;
+        ConsigneeLocationId = consigneeLocationId;
 
         return this;
     }

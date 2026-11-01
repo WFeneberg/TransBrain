@@ -9,7 +9,7 @@ export type Capability = 'read' | 'masterData.write' | 'dispatch.write' | 'tourS
 export type AppRole = 'admin' | 'disponent' | 'fahrer' | 'viewer';
 
 /** The four functional areas of the application. */
-export type Area = 'vehicles' | 'drivers' | 'orders' | 'tours';
+export type Area = 'vehicles' | 'drivers' | 'customers' | 'orders' | 'tours';
 
 const CAPABILITIES_BY_ROLE: Record<AppRole, readonly Capability[]> = {
     admin: ['read', 'masterData.write', 'dispatch.write', 'tourStatus.write'],
@@ -25,10 +25,10 @@ const CAPABILITIES_BY_ROLE: Record<AppRole, readonly Capability[]> = {
  * still works; see the guards in auth/capability.guard.ts.
  */
 const AREAS_BY_ROLE: Record<AppRole, readonly Area[]> = {
-    admin: ['vehicles', 'drivers', 'orders', 'tours'],
-    disponent: ['vehicles', 'drivers', 'orders', 'tours'],
+    admin: ['vehicles', 'drivers', 'customers', 'orders', 'tours'],
+    disponent: ['vehicles', 'drivers', 'customers', 'orders', 'tours'],
     fahrer: ['tours'],
-    viewer: ['vehicles', 'drivers', 'orders', 'tours'],
+    viewer: ['vehicles', 'drivers', 'customers', 'orders', 'tours'],
 };
 
 const ALL_ROLES = Object.keys(CAPABILITIES_BY_ROLE) as AppRole[];

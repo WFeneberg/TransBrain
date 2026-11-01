@@ -169,6 +169,53 @@ Erreichbar über „Add driver“ (neu, `/drivers/new`) oder „Edit“ in der L
   serverseitige Fehler werden auf dieselbe Weise wie im Fahrzeugformular direkt am
   betroffenen Feld angezeigt.
 
+## Kundenliste
+
+Erreichbar über den Menüpunkt **Kunden** (für `admin`, `disponent` und `viewer`; für den
+Fahrer ausgeblendet).
+
+- Angezeigte Spalten: Name, PLZ und Ort, Ansprechpartner, E-Mail.
+- Schaltfläche **„Add customer“** legt einen neuen Kunden an (nur `admin`).
+- Pro Zeile: **„Edit“** und **„Delete“** (nur `admin`).
+- Es gibt keine Suche und keine Filter. Angezeigt werden die ersten 100 Kunden, alphabetisch
+  nach Name sortiert.
+
+## Kundenformular (Anlegen / Bearbeiten)
+
+Erreichbar über „Add customer“ (neu, `/customers/new`) oder „Edit“ in der Liste
+(`/customers/{id}`). Nur für `admin`.
+
+| Feld (Beschriftung)  | Bedeutung                          | Pflichtfeld | Regeln                                                |
+|----------------------|------------------------------------|:-----------:|-------------------------------------------------------|
+| Name                 | Firmenname                         | ja          | darf nicht leer sein, höchstens 200 Zeichen           |
+| Street               | Straße                             | ja          | darf nicht leer sein, höchstens 200 Zeichen           |
+| Postal code          | PLZ                                | ja          | darf nicht leer sein, höchstens 20 Zeichen            |
+| City                 | Ort                                | ja          | darf nicht leer sein, höchstens 200 Zeichen           |
+| Country              | Land                               | ja          | zwei Buchstaben nach ISO 3166-1, z. B. `AT` oder `DE` |
+| Contact person       | Ansprechpartner                    | nein        | höchstens 200 Zeichen                                 |
+| E-mail               | E-Mail-Adresse                     | nein        | gültige E-Mail-Adresse, wenn angegeben                |
+| Phone                | Telefon                            | nein        | höchstens 50 Zeichen                                  |
+| VAT ID (UID)         | UID-Nummer, z. B. `ATU12345678`    | nein        | höchstens 20 Zeichen                                  |
+| Payment term (days)  | Zahlungsziel in Tagen              | ja          | 0 bis 365; 0 bedeutet sofort fällig                   |
+
+- **„Save“** und **„Cancel“** verhalten sich wie im Fahrzeugformular.
+- Fehlende Pflichtfelder und ungültige Werte werden direkt am Feld angezeigt. Ein Fehler, den
+  der Server meldet (etwa ein ungültiges Land), erscheint oberhalb des Formulars.
+
+### Anlieferorte
+
+Ein Kunde kann mehrere Anlieferorte haben, jeweils mit eigener Adresse und eigenem
+Ansprechpartner. Die Anlieferorte stehen unter dem Abschnitt „Anlieferorte“ im Kundenformular.
+Dieser Abschnitt erscheint erst im Bearbeitungsmodus, also nachdem der Kunde gespeichert wurde.
+
+- Schaltfläche **„Add delivery location“** öffnet ein Formular für einen neuen Anlieferort
+  (`/customers/{id}/locations/new`).
+- Pro Zeile: **„Edit“** und **„Delete“** (nur `admin`).
+- Felder: Bezeichnung des Anlieferorts (Pflicht), Straße, PLZ, Ort und Land (Pflicht, wie beim
+  Kunden), Ansprechperson, deren Telefon und E-Mail (optional).
+- Die Adresse eines Anlieferorts ist unabhängig von der Firmenadresse des Kunden. Im Bearbeitungsmodus zeigt eine Karte die Lage des Anlieferorts. Die Position wird aus der Adresse über Nominatim (OpenStreetMap) bestimmt. Der Dienst ist frei und braucht keinen Schlüssel. Ist die Adresse unbekannt, sagt ein Hinweis das ausdrücklich. Wird ein Kunde
+  gelöscht, werden seine Anlieferorte mit gelöscht.
+
 ## Auftragsliste
 
 Erreichbar über `/orders`.
@@ -199,6 +246,12 @@ derselben Zeile durch **„Confirm cancel“** und **„Keep order“**. Erst �
 storniert tatsächlich; „Keep order“ bricht ab und ändert nichts.
 
 ## Auftragsformular (Anlegen / Bearbeiten)
+
+Anlieferort (optional): Ganz oben im Empfänger-Bereich wählen Sie einen gespeicherten Anlieferort
+aus den Kundenstammdaten. Die Empfängerfelder werden daraufhin mit Bezeichnung und Adresse des
+Anlieferorts gefüllt und können danach noch geändert werden. Der Auftrag speichert die Adresse, wie
+sie beim Speichern eingetragen ist; spätere Änderungen am Anlieferort wirken nicht auf bestehende
+Aufträge. Ohne Auswahl tragen Sie die Empfängeradresse wie bisher von Hand ein.
 
 Erreichbar über „Add order“ (`/orders/new`) oder „Edit“ (`/orders/{id}`).
 
@@ -470,7 +523,7 @@ Tour dem erstbesten Fahrer überlassen.
 Die Anmeldung erfolgt über Keycloak mit genau einer der vier Rollen `admin`,
 `disponent`, `fahrer` oder `viewer`.
 
-| Rolle       | Ansehen          | Fahrzeuge/Fahrer pflegen | Aufträge pflegen | Touren planen | Tour starten/abschließen |
+| Rolle       | Ansehen          | Fahrzeuge/Fahrer/Kunden pflegen | Aufträge pflegen | Touren planen | Tour starten/abschließen |
 |-------------|------------------|:------------------------:|:----------------:|:-------------:|:------------------------:|
 | `admin`     | alles            | ja                       | ja               | ja            | ja                       |
 | `disponent` | alles            | **nein**                 | **ja**           | **ja**        | **ja**                   |
@@ -479,21 +532,21 @@ Die Anmeldung erfolgt über Keycloak mit genau einer der vier Rollen `admin`,
 
 **Aufträge und Touren sind die Ausnahme von der Regel „nur `admin` darf schreiben“.** Ein
 Disponent darf beides anlegen, ändern und stornieren beziehungsweise planen — das ist genau seine
-Aufgabe. Bei Fahrzeugen und Fahrern (Stammdaten) darf er weiterhin nur lesen.
+Aufgabe. Bei Fahrzeugen, Fahrern und Kunden (Stammdaten) darf er weiterhin nur lesen.
 
 **Der Fahrer ist die zweite Ausnahme:** Er darf nichts anlegen, aber seine eigenen Touren starten
 und abschließen — siehe Abschnitt „Touren als Fahrer“.
 
 
 **Die Oberfläche bietet nur an, was Ihre Rolle auch darf.** Die Schaltflächen
-„Add vehicle“/„Add driver“, „Edit“ und „Delete“ erscheinen ausschließlich für die Rolle
+„Add vehicle“/„Add driver“/„Add customer“, „Edit“ und „Delete“ erscheinen ausschließlich für die Rolle
 `admin`; „New order“, „Edit“, „Cancel order“ und „Plan tour“ nur für `admin` und
 `disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Wer
 eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
 
 Das **Lesen** ist davon unberührt: alle vier Rollen dürfen alle Listen ansehen, mit der
 einen Ausnahme, dass ein Fahrer in der Tourenliste nur seine eigenen Touren sieht. Die
-Navigation blendet für einen Fahrer die Bereiche Fahrzeuge, Fahrer und Aufträge aus, weil
+Navigation blendet für einen Fahrer die Bereiche Fahrzeuge, Fahrer, Kunden und Aufträge aus, weil
 er sie für seine Arbeit nicht braucht — über die Adresszeile bleiben sie erreichbar.
 
 Sollten Sie dennoch eine Ablehnung mit `HTTP 403` sehen, ist das kein Bedienfehler: Es

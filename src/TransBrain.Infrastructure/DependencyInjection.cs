@@ -14,13 +14,19 @@ public static class DependencyInjection
     {
         services.AddScoped<IVehicleRepository, VehicleRepository>();
         services.AddScoped<IDriverRepository, DriverRepository>();
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<ITransportOrderRepository, TransportOrderRepository>();
         services.AddScoped<IOrderNumberGenerator, SequentialOrderNumberGenerator>();
         services.AddScoped<ITourRepository, TourRepository>();
         services.AddScoped<ICacheService, RedisCacheService>();
         services.AddHttpClient<OpenRouteServiceClient>((provider, client) =>
             client.BaseAddress = new Uri(provider.GetRequiredService<IOptions<OpenRouteServiceOptions>>().Value.BaseUrl));
-        services.AddTransient<IGeocoder>(provider => provider.GetRequiredService<OpenRouteServiceClient>());
+        services.AddHttpClient<NominatimGeocoder>(client =>
+        {
+            client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TransBrain/1.0 (dispatch application)");
+        });
+        services.AddTransient<IGeocoder>(provider => provider.GetRequiredService<NominatimGeocoder>());
         services.AddTransient<IRoutePlanner>(provider => provider.GetRequiredService<OpenRouteServiceClient>());
         return services;
     }

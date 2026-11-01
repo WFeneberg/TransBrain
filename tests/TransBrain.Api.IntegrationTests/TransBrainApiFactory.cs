@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Testcontainers.PostgreSql;
+using TransBrain.Application.Abstractions;
 using TransBrain.Infrastructure.Persistence;
 
 namespace TransBrain.Api.IntegrationTests;
@@ -53,6 +55,9 @@ public sealed class TransBrainApiFactory : WebApplicationFactory<Program>, IAsyn
         {
             services.AddAuthentication(TestAuthHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+
+            // Integration tests must not reach the internet: geocoding answers Unavailable here.
+            services.Replace(ServiceDescriptor.Singleton<IGeocoder, OfflineGeocoder>());
         });
     }
 }

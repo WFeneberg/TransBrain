@@ -10,6 +10,7 @@ import { I18nService } from '../i18n/i18n.service';
 import { LocationMapComponent, MapMarker } from '../shared/location-map.component';
 import {Observable, switchMap} from 'rxjs';
 import { LocatedParty, Order, OrderLocations, OrderService, OrderWriteRequest } from './order.service';
+import { CustomerLocationOption, CustomerLocationService } from '../customers/customer-location.service';
 
 interface ProblemDetailsBody {
     errors?: Record<string, string[]>;
@@ -67,6 +68,26 @@ interface ProblemDetailsBody {
                         <mat-error data-testid="order-consignor-country-error">{{ fieldErrorText(errors) }}</mat-error>
                     }
                 </mat-form-field>
+            </fieldset>
+            <fieldset>
+                <legend>{{ i18n.t('orders.consigneeLocation') }}</legend>
+                <mat-form-field>
+                    <mat-label>{{ i18n.t('orders.consigneeLocation') }}</mat-label>
+                    <select
+                        matNativeControl
+                        formControlName="consigneeLocationId"
+                        (change)="onLocationChange($event)"
+                        data-testid="order-consigneeLocation"
+                    >
+                        <option value="">{{ i18n.t('orders.consigneeLocation.none') }}</option>
+                        @for (option of locationOptions(); track option.id) {
+                            <option [value]="option.id">{{ option.customerName }}: {{ option.name }}, {{ option.city }}</option>
+                        }
+                    </select>
+                </mat-form-field>
+                @if (locationPickerError(); as message) {
+                    <p data-testid="order-consigneeLocation-error">{{ message }}</p>
+                }
             </fieldset>
             <fieldset formGroupName="consignee">
                 <legend>{{ i18n.t('orders.consignee') }}</legend>
@@ -223,6 +244,7 @@ export class OrderFormComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
+    private readonly locationService = inject(CustomerLocationService);
     // SessionService.ready is what guarantees angular-auth-oidc-client has rehydrated its
     // stored session before the first request goes out. A form reached by a DIRECT navigation -
     // a bookmark, a page reload while editing, browser back - has no list component in its
@@ -236,6 +258,8 @@ export class OrderFormComponent {
     protected readonly formError = signal<string | null>(null);
     protected readonly locations = signal<OrderLocations | null>(null);
     protected readonly locationError = signal<string | null>(null);
+    protected readonly locationOptions = signal<CustomerLocationOption[]>([]);
+    protected readonly locationPickerError = signal<string | null>(null);
     protected readonly mapMarkers = computed<MapMarker[]>(() => {
         const located = this.locations();
         if (!located) {
@@ -257,9 +281,11 @@ export class OrderFormComponent {
         pickupTo: ['', Validators.required],
         deliveryFrom: ['', Validators.required],
         deliveryTo: ['', Validators.required],
+        consigneeLocationId: [''],
     });
 
     constructor() {
+        this.loadLocationOptions();
         if (this.isEditMode) {
             this.session.ready.pipe(switchMap(() => this.service.getById(this.orderId!))).subscribe({
                 next: (order: Order) => this.patchFrom(order),
@@ -270,6 +296,31 @@ export class OrderFormComponent {
             });
             this.loadLocations();
         }
+    }
+
+    // Picking a location only copies its address into the consignee fields. The order keeps
+    // that copy and the reference, so later edits to the location do not change this order.
+    protected onLocationChange(event: Event): void {
+        const id = (event.target as HTMLSelectElement).value;
+        const option = this.locationOptions().find((o) => o.id === id);
+        if (!option) {
+            return;
+        }
+        this.form.controls.consignee.patchValue({
+            name: option.name,
+            street: option.street,
+            postalCode: option.postalCode,
+            city: option.city,
+            country: option.country,
+        });
+    }
+
+    private loadLocationOptions(): void {
+        this.session.ready.pipe(switchMap(() => this.locationService.listAll())).subscribe({
+            next: (page) => this.locationOptions.set(page.items),
+            error: (error: HttpErrorResponse) =>
+                this.locationPickerError.set(this.describeFailure(error, this.i18n.t('orders.consigneeLocation.error'))),
+        });
     }
 
     // The map is advisory: a failure here must never block the form, so it has its own error.
@@ -330,6 +381,7 @@ export class OrderFormComponent {
             pickupTo: this.toIso(value.pickupTo),
             deliveryFrom: this.toIso(value.deliveryFrom),
             deliveryTo: this.toIso(value.deliveryTo),
+            consigneeLocationId: value.consigneeLocationId || null,
         };
 
         const save$: Observable<Order> = this.session.ready.pipe(
@@ -369,6 +421,7 @@ export class OrderFormComponent {
             pickupTo: this.toLocalInput(order.pickupTo),
             deliveryFrom: this.toLocalInput(order.deliveryFrom),
             deliveryTo: this.toLocalInput(order.deliveryTo),
+            consigneeLocationId: order.consigneeLocationId ?? '',
         });
     }
 

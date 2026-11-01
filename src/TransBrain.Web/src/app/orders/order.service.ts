@@ -24,6 +24,7 @@ export interface Order {
     deliveryTo: string;
     status: string;
     createdAt: string;
+    consigneeLocationId: string | null;
 }
 
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
@@ -37,6 +38,7 @@ export interface OrderWriteRequest {
     pickupTo: string;
     deliveryFrom: string;
     deliveryTo: string;
+    consigneeLocationId: string | null;
 }
 
 /** One party's location; `null` in OrderLocations means its address could not be geocoded. */

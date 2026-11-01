@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TransBrain.Domain.Customers;
 using TransBrain.Domain.Drivers;
 using TransBrain.Domain.Orders;
 using TransBrain.Domain.Tours;
@@ -15,6 +16,10 @@ public sealed class TransBrainDbContext(DbContextOptions<TransBrainDbContext> op
     public DbSet<TransportOrder> TransportOrders => Set<TransportOrder>();
 
     public DbSet<Tour> Tours => Set<Tour>();
+
+    public DbSet<Customer> Customers => Set<Customer>();
+
+    public DbSet<CustomerLocation> CustomerLocations => Set<CustomerLocation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
