@@ -96,59 +96,110 @@ auf, für das Ihnen die Berechtigung fehlt, bringt die Anwendung Sie zur Startse
 
 ## Fahrzeugliste
 
-Erreichbar über `/vehicles` oder die Kachel **Vehicles** auf der Startseite.
+Erreichbar über `/vehicles`, den Menüpunkt **Vehicles** oder die Kachel **Vehicles** auf der
+Startseite. Hier pflegen Sie die Stammdaten des Fuhrparks.
 
-- Angezeigte Spalten: License plate (Kennzeichen), Type (Fahrzeugtyp), Payload (kg)
-  (Zuladung).
-- Schaltfläche **„Add vehicle“** oberhalb der Tabelle legt ein neues Fahrzeug an.
-- Pro Zeile: **„Edit“** öffnet das Fahrzeug zum Bearbeiten, **„Delete“** löscht es sofort
-  (ohne Rückfrage-Dialog).
+![Fahrzeugliste](img/web/fahrzeugliste.png)
 
-**Bekannte Einschränkungen der Liste (Stand dieser Phase):**
-
-- Es gibt weder eine Filter- noch eine Sortiermöglichkeit in der Oberfläche. Die API
-  unterstützt zwar Filter nach Status und Typ sowie Seitenweise-Abruf, aber die Oberfläche
-  ruft immer nur die erste Seite mit der Standardgröße ab. Bei mehr als 20 Fahrzeugen sind
-  ältere Einträge in dieser Ansicht **nicht sichtbar**.
-- Es gibt noch keine Navigation (kein Menü) zwischen der Fahrzeug- und der Fahrerliste.
-  Um die Fahrerliste zu öffnen, muss die Adresse `/drivers` direkt in der Adressleiste des
-  Browsers eingegeben werden.
+- Unter der Überschrift steht die Anzahl der geladenen Fahrzeuge (z. B. „3 vehicles“).
+- **Filterleiste:**
+  - **Vehicle search** sucht ohne Beachtung der Groß-/Kleinschreibung in Kennzeichen,
+    Marke, Typbezeichnung, Fahrgestellnummer und Frächtergruppe.
+  - **Status** und **Vehicle type** schränken die Liste auf einen Status bzw. eine
+    Fahrzeugart ein („All“ hebt den Filter auf).
+  - Alle Filter wirken sofort und lassen sich kombinieren. Passt kein Fahrzeug, erscheint
+    „No vehicles found.“
+- **Spalten:** License plate, Vehicle type, Make / Model, Vehicle class, Payload (kg),
+  Default driver, Next inspection, Status. Ein Klick auf eine Spaltenüberschrift sortiert
+  auf- bzw. absteigend.
+- **Markierungen:**
+  - Ein **Schloss** neben dem Kennzeichen bedeutet „Kennzeichen geheim“.
+  - Das Datum der nächsten Untersuchung ist **rot** hinterlegt, wenn sie überfällig ist,
+    und **gelb**, wenn sie in den nächsten 30 Tagen fällig wird.
+  - Der Status erscheint als farbiger Chip: Available (grün), In workshop (orange),
+    Decommissioned (grau).
+- **Aktionen** (nur für Administratoren sichtbar):
+  - **„Add vehicle“** oben rechts legt ein neues Fahrzeug an.
+  - Pro Zeile öffnet das **Stift-Symbol** das Fahrzeug zum Bearbeiten.
+  - Das **Papierkorb-Symbol** löscht das Fahrzeug erst nach einer Sicherheitsabfrage
+    („Do you really want to delete vehicle …?“, **„Delete“** / **„Cancel“**).
+- Die Liste lädt bis zu 100 Fahrzeuge; Suche, Filter und Sortierung arbeiten auf diesen
+  geladenen Einträgen.
 
 ## Fahrzeugformular (Anlegen / Bearbeiten)
 
-Erreichbar über „Add vehicle“ (neu, `/vehicles/new`) oder „Edit“ in der Liste
-(`/vehicles/{id}`).
+Erreichbar über „Add vehicle“ (neu, `/vehicles/new`) oder das Stift-Symbol in der Liste
+(`/vehicles/{id}`). Das Formular ist in fünf Bereiche gegliedert, auf breiten Bildschirmen
+in zwei Spalten.
 
-| Feld (Beschriftung)  | Bedeutung                       | Pflichtfeld | Regeln                                  |
-|----------------------|----------------------------------|:-----------:|------------------------------------------|
-| License plate        | Kennzeichen                      | ja          | muss eindeutig sein (siehe unten)         |
-| Type                 | Fahrzeugtyp                      | ja          | Auswahl: Tractor, RigidTruck, Van         |
-| Payload (kg)         | Zuladung in Kilogramm            | ja          | muss größer als 0 sein                    |
-| Load meters          | Lademeter                        | ja          | muss größer als 0 sein                    |
-| Next inspection due  | Datum der nächsten Untersuchung  | ja          | Datum                                     |
+![Fahrzeugformular](img/web/fahrzeugformular.png)
 
-- **„Save“** speichert; bei Erfolg erfolgt die Rückkehr zur Liste.
-- **„Cancel“** verwirft die Eingabe und kehrt ohne Speichern zur Liste zurück.
+Alle Felder außer den mit * markierten Pflichtfeldern sind optional. Zahlenfelder müssen,
+wenn sie ausgefüllt sind, größer als 0 sein.
+
+| Bereich | Feld (Beschriftung) | Bedeutung | Pflicht | Regeln |
+|---|---|---|:---:|---|
+| General | License plate | Kennzeichen | ja | eindeutig, max. 15 Zeichen |
+| General | License plate confidential | Kennzeichen geheim | – | Häkchen; Schloss-Symbol in der Liste |
+| General | Vehicle type | Fahrzeugart | ja | Tractor (Zugmaschine), Rigid truck (Motorwagen), Van (Transporter) |
+| General | Vehicle class | Aufbau / Fahrzeugklasse | – | Tarpaulin, Box, Refrigerated, Tank, Silo, Tipper, Flatbed, Container, Car transporter, Low loader, Other |
+| General | Make / Model | Marke / Typbezeichnung | – | je max. 100 Zeichen |
+| General | Carrier group | Frächtergruppe (Freitext) | – | max. 100 Zeichen |
+| General | Default driver | Stammfahrer | – | Auswahl aus der Fahrerliste oder „No default driver“ |
+| Technical data | Year of manufacture (month/year) | Baujahr, monatsgenau | – | ab 1900 |
+| Technical data | Power (kW) | Motorleistung | – | 1–2000 |
+| Technical data | Chassis number (VIN) | Fahrgestellnummer | – | max. 30 Zeichen, wird in Großbuchstaben gespeichert |
+| Technical data | Engine number | Motornummer | – | max. 30 Zeichen |
+| Technical data | Next inspection due | nächste Untersuchung | ja | Datum |
+| Dimensions & loading space | Length / Width / Height (mm) | Außenmaße | – | Länge 1–30000, Breite und Höhe 1–5000 |
+| Dimensions & loading space | Load meters | Lademeter | ja | größer als 0 |
+| Weights | Payload (kg) | Nutzlast | ja | größer als 0 |
+| Weights | Curb weight (kg) | Eigengewicht | – | 1–100000 |
+| Weights | Gross vehicle weight (kg) | zulässiges Gesamtgewicht | – | 1–100000, muss größer als das Eigengewicht sein |
+| Weights | Max. fifth-wheel load (kg) | höchstzulässige Sattellast | – | 1–100000 |
+| Notes | Notes | Bemerkungen | – | max. 2000 Zeichen, mit Zeichenzähler |
+
+Alle Gewichte werden in **Kilogramm** erfasst, alle Maße in **Millimetern**.
+
+**Status ändern** (nur beim Bearbeiten, nur Administratoren): Neben der Überschrift zeigt ein
+Chip den aktuellen Status. Die Schaltflächen daneben ändern ihn **sofort**, ohne „Save“:
+
+| Aktueller Status | Schaltflächen |
+|---|---|
+| Available | **„Send to workshop“**, **„Decommission“** |
+| In workshop | **„Return to service“**, **„Decommission“** |
+| Decommissioned | keine — Hinweis „Decommissioned vehicles cannot be reactivated.“ |
+
+„Decommission“ fragt vorher nach („Do you really want to decommission vehicle …? This cannot
+be undone.“). Ein ausgemustertes Fahrzeug bleibt ausgemustert. Fahrzeuge in der Werkstatt
+oder ausgemusterte Fahrzeuge lassen sich keiner Tour zuordnen.
+
+**Änderungsvermerk:** Beim Bearbeiten steht unter der Überschrift „Last changed {Datum, Uhrzeit}
+by {Benutzer}“. Jedes Speichern und jede Statusänderung aktualisiert ihn.
+
+- **„Save“** in der Aktionsleiste am unteren Rand speichert; bei Erfolg erfolgt die Rückkehr
+  zur Liste. **„Cancel“** verwirft die Eingabe und kehrt ohne Speichern zur Liste zurück.
 - Ein leer gelassenes Pflichtfeld zeigt nach einem Speicherversuch direkt unter dem Feld
   „This field is required.“
-- Lehnt die API die Eingabe ab (z. B. ein bereits vergebenes Kennzeichen, oder Zuladung
-  bzw. Lademeter mit 0 oder weniger), erscheint die Fehlermeldung der API direkt unter dem
-  betroffenen Feld — bei einem doppelten Kennzeichen z. B. eine Konfliktmeldung
-  (HTTP 409).
+- Lehnt die API die Eingabe ab, erscheint ihre Fehlermeldung direkt unter dem betroffenen
+  Feld, z. B. bei einem bereits vergebenen Kennzeichen (HTTP 409) oder einem Gesamtgewicht,
+  das nicht über dem Eigengewicht liegt. Fehler ohne Feldbezug (z. B. ein zwischenzeitlich
+  gelöschter Stammfahrer) erscheinen als Meldung oberhalb des Formulars.
 - Ein Ladefehler beim Öffnen zum Bearbeiten (z. B. wenn das Fahrzeug zwischenzeitlich
   gelöscht wurde) erscheint als Meldung oberhalb des Formulars.
+- Wird ein Fahrer gelöscht, der als Stammfahrer eingetragen ist, verlieren die betroffenen
+  Fahrzeuge lediglich ihren Stammfahrer.
 
 ## Fahrerliste
 
-Erreichbar nur über die direkte Eingabe von `/drivers` in der Adressleiste (siehe
-„Bekannte Einschränkungen“ oben — es gibt noch keinen Menüpunkt dafür).
+Erreichbar über `/drivers` oder den Menüpunkt **Drivers**.
 
 - Angezeigte Spalten: Last name (Nachname), First name (Vorname), License classes
   (Führerscheinklassen), Status.
 - Schaltfläche **„Add driver“** legt einen neuen Fahrer an.
-- Pro Zeile: **„Edit“** und **„Delete“**, wie bei Fahrzeugen.
-- Dieselben Einschränkungen wie bei der Fahrzeugliste gelten auch hier (keine Filter,
-  keine Sortierung, nur die erste Seite von bis zu 20 Einträgen).
+- Pro Zeile: **„Edit“** öffnet den Fahrer, **„Delete“** löscht ihn sofort, ohne
+  Sicherheitsabfrage.
+- Die Fahrerliste hat keine Such-, Filter- oder Sortiermöglichkeit.
 
 ## Fahrerformular (Anlegen / Bearbeiten)
 
@@ -240,8 +291,8 @@ ist beabsichtigt: Das Unternehmen behält den Nachweis über einen erteilten und
 zurückgezogenen Auftrag — für Rückfragen zur Abrechnung und weil die Auftragsnummer dem
 Kunden gegenüber bereits genannt wurde.
 
-**Sicherheitsabfrage beim Stornieren:** Anders als beim Löschen von Fahrzeugen und
-Fahrern wird hier nachgefragt. Ein Klick auf „Cancel order“ ersetzt die Schaltfläche in
+**Sicherheitsabfrage beim Stornieren:** Wie beim Löschen von Fahrzeugen (und anders als
+beim Löschen von Fahrern) wird hier nachgefragt. Ein Klick auf „Cancel order“ ersetzt die Schaltfläche in
 derselben Zeile durch **„Confirm cancel“** und **„Keep order“**. Erst „Confirm cancel“
 storniert tatsächlich; „Keep order“ bricht ab und ändert nichts.
 
@@ -555,11 +606,11 @@ dann die passende Oberfläche.
 
 ## Bekannte Einschränkungen (Zusammenfassung)
 
-- Keine Sortierfunktion in der Oberfläche.
+- Sortieren lässt sich bisher nur die Fahrzeugliste.
 - Die Kennzahlen und Arbeitslisten der Startseite werden beim Öffnen einmal geladen; sie
   aktualisieren sich nicht von selbst, solange die Seite offen bleibt.
-- Löschen von Fahrzeugen und Fahrern erfolgt sofort, ohne Sicherheitsabfrage; das
-  Stornieren eines Auftrags fragt dagegen nach.
+- Löschen von Fahrern erfolgt sofort, ohne Sicherheitsabfrage; das Löschen von Fahrzeugen
+  und das Stornieren eines Auftrags fragen dagegen nach.
 - In der Auftragsliste lässt sich nur nach Status filtern; die Filter nach Abholzeitraum,
   die die API anbietet, haben noch keine Bedienelemente.
 - Eine Tour lässt sich nach dem Anlegen weder umplanen noch löschen. Eine falsch geplante Tour

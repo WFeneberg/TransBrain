@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Extended vehicle master data, modelled on the legacy vehicle screen: confidential-plate flag, make, model, first registration (month/year), power (kW), vehicle class (body type, e.g. tarpaulin, refrigerated, tank), carrier group, default driver, chassis (VIN) and engine number, outer dimensions L/W/H in mm, curb weight, gross weight and max. fifth-wheel load (kg) and free-text notes. `CreateVehicle`/`UpdateVehicle` accept the new fields as optional (`404` for an unknown default driver, `400` keyed by field for out-of-range values); `VehicleResponse` carries them plus `modifiedAt`/`modifiedBy`, stamped on every write. Deleting a driver clears them as default driver on their vehicles (migration `AddVehicleMasterData`)
+- `POST /api/vehicles/{id}/status` (`admin`) sets a vehicle to `Available`, `InWorkshop` or `Decommissioned`; reviving a decommissioned vehicle answers `409`
+- Redesigned vehicle screens in both frontends: searchable, filterable and sortable list with status chips, delete confirmation and status actions; the vehicle form is grouped into sections (general, technical data, dimensions & weights, notes) and shows who last changed the vehicle
+
 - `Customer` aggregate with `Create`/`Update`/`Delete`/`GetById`/`List` use cases and endpoints under `/api/customers`: company name, registered address (the shared `Address` value object), contact person, e-mail, phone, UID (`VatId`) and payment term in days (0–365); writes require the `admin` role, reads the same roles as the other master data; list responses are cached and invalidated on every write, like drivers and vehicles
 - Map for delivery locations: `GET /api/customers/{id}/locations/{locationId}/position` resolves the location address and both frontends show it on the location form. Geocoding now uses Nominatim (OpenStreetMap), which is free and needs no API key; it answers `503` when Nominatim is unreachable and `404` when the address is unknown
 - Geocoding for order addresses also moved from OpenRouteService to Nominatim, so the order map no longer needs an OpenRouteService key. Routing (route planning for tours) still uses OpenRouteService and needs its key
@@ -61,6 +65,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Playwright `home.spec.ts` in both frontends: all four realm roles, sign-out, and the route guards — 30 tests per frontend in total
 
 ### Changed
+- `ICurrentUser` exposes `UserName` (Keycloak `preferred_username`, falling back to the subject) for audit stamps
 - Write actions are now hidden from roles that may not perform them, in every screen of both frontends, instead of being offered to everyone and refused by the API with a `403`. The operator guides' "Rollen und Rechte" chapters said the opposite and have been rewritten
 - Both frontends run their OIDC `checkAuth()` / `auth.load()` exactly once, in the app shell, instead of once per screen — nine components in the Angular app, five views in the Vue app
 - The tour list now asks for the API's maximum page size too. The earlier change below covered the vehicle, driver and order lists but missed this one, which asked for no page size at all and so inherited the default of 20; with lists sorted ascending, that hid every tour planned after the twentieth

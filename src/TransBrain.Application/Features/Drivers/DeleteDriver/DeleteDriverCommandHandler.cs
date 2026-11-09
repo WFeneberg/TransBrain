@@ -1,5 +1,6 @@
 using TransBrain.Application.Abstractions;
 using TransBrain.Application.Common.Messaging;
+using TransBrain.Application.Features.Vehicles;
 using TransBrain.Domain.Common;
 using TransBrain.Domain.Drivers;
 
@@ -20,6 +21,10 @@ internal sealed class DeleteDriverCommandHandler(IDriverRepository repository, I
         await repository.SaveChangesAsync(cancellationToken);
 
         await cache.RemoveByPrefixAsync(DriverCacheKeys.Prefix, cancellationToken);
+
+        // The database clears vehicles' DefaultDriverId (ON DELETE SET NULL), so cached vehicles
+        // would otherwise keep pointing at the deleted driver.
+        await cache.RemoveByPrefixAsync(VehicleCacheKeys.Prefix, cancellationToken);
 
         return Unit.Value;
     }

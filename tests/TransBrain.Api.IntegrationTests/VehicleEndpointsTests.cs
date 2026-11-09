@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using TransBrain.Application.Common.Pagination;
+using TransBrain.Application.Features.Drivers;
 using TransBrain.Application.Features.Vehicles;
 using TransBrain.Domain.Vehicles;
 using TransBrain.Infrastructure.Persistence;
@@ -327,6 +328,195 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task PostVehicle_WithMasterData_RoundTripsAllFieldsAndStampsModification()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        DriverResponse driver = await CreateDriverAsync(admin, "Stammfahrer");
+
+        HttpResponseMessage response = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-MD 1",
+            type = "Tractor",
+            payloadKg = 24_000,
+            loadMeters = 13.6m,
+            nextInspectionDue = "2027-03-31",
+            isLicensePlateConfidential = true,
+            make = "MAN",
+            model = "TGX 18.510",
+            manufacturedOn = "2021-05-17",
+            powerKw = 375,
+            vehicleClass = "Refrigerated",
+            carrierGroup = "Nahverkehr",
+            defaultDriverId = driver.Id,
+            chassisNumber = "wma06xzz1lm123456",
+            engineNumber = "D2676LF",
+            lengthMm = 6_100,
+            widthMm = 2_550,
+            heightMm = 3_950,
+            curbWeightKg = 8_200,
+            grossWeightKg = 18_000,
+            maxFifthWheelLoadKg = 11_500,
+            notes = "Retarder defekt"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        VehicleResponse created = (await response.Content.ReadFromJsonAsync<VehicleResponse>())!;
+
+        HttpResponseMessage fetchedResponse = await factory.CreateClientAs("viewer").GetAsync($"/api/vehicles/{created.Id}");
+        VehicleResponse fetched = (await fetchedResponse.Content.ReadFromJsonAsync<VehicleResponse>())!;
+        fetched.IsLicensePlateConfidential.Should().BeTrue();
+        fetched.Make.Should().Be("MAN");
+        fetched.Model.Should().Be("TGX 18.510");
+        fetched.ManufacturedOn.Should().Be(new DateOnly(2021, 5, 1));
+        fetched.PowerKw.Should().Be(375);
+        fetched.VehicleClass.Should().Be("Refrigerated");
+        fetched.CarrierGroup.Should().Be("Nahverkehr");
+        fetched.DefaultDriverId.Should().Be(driver.Id);
+        fetched.ChassisNumber.Should().Be("WMA06XZZ1LM123456");
+        fetched.EngineNumber.Should().Be("D2676LF");
+        fetched.LengthMm.Should().Be(6_100);
+        fetched.WidthMm.Should().Be(2_550);
+        fetched.HeightMm.Should().Be(3_950);
+        fetched.CurbWeightKg.Should().Be(8_200);
+        fetched.GrossWeightKg.Should().Be(18_000);
+        fetched.MaxFifthWheelLoadKg.Should().Be(11_500);
+        fetched.Notes.Should().Be("Retarder defekt");
+        fetched.ModifiedBy.Should().NotBeNullOrWhiteSpace();
+        fetched.ModifiedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
+    public async Task PostVehicle_UnknownDefaultDriver_ReturnsNotFound()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-ND 1",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31",
+            defaultDriverId = Guid.CreateVersion7()
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task PostVehicle_InvalidMasterData_ReturnsErrorsKeyedByFieldName()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-IV 1",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31",
+            vehicleClass = "Spaceship",
+            curbWeightKg = 5_000,
+            grossWeightKg = 4_000
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("VehicleClass").And.Contain("GrossWeightKg");
+    }
+
+    [Fact]
+    public async Task DeleteDriver_AssignedAsDefaultDriver_ClearsTheVehicleAssignment()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        DriverResponse driver = await CreateDriverAsync(admin, "Geloescht");
+        VehicleResponse vehicle = await CreateVehicleAsync(admin, "M-SN 1", driver.Id);
+
+        (await admin.DeleteAsync($"/api/drivers/{driver.Id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        VehicleResponse after = (await admin.GetFromJsonAsync<VehicleResponse>($"/api/vehicles/{vehicle.Id}"))!;
+        after.DefaultDriverId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task PostStatus_AsAdmin_MovesVehicleThroughWorkshopAndDecommissioning()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        VehicleResponse vehicle = await CreateVehicleAsync(admin, "M-ST 1");
+
+        HttpResponseMessage workshop = await admin.PostAsJsonAsync(
+            $"/api/vehicles/{vehicle.Id}/status", new { status = "InWorkshop" });
+        workshop.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await workshop.Content.ReadFromJsonAsync<VehicleResponse>())!.Status.Should().Be("InWorkshop");
+
+        HttpResponseMessage decommissioned = await admin.PostAsJsonAsync(
+            $"/api/vehicles/{vehicle.Id}/status", new { status = "Decommissioned" });
+        decommissioned.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        HttpResponseMessage revived = await admin.PostAsJsonAsync(
+            $"/api/vehicles/{vehicle.Id}/status", new { status = "Available" });
+        revived.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        HttpResponseMessage list = await factory.CreateClientAs("viewer").GetAsync("/api/vehicles?status=Decommissioned&pageSize=100");
+        PagedResult<VehicleResponse>? page = await list.Content.ReadFromJsonAsync<PagedResult<VehicleResponse>>();
+        page!.Items.Should().Contain(v => v.Id == vehicle.Id);
+    }
+
+    [Fact]
+    public async Task PostStatus_UnknownStatus_ReturnsBadRequest()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        VehicleResponse vehicle = await CreateVehicleAsync(admin, "M-ST 2");
+
+        HttpResponseMessage response = await admin.PostAsJsonAsync(
+            $"/api/vehicles/{vehicle.Id}/status", new { status = "Scrapped" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task PostStatus_UnknownVehicle_ReturnsNotFound()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync(
+            $"/api/vehicles/{Guid.CreateVersion7()}/status", new { status = "InWorkshop" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task PostStatus_AsDisponent_ReturnsForbidden()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("disponent").PostAsJsonAsync(
+            $"/api/vehicles/{Guid.CreateVersion7()}/status", new { status = "InWorkshop" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    private static async Task<DriverResponse> CreateDriverAsync(HttpClient admin, string lastName)
+    {
+        HttpResponseMessage response = await admin.PostAsJsonAsync("/api/drivers", new
+        {
+            firstName = "Frank",
+            lastName,
+            licenseClasses = new[] { "CE" },
+            licenseValidUntil = "2099-06-30",
+            externalUserId = (string?)null
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        return (await response.Content.ReadFromJsonAsync<DriverResponse>())!;
+    }
+
+    private static async Task<VehicleResponse> CreateVehicleAsync(HttpClient admin, string plate, Guid? defaultDriverId = null)
+    {
+        HttpResponseMessage response = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = plate,
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31",
+            defaultDriverId
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        return (await response.Content.ReadFromJsonAsync<VehicleResponse>())!;
+    }
     // ---
     // Extra test beyond the Task 13 brief (which specifies only the six tests above). The
     // duplicate-plate handling has two branches: CreateVehicleCommandHandler's own
@@ -449,3 +639,4 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
                  """)
             .SingleAsync();
 }
+

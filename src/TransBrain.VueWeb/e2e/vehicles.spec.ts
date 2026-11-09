@@ -54,6 +54,23 @@ test('adminUser_afterKeycloakLogin_seesVehicleList', async ({ page }) => {
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
     await expect(page.getByTestId('vehicle-plate').filter({ hasText: licensePlate })).toBeVisible();
+
+    // The filter bar narrows the loaded list client-side: the plate search finds the seeded row,
+    // a status it does not have hides it, and a search nothing matches shows the empty state.
+    await page.getByTestId('vehicle-search').fill(licensePlate.toLowerCase());
+    await expect(page.getByTestId('vehicle-plate')).toHaveText([licensePlate]);
+
+    await page.getByTestId('vehicle-status-filter').click();
+    await page.getByRole('option', { name: 'Decommissioned' }).click();
+    await expect(page.getByTestId('vehicle-plate')).toHaveCount(0);
+    await expect(page.getByText('No vehicles found.')).toBeVisible();
+
+    await page.getByTestId('vehicle-status-filter').click();
+    await page.getByRole('option', { name: 'All' }).click();
+    await expect(page.getByTestId('vehicle-plate')).toHaveText([licensePlate]);
+
+    await page.getByTestId('vehicle-search').fill('no-such-vehicle');
+    await expect(page.getByText('No vehicles found.')).toBeVisible();
 });
 
 test('viewerUser_onTheVehicleList_seesNoWriteActions', async ({ page }) => {

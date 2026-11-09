@@ -17,5 +17,10 @@ internal sealed class HttpContextCurrentUser(IHttpContextAccessor accessor) : IC
         accessor.HttpContext?.User.FindFirstValue("sub")
         ?? accessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
+    public string? UserName =>
+        accessor.HttpContext?.User.FindFirstValue("preferred_username")
+        ?? accessor.HttpContext?.User.FindFirstValue(ClaimTypes.Name)
+        ?? UserId;
+
     public bool IsInRole(string role) => accessor.HttpContext?.User.IsInRole(role) ?? false;
 }

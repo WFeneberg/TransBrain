@@ -6,6 +6,8 @@ public sealed class StubCurrentUser(string? userId, params string[] roles) : ICu
 {
     public string? UserId { get; } = userId;
 
+    public string? UserName => UserId;
+
     public bool IsInRole(string role) => roles.Contains(role, StringComparer.OrdinalIgnoreCase);
 
     public static StubCurrentUser Dispatcher() => new("dispatcher-sub", "disponent");

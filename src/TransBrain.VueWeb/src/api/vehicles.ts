@@ -8,8 +8,47 @@ export interface Vehicle {
     payloadKg: number;
     loadMeters: number;
     nextInspectionDue: string;
-    status: string;
+    status: VehicleStatus;
+    isLicensePlateConfidential: boolean;
+    make: string | null;
+    model: string | null;
+    /** "YYYY-MM-01" - the API stores the construction date with month precision. */
+    manufacturedOn: string | null;
+    powerKw: number | null;
+    vehicleClass: string | null;
+    carrierGroup: string | null;
+    defaultDriverId: string | null;
+    chassisNumber: string | null;
+    engineNumber: string | null;
+    lengthMm: number | null;
+    widthMm: number | null;
+    heightMm: number | null;
+    curbWeightKg: number | null;
+    grossWeightKg: number | null;
+    maxFifthWheelLoadKg: number | null;
+    notes: string | null;
+    /** Read-only, set by the server on every create, update and status change. */
+    modifiedAt: string | null;
+    modifiedBy: string | null;
 }
+
+export type VehicleStatus = 'Available' | 'InWorkshop' | 'Decommissioned';
+
+export const VEHICLE_STATUSES: readonly VehicleStatus[] = ['Available', 'InWorkshop', 'Decommissioned'];
+export const VEHICLE_TYPES = ['Tractor', 'RigidTruck', 'Van'] as const;
+export const VEHICLE_CLASSES = [
+    'Tarpaulin',
+    'Box',
+    'Refrigerated',
+    'Tank',
+    'Silo',
+    'Tipper',
+    'Flatbed',
+    'Container',
+    'CarTransporter',
+    'LowLoader',
+    'Other',
+] as const;
 
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
 export interface VehicleWriteRequest {
@@ -18,6 +57,23 @@ export interface VehicleWriteRequest {
     payloadKg: number;
     loadMeters: number;
     nextInspectionDue: string;
+    isLicensePlateConfidential: boolean;
+    make: string | null;
+    model: string | null;
+    manufacturedOn: string | null;
+    powerKw: number | null;
+    vehicleClass: string | null;
+    carrierGroup: string | null;
+    defaultDriverId: string | null;
+    chassisNumber: string | null;
+    engineNumber: string | null;
+    lengthMm: number | null;
+    widthMm: number | null;
+    heightMm: number | null;
+    curbWeightKg: number | null;
+    grossWeightKg: number | null;
+    maxFifthWheelLoadKg: number | null;
+    notes: string | null;
 }
 
 export interface PagedResult<T> {
@@ -71,6 +127,12 @@ export async function createVehicle(request: VehicleWriteRequest): Promise<Vehic
 
 export async function updateVehicle(id: string, request: VehicleWriteRequest): Promise<Vehicle> {
     const response = await client.put<Vehicle>(`/vehicles/${id}`, request);
+    return response.data;
+}
+
+/** Available <-> InWorkshop, either -> Decommissioned; a decommissioned vehicle answers 409. */
+export async function changeVehicleStatus(id: string, status: VehicleStatus): Promise<Vehicle> {
+    const response = await client.post<Vehicle>(`/vehicles/${id}/status`, { status });
     return response.data;
 }
 
