@@ -364,6 +364,8 @@ Fahrer ausgeblendet).
 - Angezeigte Spalten: Name, PLZ und Ort, Ansprechpartner, E-Mail. Ein Klick auf einen
   Spaltenkopf sortiert die Liste.
 - Schaltfläche **„Add customer“** legt einen neuen Kunden an (nur `admin`).
+- Schaltfläche **„Master data lists“** öffnet die [Kunden-Stammdaten](#kunden-stammdaten)
+  (für alle angemeldeten Benutzer).
 - Pro Zeile: **Stift-Symbol** (Bearbeiten) und **Papierkorb-Symbol** (Löschen nach
   Sicherheitsabfrage), nur `admin`.
 - Geladen werden die ersten 100 Kunden, alphabetisch nach Name sortiert.
@@ -375,8 +377,8 @@ Erreichbar über „Add customer“ (neu, `/customers/new`) oder das Stift-Symbo
 
 ![Kundenformular](img/web/kundenformular.png)
 
-Die Felder sind in Karten gegliedert („Company“, „Address“, „Contact“, „Billing“);
-**„Cancel“** und **„Save“** stehen in einer Leiste am unteren Rand.
+Die Felder sind in Karten gegliedert („Company“, „Address“, „Contact“, „Billing“,
+„Additional data“); **„Cancel“** und **„Save“** stehen in einer Leiste am unteren Rand.
 
 | Feld (Beschriftung)  | Bedeutung                          | Pflichtfeld | Regeln                                                |
 |----------------------|------------------------------------|:-----------:|-------------------------------------------------------|
@@ -395,6 +397,30 @@ Die Felder sind in Karten gegliedert („Company“, „Address“, „Contact�
 - Fehlende Pflichtfelder und ungültige Werte werden direkt am Feld angezeigt. Ein Fehler, den
   der Server meldet (etwa ein ungültiges Land), erscheint oberhalb des Formulars.
 
+### Zusatzdaten (Additional data)
+
+Die Karte **Additional data** entspricht dem Reiter „Zusatz“ des Altsystems. Alle Angaben sind
+freiwillig. Wie bei den kaufmännischen Daten eines Fahrzeugs wird beim Speichern immer die
+ganze Karte übernommen: ein geleertes Feld ist danach auch gespeichert leer.
+
+![Karte Additional data](img/web/kunde-zusatz.png)
+
+| Feld (Beschriftung) | Bedeutung | Regeln |
+|---|---|---|
+| Secondary address: Name, Street, Postal code, City, Country | Zusatzadresse (z. B. Lager oder Rechnungsanschrift), unabhängig von der Firmenadresse | Name, Straße, Ort je höchstens 200 Zeichen, PLZ höchstens 20; Country (Staat) zwei Buchstaben nach ISO 3166-1, Kleinbuchstaben werden zu Großbuchstaben |
+| Founded on | Gründungsdatum | nicht vor 1800 |
+| Number of workers | Anzahl Arbeiter | ganze Zahl von 0 bis 1.000.000; leer zählt als 0 |
+| Number of salaried employees | Anzahl Angestellte | ganze Zahl von 0 bis 1.000.000; leer zählt als 0 |
+| Customer class | Kundenklasse, z. B. „Huter Vils alle Gattungen“ | Auswahl aus den aktiven Kundenklassen der [Kunden-Stammdaten](#kunden-stammdaten); „–“ entfernt sie |
+| Pallet check | Palettenprüfung | Häkchen |
+| Toll not on invoice (customer) | Maut wird dem Kunden nicht in Rechnung gestellt | Häkchen |
+| Reimburse toll (subcontractor) | Maut wird dem Subunternehmer erstattet | Häkchen |
+| Comment | Kommentar | höchstens 2000 Zeichen |
+
+- Eine inzwischen deaktivierte Kundenklasse bleibt beim Kunden erhalten; sie erscheint mit dem
+  Zusatz „(inactive)“ und kann beim Speichern beibehalten, aber keinem anderen Kunden neu
+  zugewiesen werden.
+
 ### Anlieferorte
 
 Ein Kunde kann mehrere Anlieferorte haben, jeweils mit eigener Adresse und eigenem
@@ -409,6 +435,22 @@ Dieser Abschnitt erscheint erst im Bearbeitungsmodus, also nachdem der Kunde ges
   Kunden), Ansprechperson, deren Telefon und E-Mail (optional).
 - Die Adresse eines Anlieferorts ist unabhängig von der Firmenadresse des Kunden. Im Bearbeitungsmodus zeigt eine Karte die Lage des Anlieferorts. Die Position wird aus der Adresse über Nominatim (OpenStreetMap) bestimmt. Der Dienst ist frei und braucht keinen Schlüssel. Ist die Adresse unbekannt, sagt ein Hinweis das ausdrücklich. Wird ein Kunde
   gelöscht, werden seine Anlieferorte mit gelöscht.
+
+## Kunden-Stammdaten
+
+Erreichbar über die Schaltfläche **„Master data lists“** oben in der Kundenliste
+(`/customer-catalog`). Hier pflegen Sie die Auswahllisten des Kundenformulars, derzeit den
+Reiter **Customer classes** (Kundenklassen). Beim ersten Start ist die Kundenklasse des
+Altsystems „Huter Vils alle Gattungen“ (Code `HuterVilsAll`) bereits angelegt.
+**„Back to customers“** führt zurück zur Kundenliste.
+
+![Kunden-Stammdaten](img/web/kunden-stammdaten.png)
+
+Die Seite funktioniert genau wie die [Fahrzeug-Stammdaten](#fahrzeug-stammdaten): alle
+angemeldeten Benutzer sehen die Liste, ändern dürfen sie nur Administratoren; Code und Name
+werden im selben Dialog erfasst, der Code ist später nicht änderbar. Die Spalte **Used by**
+zählt hier die Kunden („3 customers“), und eine Kundenklasse, die noch ein Kunde verwendet,
+lässt sich nicht löschen, nur deaktivieren.
 
 ## Auftragsliste
 

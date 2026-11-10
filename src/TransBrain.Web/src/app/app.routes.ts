@@ -33,6 +33,12 @@ export const routes: Routes = [
     // Readable by every signed-in role like the vehicle list; the write controls inside are gated
     // on masterData.write individually.
     { path: 'vehicle-catalog', loadComponent: loadVehicleCatalog, canActivate: [requireAuthentication] },
+    {
+        path: 'customer-catalog',
+        loadComponent: loadVehicleCatalog,
+        canActivate: [requireAuthentication],
+        data: { catalogScope: 'customer' },
+    },
     { path: 'drivers', loadComponent: loadDriverList, canActivate: [requireAuthentication] },
     { path: 'drivers/new', loadComponent: loadDriverForm, canActivate: [requireCapability('masterData.write')] },
     { path: 'drivers/:id', loadComponent: loadDriverForm, canActivate: [requireCapability('masterData.write')] },

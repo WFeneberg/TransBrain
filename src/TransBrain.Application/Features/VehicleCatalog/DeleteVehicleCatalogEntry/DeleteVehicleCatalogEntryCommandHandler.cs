@@ -18,14 +18,14 @@ internal sealed class DeleteVehicleCatalogEntryCommandHandler(IVehicleCatalogRep
             return VehicleCatalogErrors.NotFound(command.Kind, command.Id);
         }
 
-        // Vehicles keep the code as plain text, so deleting a used entry would leave them pointing at nothing.
+        // Vehicles and customers keep the code as plain text, so deleting a used entry would leave them pointing at nothing.
         IReadOnlyDictionary<string, int> usage = await repository.CountUsageAsync(command.Kind, cancellationToken);
         int usageCount = usage.GetValueOrDefault(entry.Code);
         if (usageCount > 0)
         {
             return Error.Conflict(
                 "VehicleCatalog.InUse",
-                $"'{entry.Name}' is used by {usageCount} vehicle(s). Deactivate it instead.");
+                $"'{entry.Name}' is used by {usageCount} {VehicleCatalogErrors.UsageUnit(command.Kind)}. Deactivate it instead.");
         }
 
         await repository.RemoveAsync(entry, cancellationToken);

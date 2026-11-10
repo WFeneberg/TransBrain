@@ -1,15 +1,22 @@
 import axios from 'axios';
 import { userManager } from '../auth/userManager';
 
-/** The maintainable selection lists behind the vehicle form - see VehicleCatalog.vue. */
-export type VehicleCatalogKind = 'VehicleClass' | 'CarrierGroup' | 'InsuranceCompany' | 'DocumentType';
+/**
+ * The maintainable selection lists - see VehicleCatalog.vue. Despite the name the API also keeps
+ * the customer classes here, which are maintained on their own page ('/customer-catalog').
+ */
+export type VehicleCatalogKind = 'VehicleClass' | 'CarrierGroup' | 'InsuranceCompany' | 'DocumentType' | 'CustomerClass';
 
+/** The kinds behind the vehicle form, shown on '/vehicle-catalog'. */
 export const VEHICLE_CATALOG_KINDS: readonly VehicleCatalogKind[] = [
     'VehicleClass',
     'CarrierGroup',
     'InsuranceCompany',
     'DocumentType',
 ];
+
+/** The kinds behind the customer form, shown on '/customer-catalog'. */
+export const CUSTOMER_CATALOG_KINDS: readonly VehicleCatalogKind[] = ['CustomerClass'];
 
 export interface VehicleCatalogEntry {
     id: string;
@@ -18,8 +25,9 @@ export interface VehicleCatalogEntry {
     code: string;
     /** User data, shown as-is in every language. */
     name: string;
-    /** Inactive entries stay valid on vehicles that already use them, but are not offered for new selection. */
+    /** Inactive entries stay valid on vehicles (or customers) that already use them, but are not offered for new selection. */
     isActive: boolean;
+    /** Number of vehicles - for 'CustomerClass' customers - using the entry. */
     usageCount: number;
 }
 

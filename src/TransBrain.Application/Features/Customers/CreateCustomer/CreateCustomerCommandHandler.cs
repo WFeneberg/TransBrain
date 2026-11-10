@@ -5,7 +5,10 @@ using TransBrain.Domain.Customers;
 
 namespace TransBrain.Application.Features.Customers.CreateCustomer;
 
-internal sealed class CreateCustomerCommandHandler(ICustomerRepository repository, ICacheService cache)
+internal sealed class CreateCustomerCommandHandler(
+    ICustomerRepository repository,
+    IVehicleCatalogRepository catalog,
+    ICacheService cache)
     : ICommandHandler<CreateCustomerCommand, CustomerResponse>
 {
     public async Task<Result<CustomerResponse>> Handle(
@@ -24,6 +27,13 @@ internal sealed class CreateCustomerCommandHandler(ICustomerRepository repositor
             return address.Error!;
         }
 
+        Result<CustomerAdditionalInfo> additional = await CustomerWriteMapping.ToAdditionalAsync(
+            command.Additional, catalog, current: null, cancellationToken);
+        if (!additional.IsSuccess)
+        {
+            return additional.Error!;
+        }
+
         Result<Customer> customer = Customer.Create(
             command.Name,
             address.Value,
@@ -31,7 +41,8 @@ internal sealed class CreateCustomerCommandHandler(ICustomerRepository repositor
             command.Email,
             command.Phone,
             command.VatId,
-            command.PaymentTermDays);
+            command.PaymentTermDays,
+            additional.Value);
 
         if (!customer.IsSuccess)
         {

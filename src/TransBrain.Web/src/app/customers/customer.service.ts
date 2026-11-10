@@ -14,6 +14,29 @@ export interface Customer {
     phone: string | null;
     vatId: string | null;
     paymentTermDays: number;
+    additional: CustomerAdditionalData;
+}
+
+/**
+ * The additional data of a customer ("Zusatz"). Every value is optional; the counts default to 0
+ * and the flags to false. `customerClass` is a code of the 'CustomerClass' catalog.
+ */
+export interface CustomerAdditionalData {
+    secondaryName: string | null;
+    secondaryStreet: string | null;
+    secondaryPostalCode: string | null;
+    secondaryCity: string | null;
+    /** ISO 3166-1 alpha-2 code. */
+    secondaryCountry: string | null;
+    /** ISO date (yyyy-MM-dd). */
+    foundedOn: string | null;
+    workerCount: number;
+    salariedEmployeeCount: number;
+    requiresPalletCheck: boolean;
+    excludeTollFromInvoice: boolean;
+    reimburseToll: boolean;
+    customerClass: string | null;
+    comment: string | null;
 }
 
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
@@ -28,6 +51,8 @@ export interface CustomerWriteRequest {
     phone: string | null;
     vatId: string | null;
     paymentTermDays: number;
+    /** Replaces the stored additional data as a whole; leaving it out clears it. */
+    additional: CustomerAdditionalData;
 }
 
 export interface PagedResult<T> {

@@ -14,7 +14,10 @@ public interface IVehicleCatalogRepository
     Task<VehicleCatalogEntry?> FindByCodeAsync(
         VehicleCatalogKind kind, string code, CancellationToken cancellationToken);
 
-    /// <summary>Number of vehicles per code that currently refer to an entry of this catalog.</summary>
+    /// <summary>
+    /// Number of vehicles per code that currently refer to an entry of this catalog; for
+    /// <see cref="VehicleCatalogKind.CustomerClass"/> the number of customers.
+    /// </summary>
     Task<IReadOnlyDictionary<string, int>> CountUsageAsync(
         VehicleCatalogKind kind, CancellationToken cancellationToken);
 

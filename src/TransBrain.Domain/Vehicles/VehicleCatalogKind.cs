@@ -13,5 +13,11 @@ public enum VehicleCatalogKind
     InsuranceCompany,
 
     /// <summary>Kind of special document or periodic inspection ("Sonderpapier"), for example the ADR certificate.</summary>
-    DocumentType
+    DocumentType,
+
+    /// <summary>
+    /// Customer class ("Kundenklasse") a customer is assigned to. Not a vehicle list: it lives in this
+    /// catalog so customers share its maintenance, deactivation and usage counting.
+    /// </summary>
+    CustomerClass
 }

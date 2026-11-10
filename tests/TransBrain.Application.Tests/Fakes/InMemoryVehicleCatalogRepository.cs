@@ -4,8 +4,11 @@ using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Tests.Fakes;
 
-/// <param name="vehicles">Source of the usage counts; without it every entry counts as unused.</param>
-public sealed class InMemoryVehicleCatalogRepository(InMemoryVehicleRepository? vehicles = null)
+/// <param name="vehicles">Source of the vehicle usage counts; without it every entry counts as unused.</param>
+/// <param name="customers">Source of the customer class usage counts.</param>
+public sealed class InMemoryVehicleCatalogRepository(
+    InMemoryVehicleRepository? vehicles = null,
+    InMemoryCustomerRepository? customers = null)
     : IVehicleCatalogRepository
 {
     private readonly List<VehicleCatalogEntry> _entries = [];
@@ -27,6 +30,7 @@ public sealed class InMemoryVehicleCatalogRepository(InMemoryVehicleRepository? 
         catalog.Seed(VehicleCatalogKind.InsuranceCompany, "UNIQA", "UNIQA");
         catalog.Seed(VehicleCatalogKind.DocumentType, "ADR", "ADR-Zulassungsbescheinigung");
         catalog.Seed(VehicleCatalogKind.DocumentType, "Tachograph", "Tachographenprüfung");
+        catalog.Seed(VehicleCatalogKind.CustomerClass, "HuterVilsAll", "Huter Vils alle Gattungen");
         return catalog;
     }
 
@@ -65,6 +69,8 @@ public sealed class InMemoryVehicleCatalogRepository(InMemoryVehicleRepository? 
             VehicleCatalogKind.InsuranceCompany => all.SelectMany(v =>
                 new[] { v.Commercial.VehicleInsurer, v.Commercial.TransportInsurer }.Distinct()),
             VehicleCatalogKind.DocumentType => (vehicles?.Documents ?? []).Select(d => d.DocumentType),
+            VehicleCatalogKind.CustomerClass =>
+                (customers?.Customers ?? []).Select(c => c.Additional.CustomerClass),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
         };
 

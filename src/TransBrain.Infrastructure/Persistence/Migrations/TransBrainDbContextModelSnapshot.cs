@@ -445,6 +445,14 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             IsActive = true,
                             Kind = "DocumentType",
                             Name = "Ladebordwandprüfung"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000301"),
+                            Code = "HuterVilsAll",
+                            IsActive = true,
+                            Kind = "CustomerClass",
+                            Name = "Huter Vils alle Gattungen"
                         });
                 });
 
@@ -531,6 +539,81 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             b1.WithOwner()
                                 .HasForeignKey("CustomerId");
                         });
+
+                    b.OwnsOne("TransBrain.Domain.Customers.CustomerAdditionalInfo", "Additional", b1 =>
+                        {
+                            b1.Property<Guid>("CustomerId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Comment")
+                                .HasMaxLength(2000)
+                                .HasColumnType("character varying(2000)")
+                                .HasColumnName("Comment");
+
+                            b1.Property<string>("CustomerClass")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("CustomerClass");
+
+                            b1.Property<bool>("ExcludeTollFromInvoice")
+                                .HasColumnType("boolean")
+                                .HasColumnName("ExcludeTollFromInvoice");
+
+                            b1.Property<DateOnly?>("FoundedOn")
+                                .HasColumnType("date")
+                                .HasColumnName("FoundedOn");
+
+                            b1.Property<bool>("ReimburseToll")
+                                .HasColumnType("boolean")
+                                .HasColumnName("ReimburseToll");
+
+                            b1.Property<bool>("RequiresPalletCheck")
+                                .HasColumnType("boolean")
+                                .HasColumnName("RequiresPalletCheck");
+
+                            b1.Property<int>("SalariedEmployeeCount")
+                                .HasColumnType("integer")
+                                .HasColumnName("SalariedEmployeeCount");
+
+                            b1.Property<string>("SecondaryCity")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("secondary_city");
+
+                            b1.Property<string>("SecondaryCountry")
+                                .HasMaxLength(2)
+                                .HasColumnType("character varying(2)")
+                                .HasColumnName("secondary_country");
+
+                            b1.Property<string>("SecondaryName")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("secondary_name");
+
+                            b1.Property<string>("SecondaryPostalCode")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("secondary_postal_code");
+
+                            b1.Property<string>("SecondaryStreet")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("secondary_street");
+
+                            b1.Property<int>("WorkerCount")
+                                .HasColumnType("integer")
+                                .HasColumnName("WorkerCount");
+
+                            b1.HasKey("CustomerId");
+
+                            b1.ToTable("customers");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CustomerId");
+                        });
+
+                    b.Navigation("Additional")
+                        .IsRequired();
 
                     b.Navigation("Address")
                         .IsRequired();

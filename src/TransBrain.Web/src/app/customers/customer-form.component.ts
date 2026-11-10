@@ -1,12 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -14,7 +16,19 @@ import { filter, switchMap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { I18nService } from '../i18n/i18n.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
-import { Customer, CustomerService, CustomerWriteRequest } from './customer.service';
+import {
+    VehicleCatalogEntry,
+    VehicleCatalogOption,
+    VehicleCatalogService,
+    catalogOptions,
+} from '../vehicles/vehicle-catalog.service';
+import { dateFromYear, wholeNumberInRange } from '../vehicles/vehicle-validators';
+import {
+    Customer,
+    CustomerAdditionalData,
+    CustomerService,
+    CustomerWriteRequest,
+} from './customer.service';
 import { CustomerLocation, CustomerLocationService } from './customer-location.service';
 
 interface ProblemDetailsBody {
@@ -25,6 +39,19 @@ interface ProblemDetailsBody {
 
 const MAX_PAYMENT_TERM_DAYS = 365;
 
+// Mirrors CustomerAdditionalInfo in the domain.
+const MAX_HEADCOUNT = 1_000_000;
+const MIN_FOUNDING_YEAR = 1800;
+const MAX_COMMENT_LENGTH = 2000;
+
+const PASCAL_SEGMENTS = /(^|\.)([A-Z])/g;
+
+const ADDITIONAL_FLAGS = [
+    'requiresPalletCheck',
+    'excludeTollFromInvoice',
+    'reimburseToll',
+] as const;
+
 @Component({
     selector: 'app-customer-form',
     standalone: true,
@@ -32,9 +59,11 @@ const MAX_PAYMENT_TERM_DAYS = 365;
         ReactiveFormsModule,
         MatButtonModule,
         MatCardModule,
+        MatCheckboxModule,
         MatFormFieldModule,
         MatIconModule,
         MatInputModule,
+        MatSelectModule,
         MatTableModule,
         MatTooltipModule,
         RouterLink,
@@ -105,6 +134,163 @@ const MAX_PAYMENT_TERM_DAYS = 365;
                                 />
                                 @if (form.controls.paymentTermDays.errors; as errors) {
                                     <mat-error data-testid="customer-paymentTermDays-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                        </mat-card-content>
+                    </mat-card>
+
+                    <mat-card
+                        appearance="outlined"
+                        class="full-width"
+                        formGroupName="additional"
+                        data-testid="customer-additional"
+                    >
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">post_add</mat-icon>
+                            <mat-card-title>{{
+                                i18n.t('customers.section.additional')
+                            }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content class="additional-groups">
+                            <section class="group">
+                                <h3 class="group-title">
+                                    {{ i18n.t('customers.additional.secondaryAddress') }}
+                                </h3>
+                                <div class="fields">
+                                    @for (field of secondaryAddressFields; track field.name) {
+                                        <mat-form-field [class.full-width]="field.wide">
+                                            <mat-label>{{ i18n.t(field.label) }}</mat-label>
+                                            <input
+                                                matInput
+                                                [formControlName]="field.name"
+                                                [attr.maxlength]="field.maxLength"
+                                                [attr.data-testid]="'customer-' + field.name"
+                                            />
+                                            @if (
+                                                additional.controls[field.name].errors;
+                                                as errors
+                                            ) {
+                                                <mat-error
+                                                    [attr.data-testid]="
+                                                        'customer-' + field.name + '-error'
+                                                    "
+                                                    >{{ fieldErrorText(errors) }}</mat-error
+                                                >
+                                            }
+                                        </mat-form-field>
+                                    }
+                                </div>
+                            </section>
+
+                            <section class="group">
+                                <h3 class="group-title">
+                                    {{ i18n.t('customers.additional.companyFigures') }}
+                                </h3>
+                                <div class="fields">
+                                    <mat-form-field>
+                                        <mat-label>{{
+                                            i18n.t('customers.additional.foundedOn')
+                                        }}</mat-label>
+                                        <input
+                                            matInput
+                                            type="date"
+                                            formControlName="foundedOn"
+                                            data-testid="customer-foundedOn"
+                                        />
+                                        @if (additional.controls.foundedOn.errors; as errors) {
+                                            <mat-error data-testid="customer-foundedOn-error">{{
+                                                fieldErrorText(errors)
+                                            }}</mat-error>
+                                        }
+                                    </mat-form-field>
+                                    <mat-form-field>
+                                        <mat-label>{{
+                                            i18n.t('customers.additional.customerClass')
+                                        }}</mat-label>
+                                        <mat-select
+                                            formControlName="customerClass"
+                                            data-testid="customer-customerClass"
+                                        >
+                                            <mat-option [value]="null">–</mat-option>
+                                            @for (
+                                                option of customerClassOptions();
+                                                track option.code
+                                            ) {
+                                                <mat-option [value]="option.code">{{
+                                                    optionLabel(option)
+                                                }}</mat-option>
+                                            }
+                                        </mat-select>
+                                        @if (additional.controls.customerClass.errors; as errors) {
+                                            <mat-error data-testid="customer-customerClass-error">{{
+                                                fieldErrorText(errors)
+                                            }}</mat-error>
+                                        }
+                                    </mat-form-field>
+                                    <mat-form-field>
+                                        <mat-label>{{
+                                            i18n.t('customers.additional.workerCount')
+                                        }}</mat-label>
+                                        <input
+                                            matInput
+                                            type="number"
+                                            min="0"
+                                            formControlName="workerCount"
+                                            data-testid="customer-workerCount"
+                                        />
+                                        @if (additional.controls.workerCount.errors; as errors) {
+                                            <mat-error data-testid="customer-workerCount-error">{{
+                                                fieldErrorText(errors)
+                                            }}</mat-error>
+                                        }
+                                    </mat-form-field>
+                                    <mat-form-field>
+                                        <mat-label>{{
+                                            i18n.t('customers.additional.salariedEmployeeCount')
+                                        }}</mat-label>
+                                        <input
+                                            matInput
+                                            type="number"
+                                            min="0"
+                                            formControlName="salariedEmployeeCount"
+                                            data-testid="customer-salariedEmployeeCount"
+                                        />
+                                        @if (
+                                            additional.controls.salariedEmployeeCount.errors;
+                                            as errors
+                                        ) {
+                                            <mat-error
+                                                data-testid="customer-salariedEmployeeCount-error"
+                                                >{{ fieldErrorText(errors) }}</mat-error
+                                            >
+                                        }
+                                    </mat-form-field>
+                                </div>
+                                <div class="flags">
+                                    @for (flag of additionalFlags; track flag) {
+                                        <mat-checkbox
+                                            [formControlName]="flag"
+                                            [attr.data-testid]="'customer-' + flag"
+                                        >
+                                            {{ i18n.t(flagKey(flag)) }}
+                                        </mat-checkbox>
+                                    }
+                                </div>
+                            </section>
+
+                            <mat-form-field class="comment">
+                                <mat-label>{{ i18n.t('customers.additional.comment') }}</mat-label>
+                                <textarea
+                                    matInput
+                                    rows="4"
+                                    formControlName="comment"
+                                    [attr.maxlength]="maxCommentLength"
+                                    data-testid="customer-comment"
+                                ></textarea>
+                                @if (additional.controls.comment.errors; as errors) {
+                                    <mat-error data-testid="customer-comment-error">{{
                                         fieldErrorText(errors)
                                     }}</mat-error>
                                 }
@@ -283,6 +469,39 @@ const MAX_PAYMENT_TERM_DAYS = 365;
             mat-card-content .error-banner {
                 margin-bottom: 12px;
             }
+
+            .additional-groups {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px 24px;
+            }
+
+            .group {
+                min-width: 0;
+            }
+
+            .group-title {
+                margin: 0 0 12px;
+                font: var(--mat-sys-title-small);
+                color: var(--mat-sys-on-surface-variant);
+            }
+
+            .flags {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .comment {
+                grid-column: 1 / -1;
+                width: 100%;
+            }
+
+            @media (max-width: 899px) {
+                .additional-groups {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+            }
         `,
     ],
 })
@@ -292,6 +511,7 @@ export class CustomerFormComponent {
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
     private readonly locationService = inject(CustomerLocationService);
+    private readonly catalogService = inject(VehicleCatalogService);
     private readonly dialog = inject(MatDialog);
     // See DriverFormComponent: a directly opened form must wait for the stored session.
     protected readonly session = inject(SessionService);
@@ -342,6 +562,33 @@ export class CustomerFormComponent {
     protected readonly isEditMode = this.customerId !== null;
     protected readonly formError = signal<string | null>(null);
 
+    protected readonly secondaryAddressFields = [
+        {
+            name: 'secondaryName',
+            label: 'customers.additional.secondaryName',
+            maxLength: 200,
+            wide: true,
+        },
+        { name: 'secondaryStreet', label: 'common.street', maxLength: 200, wide: true },
+        { name: 'secondaryPostalCode', label: 'common.postalCode', maxLength: 20, wide: false },
+        { name: 'secondaryCity', label: 'common.city', maxLength: 200, wide: false },
+        {
+            name: 'secondaryCountry',
+            label: 'customers.additional.secondaryCountry',
+            maxLength: 2,
+            wide: false,
+        },
+    ] as const;
+    protected readonly additionalFlags = ADDITIONAL_FLAGS;
+    protected readonly maxCommentLength = MAX_COMMENT_LENGTH;
+
+    private readonly customerClasses = signal<VehicleCatalogEntry[]>([]);
+    // The class the customer is SAVED with stays selectable even after it was deactivated.
+    private readonly storedCustomerClass = signal<string | null>(null);
+    protected readonly customerClassOptions = computed(() =>
+        catalogOptions(this.customerClasses(), this.storedCustomerClass()),
+    );
+
     protected readonly form = this.fb.nonNullable.group({
         name: ['', Validators.required],
         street: ['', Validators.required],
@@ -356,9 +603,39 @@ export class CustomerFormComponent {
             30,
             [Validators.required, Validators.min(0), Validators.max(MAX_PAYMENT_TERM_DAYS)],
         ],
+        additional: this.fb.nonNullable.group({
+            secondaryName: ['', Validators.maxLength(200)],
+            secondaryStreet: ['', Validators.maxLength(200)],
+            secondaryPostalCode: ['', Validators.maxLength(20)],
+            secondaryCity: ['', Validators.maxLength(200)],
+            secondaryCountry: ['', Validators.pattern(/^[A-Za-z]{2}$/)],
+            foundedOn: ['', dateFromYear(MIN_FOUNDING_YEAR)],
+            workerCount: this.fb.control<number | null>(0, wholeNumberInRange(0, MAX_HEADCOUNT)),
+            salariedEmployeeCount: this.fb.control<number | null>(
+                0,
+                wholeNumberInRange(0, MAX_HEADCOUNT),
+            ),
+            requiresPalletCheck: [false],
+            excludeTollFromInvoice: [false],
+            reimburseToll: [false],
+            customerClass: this.fb.control<string | null>(null),
+            comment: ['', Validators.maxLength(MAX_COMMENT_LENGTH)],
+        }),
     });
 
+    protected readonly additional = this.form.controls.additional;
+
     constructor() {
+        this.session.ready
+            .pipe(switchMap(() => this.catalogService.list('CustomerClass')))
+            .subscribe({
+                next: (entries) => this.customerClasses.set(entries),
+                error: (error: HttpErrorResponse) =>
+                    this.formError.set(
+                        `${this.i18n.t('customers.error.catalogLoad')} (HTTP ${error.status})`,
+                    ),
+            });
+
         if (this.isEditMode) {
             this.session.ready.subscribe((isAuthenticated) => {
                 if (isAuthenticated) {
@@ -368,7 +645,8 @@ export class CustomerFormComponent {
             this.session.ready
                 .pipe(switchMap(() => this.service.getById(this.customerId!)))
                 .subscribe({
-                    next: (customer: Customer) =>
+                    next: (customer: Customer) => {
+                        this.storedCustomerClass.set(customer.additional?.customerClass ?? null);
                         this.form.patchValue({
                             name: customer.name,
                             street: customer.street,
@@ -380,7 +658,9 @@ export class CustomerFormComponent {
                             phone: customer.phone ?? '',
                             vatId: customer.vatId ?? '',
                             paymentTermDays: customer.paymentTermDays,
-                        }),
+                            additional: this.toAdditionalFormValue(customer.additional),
+                        });
+                    },
                     error: (error: HttpErrorResponse) =>
                         this.formError.set(
                             this.describeFailure(error, this.i18n.t('customers.error.load')),
@@ -396,7 +676,29 @@ export class CustomerFormComponent {
         if (errors['required']) {
             return this.i18n.t('common.fieldRequired');
         }
+        if (errors['range']) {
+            return this.i18n.t(
+                'common.fieldRange',
+                errors['range'] as { min: number; max: number },
+            );
+        }
+        if (errors['minYear']) {
+            return this.i18n.t(
+                'customers.additional.foundedOnTooEarly',
+                errors['minYear'] as { year: number },
+            );
+        }
         return this.i18n.t('common.fieldInvalid');
+    }
+
+    protected flagKey(flag: (typeof ADDITIONAL_FLAGS)[number]) {
+        return `customers.additional.${flag}` as const;
+    }
+
+    protected optionLabel(option: VehicleCatalogOption): string {
+        return option.isActive
+            ? option.name
+            : this.i18n.t('vehicles.catalogInactive', { name: option.name });
     }
 
     protected save(): void {
@@ -406,7 +708,10 @@ export class CustomerFormComponent {
             return;
         }
 
-        const request: CustomerWriteRequest = this.form.getRawValue();
+        const request: CustomerWriteRequest = {
+            ...this.form.getRawValue(),
+            additional: this.additionalRequest(),
+        };
         const save$ = this.session.ready.pipe(
             switchMap(() =>
                 this.isEditMode
@@ -465,13 +770,17 @@ export class CustomerFormComponent {
         });
     }
 
-    // Field keys arrive PascalCase (.NET property names); lowercase the first letter to find the control.
+    // Field keys arrive PascalCase (.NET property names), nested ones dotted ("Additional.WorkerCount");
+    // lowercase the first letter of every segment to find the control.
     private applyServerErrors(error: HttpErrorResponse): void {
         const problem = error.error as ProblemDetailsBody | null;
 
         if (problem?.errors) {
             for (const [field, messages] of Object.entries(problem.errors)) {
-                const controlName = field.charAt(0).toLowerCase() + field.slice(1);
+                const controlName = field.replace(
+                    PASCAL_SEGMENTS,
+                    (_, separator: string, letter: string) => separator + letter.toLowerCase(),
+                );
                 const control = this.form.get(controlName);
                 const message = messages.join(' ');
                 if (control) {
@@ -492,5 +801,43 @@ export class CustomerFormComponent {
         const problem = error.error as ProblemDetailsBody | null;
         const message = problem?.detail ?? problem?.title ?? fallback;
         return `${message} (HTTP ${error.status})`;
+    }
+
+    private toAdditionalFormValue(additional: CustomerAdditionalData | null | undefined) {
+        return {
+            secondaryName: additional?.secondaryName ?? '',
+            secondaryStreet: additional?.secondaryStreet ?? '',
+            secondaryPostalCode: additional?.secondaryPostalCode ?? '',
+            secondaryCity: additional?.secondaryCity ?? '',
+            secondaryCountry: additional?.secondaryCountry ?? '',
+            foundedOn: additional?.foundedOn?.slice(0, 10) ?? '',
+            workerCount: additional?.workerCount ?? 0,
+            salariedEmployeeCount: additional?.salariedEmployeeCount ?? 0,
+            requiresPalletCheck: additional?.requiresPalletCheck ?? false,
+            excludeTollFromInvoice: additional?.excludeTollFromInvoice ?? false,
+            reimburseToll: additional?.reimburseToll ?? false,
+            customerClass: additional?.customerClass ?? null,
+            comment: additional?.comment ?? '',
+        };
+    }
+
+    private additionalRequest(): CustomerAdditionalData {
+        const value = this.additional.getRawValue();
+        const text = (input: string) => input.trim() || null;
+        return {
+            secondaryName: text(value.secondaryName),
+            secondaryStreet: text(value.secondaryStreet),
+            secondaryPostalCode: text(value.secondaryPostalCode),
+            secondaryCity: text(value.secondaryCity),
+            secondaryCountry: text(value.secondaryCountry)?.toUpperCase() ?? null,
+            foundedOn: value.foundedOn || null,
+            workerCount: Number(value.workerCount ?? 0),
+            salariedEmployeeCount: Number(value.salariedEmployeeCount ?? 0),
+            requiresPalletCheck: value.requiresPalletCheck,
+            excludeTollFromInvoice: value.excludeTollFromInvoice,
+            reimburseToll: value.reimburseToll,
+            customerClass: value.customerClass,
+            comment: text(value.comment),
+        };
     }
 }

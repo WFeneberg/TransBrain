@@ -47,8 +47,16 @@ const LIST_PAGE_SIZE = 100;
                             {{ i18n.t('customers.count', { count: filteredCount() }) }}
                         </p>
                     </div>
-                    @if (session.can('masterData.write')) {
-                        <div class="header-actions">
+                    <div class="header-actions">
+                        <a
+                            mat-stroked-button
+                            routerLink="/customer-catalog"
+                            data-testid="customer-catalog-link"
+                        >
+                            <mat-icon>tune</mat-icon>
+                            {{ i18n.t('customers.catalogLink') }}
+                        </a>
+                        @if (session.can('masterData.write')) {
                             <a
                                 mat-flat-button
                                 routerLink="/customers/new"
@@ -57,8 +65,8 @@ const LIST_PAGE_SIZE = 100;
                                 <mat-icon>add</mat-icon>
                                 {{ i18n.t('customers.add') }}
                             </a>
-                        </div>
-                    }
+                        }
+                    </div>
                 </header>
 
                 @if (actionError(); as message) {

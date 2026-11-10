@@ -5,7 +5,10 @@ using TransBrain.Domain.Customers;
 
 namespace TransBrain.Application.Features.Customers.UpdateCustomer;
 
-internal sealed class UpdateCustomerCommandHandler(ICustomerRepository repository, ICacheService cache)
+internal sealed class UpdateCustomerCommandHandler(
+    ICustomerRepository repository,
+    IVehicleCatalogRepository catalog,
+    ICacheService cache)
     : ICommandHandler<UpdateCustomerCommand, CustomerResponse>
 {
     public async Task<Result<CustomerResponse>> Handle(
@@ -30,6 +33,13 @@ internal sealed class UpdateCustomerCommandHandler(ICustomerRepository repositor
             return address.Error!;
         }
 
+        Result<CustomerAdditionalInfo> additional = await CustomerWriteMapping.ToAdditionalAsync(
+            command.Additional, catalog, customer.Additional, cancellationToken);
+        if (!additional.IsSuccess)
+        {
+            return additional.Error!;
+        }
+
         Result<Customer> updated = customer.Update(
             command.Name,
             address.Value,
@@ -37,7 +47,8 @@ internal sealed class UpdateCustomerCommandHandler(ICustomerRepository repositor
             command.Email,
             command.Phone,
             command.VatId,
-            command.PaymentTermDays);
+            command.PaymentTermDays,
+            additional.Value);
 
         if (!updated.IsSuccess)
         {

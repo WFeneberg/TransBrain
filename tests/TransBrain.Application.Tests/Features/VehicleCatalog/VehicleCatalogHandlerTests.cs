@@ -7,6 +7,7 @@ using TransBrain.Application.Features.VehicleCatalog.ListVehicleCatalog;
 using TransBrain.Application.Features.VehicleCatalog.UpdateVehicleCatalogEntry;
 using TransBrain.Application.Tests.Fakes;
 using TransBrain.Domain.Common;
+using TransBrain.Domain.Customers;
 using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Tests.Features.VehicleCatalog;
@@ -214,6 +215,28 @@ public class VehicleCatalogHandlerTests
 
         result.Error!.Code.Should().Be("VehicleCatalog.InUse");
         catalog.Entries.Should().Contain(adr);
+    }
+
+    [Fact]
+    public async Task Delete_CustomerClassInUse_ReturnsConflictCountingCustomers()
+    {
+        InMemoryCustomerRepository customers = new();
+        customers.Seed(Customer.Create(
+            "Muster GmbH",
+            Address.Create("Muster GmbH", "Weg 1", "4020", "Linz", "AT").Value,
+            null, null, null, null, 30,
+            CustomerAdditionalInfo.Create(customerClass: "HuterVilsAll").Value).Value);
+        InMemoryVehicleCatalogRepository catalog = new(customers: customers);
+        VehicleCatalogEntry customerClass =
+            catalog.Seed(VehicleCatalogKind.CustomerClass, "HuterVilsAll", "Huter Vils alle Gattungen");
+
+        Result<Unit> result = await new DeleteVehicleCatalogEntryCommandHandler(catalog).Handle(
+            new DeleteVehicleCatalogEntryCommand(VehicleCatalogKind.CustomerClass, customerClass.Id),
+            CancellationToken.None);
+
+        result.Error!.Code.Should().Be("VehicleCatalog.InUse");
+        result.Error.Message.Should().Contain("1 customer(s)");
+        catalog.Entries.Should().ContainSingle();
     }
 
     private static Vehicle VehicleInsuredBy(string plate, string? vehicleInsurer, string? transportInsurer) =>

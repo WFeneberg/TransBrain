@@ -7,13 +7,14 @@ import {
     deleteVehicleCatalogEntry,
     listVehicleCatalog,
     updateVehicleCatalogEntry,
+    CUSTOMER_CATALOG_KINDS,
     VEHICLE_CATALOG_KINDS,
     type VehicleCatalogEntry,
     type VehicleCatalogKind,
 } from '../api/vehicleCatalog';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useAuthStore } from '../stores/auth';
-import { useI18n } from '../i18n';
+import { useI18n, type MessageKey } from '../i18n';
 
 interface ProblemDetailsBody {
     errors?: Record<string, string[]>;
@@ -30,6 +31,42 @@ const KIND_ICONS: Record<VehicleCatalogKind, string> = {
     CarrierGroup: 'mdi-account-group-outline',
     InsuranceCompany: 'mdi-shield-car',
     DocumentType: 'mdi-file-certificate-outline',
+    CustomerClass: 'mdi-account-star-outline',
+};
+
+/**
+ * The page serves two routes: '/vehicle-catalog' with the lists behind the vehicle form and
+ * '/customer-catalog' (route meta `catalogScope: 'customer'`) with those behind the customer form.
+ */
+interface CatalogScope {
+    kinds: readonly VehicleCatalogKind[];
+    title: MessageKey;
+    subtitle: MessageKey;
+    back: MessageKey;
+    backPath: string;
+    usage: MessageKey;
+    testIdPrefix: string;
+}
+
+const SCOPES: Record<'vehicle' | 'customer', CatalogScope> = {
+    vehicle: {
+        kinds: VEHICLE_CATALOG_KINDS,
+        title: 'vehicleCatalog.title',
+        subtitle: 'vehicleCatalog.subtitle',
+        back: 'vehicleCatalog.back',
+        backPath: '/vehicles',
+        usage: 'vehicleCatalog.usage',
+        testIdPrefix: 'vehicle-catalog',
+    },
+    customer: {
+        kinds: CUSTOMER_CATALOG_KINDS,
+        title: 'customerCatalog.title',
+        subtitle: 'customerCatalog.subtitle',
+        back: 'customerCatalog.back',
+        backPath: '/customers',
+        usage: 'customerCatalog.usage',
+        testIdPrefix: 'customer-catalog',
+    },
 };
 
 const auth = useAuthStore();
@@ -38,6 +75,7 @@ const route = useRoute();
 const router = useRouter();
 
 const canWrite = computed(() => auth.can('masterData.write'));
+const scope = computed(() => SCOPES[route.meta.catalogScope === 'customer' ? 'customer' : 'vehicle']);
 
 const kind = ref<VehicleCatalogKind>(kindFromQuery(route.query.kind));
 const entries = ref<VehicleCatalogEntry[]>([]);
@@ -66,8 +104,13 @@ const headers = computed(() => [
 ]);
 
 function kindFromQuery(value: unknown): VehicleCatalogKind {
-    return VEHICLE_CATALOG_KINDS.find((candidate) => candidate === value) ?? 'VehicleClass';
+    return scope.value.kinds.find((candidate) => candidate === value) ?? scope.value.kinds[0];
 }
+
+// Both routes render this component, so a direct switch between them reuses the instance.
+watch(scope, () => {
+    kind.value = kindFromQuery(route.query.kind);
+});
 
 onMounted(refresh);
 
@@ -238,15 +281,15 @@ function describe(error: unknown, fallback: string): string {
             variant="text"
             prepend-icon="mdi-arrow-left"
             class="back-button"
-            data-testid="vehicle-catalog-back"
-            @click="router.push('/vehicles')"
-            >{{ t('vehicleCatalog.back') }}</v-btn
+            :data-testid="`${scope.testIdPrefix}-back`"
+            @click="router.push(scope.backPath)"
+            >{{ t(scope.back) }}</v-btn
         >
 
         <div class="page-header">
             <div>
-                <h1 class="text-h4">{{ t('vehicleCatalog.title') }}</h1>
-                <p class="text-medium-emphasis page-subtitle">{{ t('vehicleCatalog.subtitle') }}</p>
+                <h1 class="text-h4">{{ t(scope.title) }}</h1>
+                <p class="text-medium-emphasis page-subtitle">{{ t(scope.subtitle) }}</p>
             </div>
         </div>
 
@@ -256,11 +299,11 @@ function describe(error: unknown, fallback: string): string {
             <div class="card-toolbar">
                 <v-tabs v-model="kind" color="primary" density="comfortable" show-arrows>
                     <v-tab
-                        v-for="tabKind in VEHICLE_CATALOG_KINDS"
+                        v-for="tabKind in scope.kinds"
                         :key="tabKind"
                         :value="tabKind"
                         :prepend-icon="KIND_ICONS[tabKind]"
-                        :data-testid="`vehicle-catalog-tab-${tabKind}`"
+                        :data-testid="`${scope.testIdPrefix}-tab-${tabKind}`"
                         >{{ t(`vehicleCatalog.kind.${tabKind}`) }}</v-tab
                     >
                 </v-tabs>
@@ -313,7 +356,7 @@ function describe(error: unknown, fallback: string): string {
                     <span
                         :class="{ 'text-medium-emphasis': item.usageCount === 0 }"
                         data-testid="catalog-entry-usage"
-                        >{{ t('vehicleCatalog.usage', { count: item.usageCount }) }}</span
+                        >{{ t(scope.usage, { count: item.usageCount }) }}</span
                     >
                 </template>
                 <template #item.actions="{ item }">
