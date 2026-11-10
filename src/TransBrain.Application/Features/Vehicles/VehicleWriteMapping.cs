@@ -46,6 +46,7 @@ internal static class VehicleWriteMapping
         {
             return carrierGroup.Error!;
         }
+
         return VehicleDetails.Create(
             command.IsLicensePlateConfidential,
             command.Make,
@@ -63,6 +64,58 @@ internal static class VehicleWriteMapping
             command.GrossWeightKg,
             command.MaxFifthWheelLoadKg,
             command.Notes);
+    }
+
+    public static Result<VehicleEquipment> ToEquipment(VehicleEquipmentData? data)
+    {
+        if (data is null)
+        {
+            return VehicleEquipment.Empty;
+        }
+
+        MarbleRackMaterial? material = null;
+        if (data.MarbleRackMaterial is not null)
+        {
+            if (!TryParseMarbleRackMaterial(data.MarbleRackMaterial, out MarbleRackMaterial parsed))
+            {
+                return Error.Validation(
+                    "Vehicle.UnknownMarbleRackMaterial",
+                    $"'{data.MarbleRackMaterial}' is not a known marble rack material.");
+            }
+
+            material = parsed;
+        }
+
+        return VehicleEquipment.Create(
+            data.HasPartitionWall,
+            data.HasPalletBasket,
+            data.HasDangerousGoodsEquipment,
+            data.IsDangerousGoodsApproved,
+            data.HasLiftAxle,
+            data.HasDoubleDeck,
+            data.HasDoubleDeckBeams,
+            data.HasSmallLadder,
+            data.HasLargeLadder,
+            data.TankVolumeLiters,
+            data.InteriorLengthMm,
+            data.InteriorWidthMm,
+            data.InteriorHeightMm,
+            data.SupportPoleCount,
+            data.LoadBarCount,
+            data.LashingStrapCount,
+            data.PalletCount,
+            data.ChainTensionerCount,
+            data.MarbleRackCount,
+            material);
+    }
+
+    // Names only: a numeric string would otherwise parse to the member with that underlying value.
+    public static bool TryParseMarbleRackMaterial(string value, out MarbleRackMaterial material)
+    {
+        material = default;
+        return !value.Any(char.IsDigit)
+            && Enum.TryParse(value, ignoreCase: true, out material)
+            && Enum.IsDefined(material);
     }
 
     public static async Task<Result<Unit>> EnsureDriverExistsAsync(

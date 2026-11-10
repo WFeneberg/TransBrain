@@ -126,13 +126,14 @@ Startseite. Hier pflegen Sie die Stammdaten des Fuhrparks.
 ## Fahrzeugformular (Anlegen / Bearbeiten)
 
 Erreichbar über „Add vehicle“ (neu, `/vehicles/new`) oder das Stift-Symbol in der Liste
-(`/vehicles/{id}`). Das Formular ist in fünf Bereiche gegliedert, auf breiten Bildschirmen
+(`/vehicles/{id}`). Das Formular ist in sechs Bereiche gegliedert, auf breiten Bildschirmen
 in zwei Spalten.
 
 ![Fahrzeugformular](img/vueweb/fahrzeugformular.png)
 
 Alle Felder außer den mit * markierten Pflichtfeldern sind optional. Zahlenfelder müssen,
-wenn sie ausgefüllt sind, größer als 0 sein.
+wenn sie ausgefüllt sind, größer als 0 sein; nur die Anzahlen im Bereich Equipment
+dürfen auch 0 sein.
 
 | Bereich | Feld (Beschriftung) | Bedeutung | Pflicht | Regeln |
 |---|---|---|:---:|---|
@@ -154,9 +155,24 @@ wenn sie ausgefüllt sind, größer als 0 sein.
 | Weights | Curb weight (kg) | Eigengewicht | – | 1–100000 |
 | Weights | Gross vehicle weight (kg) | zulässiges Gesamtgewicht | – | 1–100000, muss größer als das Eigengewicht sein |
 | Weights | Max. fifth-wheel load (kg) | höchstzulässige Sattellast | – | 1–100000 |
+| Equipment – Body & features | Partition wall, Pallet basket, Dangerous goods equipment, Dangerous goods approved (ADR), Lift axle, Double deck, Double-deck beams, Small ladder, Large ladder | Trennwand, Palettenkorb, Gefahrgutausrüstung, Gefahrguttauglich (ADR), Liftachse, Doppelstock, Doppelstockbalken, kleine / große Leiter | – | Häkchen |
+| Equipment – Loading space & tank | Interior length / width / height (mm) | Innenmaße des Laderaums | – | Länge 1–30000, Breite und Höhe 1–5000 |
+| Equipment – Loading space & tank | Tank volume (l) | Tankvolumen in Litern | – | 1–100000 |
+| Equipment – Load securing | Support poles, Load bars, Lashing straps, Chain tensioners, Pallets | Anzahl Stützstangen, Spannlatten, Spanngurte, Kettenspanner, Paletten | – | ganze Zahl 0–999 |
+| Equipment – Marble racks | Number of marble racks | Anzahl Marmorböcke | – | ganze Zahl 0–999 |
+| Equipment – Marble racks | Material | Art der Marmorböcke | – | Auswahl „Not specified“ (keine Angabe), „Steel“ (Stahl) oder „Aluminium“ (Alu) |
 | Notes | Notes | Bemerkungen | – | max. 2000 Zeichen, mit Zeichenzähler |
 
 Alle Gewichte werden in **Kilogramm** erfasst, alle Maße in **Millimetern**.
+
+**Ausstattung (Equipment):** Der Bereich über die volle Breite erfasst die Ausstattung des
+Fahrzeugs in vier Gruppen. Bei den Anzahlen bedeutet ein **leeres Feld „nicht erfasst“**,
+**0 „keine vorhanden“**. Ein neues Fahrzeug startet ohne Häkchen, mit leeren Feldern und dem
+Material „Not specified“. Beim Speichern wird die Ausstattung immer vollständig übernommen:
+ein entferntes Häkchen oder ein geleertes Feld ist danach auch gespeichert leer. Die
+Fahrzeugliste zeigt die Ausstattung nicht an.
+
+![Bereich Equipment](img/vueweb/fahrzeug-ausstattung.png)
 
 **Status ändern** (nur beim Bearbeiten, nur Administratoren): Neben der Überschrift zeigt ein
 Chip den aktuellen Status. Die Schaltflächen daneben ändern ihn **sofort**, ohne „Save“:

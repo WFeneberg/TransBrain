@@ -82,6 +82,57 @@ public class CreateVehicleCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_Equipment_PersistsItAndReturnsItInTheResponse()
+    {
+        InMemoryVehicleRepository repository = new();
+        CreateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService());
+        VehicleEquipmentData equipment = new(
+            HasPartitionWall: true,
+            IsDangerousGoodsApproved: true,
+            HasLargeLadder: true,
+            TankVolumeLiters: 1_200,
+            InteriorLengthMm: 13_600,
+            InteriorWidthMm: 2_480,
+            InteriorHeightMm: 2_700,
+            LashingStrapCount: 20,
+            PalletCount: 0,
+            MarbleRackCount: 3,
+            MarbleRackMaterial: "Aluminium");
+
+        Result<VehicleResponse> result = await handler.Handle(
+            ValidCommand with { Equipment = equipment }, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Equipment.Should().Be(equipment);
+        Vehicle stored = repository.Vehicles.Should().ContainSingle().Subject;
+        stored.Equipment.MarbleRackMaterial.Should().Be(MarbleRackMaterial.Aluminium);
+        stored.Equipment.PalletCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_NoEquipment_ReturnsEmptyEquipment()
+    {
+        CreateVehicleCommandHandler handler = CreateHandler(new InMemoryVehicleRepository(), new InMemoryCacheService());
+
+        Result<VehicleResponse> result = await handler.Handle(ValidCommand, CancellationToken.None);
+
+        result.Value.Equipment.Should().Be(new VehicleEquipmentData());
+    }
+
+    [Fact]
+    public async Task Handle_EquipmentOutOfRange_ReturnsDomainErrorAndPersistsNothing()
+    {
+        InMemoryVehicleRepository repository = new();
+        CreateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService());
+
+        Result<VehicleResponse> result = await handler.Handle(
+            ValidCommand with { Equipment = new VehicleEquipmentData(TankVolumeLiters: 0) }, CancellationToken.None);
+
+        result.Error!.Code.Should().Be("Vehicle.TankVolumeOutOfRange");
+        repository.Vehicles.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Handle_UnknownDefaultDriver_ReturnsNotFoundAndPersistsNothing()
     {
         InMemoryVehicleRepository repository = new();

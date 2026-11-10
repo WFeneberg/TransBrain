@@ -8,6 +8,56 @@ export type VehicleType = (typeof VEHICLE_TYPES)[number];
 export const VEHICLE_STATUSES = ['Available', 'InWorkshop', 'Decommissioned'] as const;
 export type VehicleStatus = (typeof VEHICLE_STATUSES)[number];
 
+export const MARBLE_RACK_MATERIALS = ['Steel', 'Aluminium'] as const;
+export type MarbleRackMaterial = (typeof MARBLE_RACK_MATERIALS)[number];
+
+/** Optional equipment of a vehicle; PUT replaces it as a whole, so it is always sent complete. */
+export interface VehicleEquipment {
+    hasPartitionWall: boolean;
+    hasPalletBasket: boolean;
+    hasDangerousGoodsEquipment: boolean;
+    isDangerousGoodsApproved: boolean;
+    hasLiftAxle: boolean;
+    hasDoubleDeck: boolean;
+    hasDoubleDeckBeams: boolean;
+    hasSmallLadder: boolean;
+    hasLargeLadder: boolean;
+    tankVolumeLiters: number | null;
+    interiorLengthMm: number | null;
+    interiorWidthMm: number | null;
+    interiorHeightMm: number | null;
+    supportPoleCount: number | null;
+    loadBarCount: number | null;
+    lashingStrapCount: number | null;
+    palletCount: number | null;
+    chainTensionerCount: number | null;
+    marbleRackCount: number | null;
+    marbleRackMaterial: MarbleRackMaterial | null;
+}
+
+export const EMPTY_VEHICLE_EQUIPMENT: Readonly<VehicleEquipment> = {
+    hasPartitionWall: false,
+    hasPalletBasket: false,
+    hasDangerousGoodsEquipment: false,
+    isDangerousGoodsApproved: false,
+    hasLiftAxle: false,
+    hasDoubleDeck: false,
+    hasDoubleDeckBeams: false,
+    hasSmallLadder: false,
+    hasLargeLadder: false,
+    tankVolumeLiters: null,
+    interiorLengthMm: null,
+    interiorWidthMm: null,
+    interiorHeightMm: null,
+    supportPoleCount: null,
+    loadBarCount: null,
+    lashingStrapCount: null,
+    palletCount: null,
+    chainTensionerCount: null,
+    marbleRackCount: null,
+    marbleRackMaterial: null,
+};
+
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
 export interface VehicleWriteRequest {
     licensePlate: string;
@@ -35,6 +85,8 @@ export interface VehicleWriteRequest {
     grossWeightKg: number | null;
     maxFifthWheelLoadKg: number | null;
     notes: string | null;
+    /** Omitted or null on write means "no equipment"; responses always carry it. */
+    equipment: VehicleEquipment | null;
 }
 
 export interface Vehicle extends VehicleWriteRequest {

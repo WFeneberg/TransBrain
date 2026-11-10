@@ -390,6 +390,121 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
     }
 
     [Fact]
+    public async Task PostAndPutVehicle_WithEquipment_RoundTripsAndReplacesIt()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        HttpResponseMessage response = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-EQ 1",
+            type = "Tractor",
+            payloadKg = 24_000,
+            loadMeters = 13.6m,
+            nextInspectionDue = "2027-03-31",
+            equipment = new
+            {
+                hasPartitionWall = true,
+                hasDangerousGoodsEquipment = true,
+                isDangerousGoodsApproved = true,
+                hasLiftAxle = true,
+                tankVolumeLiters = 1_200,
+                interiorLengthMm = 13_600,
+                interiorWidthMm = 2_480,
+                interiorHeightMm = 2_700,
+                lashingStrapCount = 20,
+                palletCount = 0,
+                marbleRackCount = 3,
+                marbleRackMaterial = "aluminium"
+            }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        VehicleResponse created = (await response.Content.ReadFromJsonAsync<VehicleResponse>())!;
+        HttpResponseMessage fetchedResponse = await factory.CreateClientAs("viewer").GetAsync($"/api/vehicles/{created.Id}");
+        VehicleResponse fetched = (await fetchedResponse.Content.ReadFromJsonAsync<VehicleResponse>())!;
+        fetched.Equipment.Should().Be(new VehicleEquipmentData(
+            HasPartitionWall: true,
+            HasDangerousGoodsEquipment: true,
+            IsDangerousGoodsApproved: true,
+            HasLiftAxle: true,
+            TankVolumeLiters: 1_200,
+            InteriorLengthMm: 13_600,
+            InteriorWidthMm: 2_480,
+            InteriorHeightMm: 2_700,
+            LashingStrapCount: 20,
+            PalletCount: 0,
+            MarbleRackCount: 3,
+            MarbleRackMaterial: "Aluminium"));
+
+        HttpResponseMessage put = await admin.PutAsJsonAsync($"/api/vehicles/{created.Id}", new
+        {
+            licensePlate = "M-EQ 1",
+            type = "Tractor",
+            payloadKg = 24_000,
+            loadMeters = 13.6m,
+            nextInspectionDue = "2027-03-31",
+            equipment = new { hasSmallLadder = true }
+        });
+
+        put.StatusCode.Should().Be(HttpStatusCode.OK);
+        HttpResponseMessage refetchedResponse = await admin.GetAsync($"/api/vehicles/{created.Id}");
+        VehicleResponse refetched = (await refetchedResponse.Content.ReadFromJsonAsync<VehicleResponse>())!;
+        refetched.Equipment.Should().Be(new VehicleEquipmentData(HasSmallLadder: true));
+    }
+
+    // Regression: with a model-level HasDefaultValue(false), EF skipped writing false when the owned
+    // value was replaced, so unticking a box (true -> false) silently did not persist.
+    [Fact]
+    public async Task PutVehicle_UntickedFlags_PersistsFalse()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        HttpResponseMessage response = await admin.PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-EQ 3",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31",
+            isLicensePlateConfidential = true,
+            equipment = new { hasLiftAxle = true }
+        });
+        VehicleResponse created = (await response.Content.ReadFromJsonAsync<VehicleResponse>())!;
+
+        HttpResponseMessage put = await admin.PutAsJsonAsync($"/api/vehicles/{created.Id}", new
+        {
+            licensePlate = "M-EQ 3",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31",
+            isLicensePlateConfidential = false,
+            equipment = new { hasLiftAxle = false }
+        });
+
+        put.StatusCode.Should().Be(HttpStatusCode.OK);
+        VehicleResponse fetched = (await admin.GetFromJsonAsync<VehicleResponse>($"/api/vehicles/{created.Id}"))!;
+        fetched.IsLicensePlateConfidential.Should().BeFalse();
+        fetched.Equipment.HasLiftAxle.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PostVehicle_InvalidEquipment_ReturnsErrorsKeyedByDottedFieldName()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync("/api/vehicles", new
+        {
+            licensePlate = "M-EQ 2",
+            type = "Van",
+            payloadKg = 3_000,
+            loadMeters = 4.0m,
+            nextInspectionDue = "2027-03-31",
+            equipment = new { tankVolumeLiters = 0, marbleRackMaterial = "Wood" }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        string body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("\"Equipment.TankVolumeLiters\"").And.Contain("\"Equipment.MarbleRackMaterial\"");
+    }
+
+    [Fact]
     public async Task PostVehicle_UnknownDefaultDriver_ReturnsNotFound()
     {
         HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync("/api/vehicles", new

@@ -7,7 +7,7 @@ namespace TransBrain.Application.Features.Vehicles;
 /// These rules exist to report several field problems at once, which a domain factory
 /// returning a single coded error cannot do. They deliberately mirror — and never extend —
 /// the domain's own checks (<see cref="TransBrain.Domain.Vehicles.LicensePlate.Create"/>,
-/// <see cref="Vehicle.Create"/> and <see cref="VehicleDetails.Create"/>): if these ever
+/// <see cref="Vehicle.Create"/>, <see cref="VehicleDetails.Create"/> and <see cref="VehicleEquipment.Create"/>): if these ever
 /// disagree, the domain wins and this is the copy to fix.
 /// </remarks>
 internal sealed class VehicleWriteRules : AbstractValidator<IVehicleWriteCommand>
@@ -42,5 +42,22 @@ internal sealed class VehicleWriteRules : AbstractValidator<IVehicleWriteCommand
             .Must((command, gross) => gross > command.CurbWeightKg)
             .When(c => c.GrossWeightKg.HasValue && c.CurbWeightKg.HasValue)
             .WithMessage("Gross weight must be greater than the curb weight.");
+
+        When(c => c.Equipment is not null, () =>
+        {
+            RuleFor(c => c.Equipment!.TankVolumeLiters).InclusiveBetween(1, VehicleEquipment.MaxTankVolumeLiters);
+            RuleFor(c => c.Equipment!.InteriorLengthMm).InclusiveBetween(1, VehicleDetails.MaxLengthMm);
+            RuleFor(c => c.Equipment!.InteriorWidthMm).InclusiveBetween(1, VehicleDetails.MaxWidthMm);
+            RuleFor(c => c.Equipment!.InteriorHeightMm).InclusiveBetween(1, VehicleDetails.MaxHeightMm);
+            RuleFor(c => c.Equipment!.SupportPoleCount).InclusiveBetween(0, VehicleEquipment.MaxCount);
+            RuleFor(c => c.Equipment!.LoadBarCount).InclusiveBetween(0, VehicleEquipment.MaxCount);
+            RuleFor(c => c.Equipment!.LashingStrapCount).InclusiveBetween(0, VehicleEquipment.MaxCount);
+            RuleFor(c => c.Equipment!.PalletCount).InclusiveBetween(0, VehicleEquipment.MaxCount);
+            RuleFor(c => c.Equipment!.ChainTensionerCount).InclusiveBetween(0, VehicleEquipment.MaxCount);
+            RuleFor(c => c.Equipment!.MarbleRackCount).InclusiveBetween(0, VehicleEquipment.MaxCount);
+            RuleFor(c => c.Equipment!.MarbleRackMaterial)
+                .Must(material => material is null || VehicleWriteMapping.TryParseMarbleRackMaterial(material, out _))
+                .WithMessage("Marble rack material must be 'Steel' or 'Aluminium'.");
+        });
     }
 }

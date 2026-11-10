@@ -24,4 +24,5 @@ public sealed record CreateVehicleCommand(
     int? CurbWeightKg = null,
     int? GrossWeightKg = null,
     int? MaxFifthWheelLoadKg = null,
-    string? Notes = null) : ICommand<VehicleResponse>, IVehicleWriteCommand;
+    string? Notes = null,
+    VehicleEquipmentData? Equipment = null) : ICommand<VehicleResponse>, IVehicleWriteCommand;

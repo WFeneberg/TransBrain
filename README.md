@@ -115,7 +115,7 @@ The two master-data aggregates expose the same shape of CRUD endpoint group:
 
 | Method | Route                | Policy            | Notes                                              |
 |--------|----------------------|--------------------|-----------------------------------------------------|
-| POST   | `/api/vehicles`      | `MasterDataWrite` | Per-field validation errors; `409` on a duplicate plate |
+| POST   | `/api/vehicles`      | `MasterDataWrite` | Per-field validation errors (nested `equipment` fields keyed e.g. `Equipment.TankVolumeLiters`); `409` on a duplicate plate |
 | GET    | `/api/vehicles`      | `Read`             | Paged; filters: `page`, `pageSize`, `status`, `type` |
 | GET    | `/api/vehicles/{id}` | `Read`             | `404` if not found                                   |
 | PUT    | `/api/vehicles/{id}` | `MasterDataWrite` | `404` if not found, `409` on a duplicate plate       |

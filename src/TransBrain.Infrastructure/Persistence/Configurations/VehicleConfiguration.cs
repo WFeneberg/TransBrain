@@ -43,7 +43,7 @@ internal sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
         builder.OwnsOne(v => v.Details, details =>
         {
             details.Property(d => d.IsLicensePlateConfidential)
-                .HasColumnName("IsLicensePlateConfidential").HasDefaultValue(false).IsRequired();
+                .HasColumnName("IsLicensePlateConfidential").IsRequired();
             details.Property(d => d.Make).HasColumnName("Make").HasMaxLength(VehicleDetails.MaxNameLength);
             details.Property(d => d.Model).HasColumnName("Model").HasMaxLength(VehicleDetails.MaxNameLength);
             details.Property(d => d.ManufacturedOn).HasColumnName("ManufacturedOn");
@@ -66,6 +66,44 @@ internal sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
         });
 
         builder.Navigation(v => v.Details).IsRequired();
+
+        // No HasDefaultValue on the bools: EF would treat false as "not set" and skip it when the owned
+        // value is replaced, so unticking a box would not persist. The migration still back-fills false.
+        builder.OwnsOne(v => v.Equipment, equipment =>
+        {
+            equipment.Property(e => e.HasPartitionWall)
+                .HasColumnName("HasPartitionWall").IsRequired();
+            equipment.Property(e => e.HasPalletBasket)
+                .HasColumnName("HasPalletBasket").IsRequired();
+            equipment.Property(e => e.HasDangerousGoodsEquipment)
+                .HasColumnName("HasDangerousGoodsEquipment").IsRequired();
+            equipment.Property(e => e.IsDangerousGoodsApproved)
+                .HasColumnName("IsDangerousGoodsApproved").IsRequired();
+            equipment.Property(e => e.HasLiftAxle)
+                .HasColumnName("HasLiftAxle").IsRequired();
+            equipment.Property(e => e.HasDoubleDeck)
+                .HasColumnName("HasDoubleDeck").IsRequired();
+            equipment.Property(e => e.HasDoubleDeckBeams)
+                .HasColumnName("HasDoubleDeckBeams").IsRequired();
+            equipment.Property(e => e.HasSmallLadder)
+                .HasColumnName("HasSmallLadder").IsRequired();
+            equipment.Property(e => e.HasLargeLadder)
+                .HasColumnName("HasLargeLadder").IsRequired();
+            equipment.Property(e => e.TankVolumeLiters).HasColumnName("TankVolumeLiters");
+            equipment.Property(e => e.InteriorLengthMm).HasColumnName("InteriorLengthMm");
+            equipment.Property(e => e.InteriorWidthMm).HasColumnName("InteriorWidthMm");
+            equipment.Property(e => e.InteriorHeightMm).HasColumnName("InteriorHeightMm");
+            equipment.Property(e => e.SupportPoleCount).HasColumnName("SupportPoleCount");
+            equipment.Property(e => e.LoadBarCount).HasColumnName("LoadBarCount");
+            equipment.Property(e => e.LashingStrapCount).HasColumnName("LashingStrapCount");
+            equipment.Property(e => e.PalletCount).HasColumnName("PalletCount");
+            equipment.Property(e => e.ChainTensionerCount).HasColumnName("ChainTensionerCount");
+            equipment.Property(e => e.MarbleRackCount).HasColumnName("MarbleRackCount");
+            equipment.Property(e => e.MarbleRackMaterial)
+                .HasColumnName("MarbleRackMaterial").HasConversion<string>().HasMaxLength(20);
+        });
+
+        builder.Navigation(v => v.Equipment).IsRequired();
     }
 }
 

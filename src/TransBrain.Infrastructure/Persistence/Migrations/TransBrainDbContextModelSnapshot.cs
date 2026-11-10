@@ -747,9 +747,7 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                                 .HasColumnName("HeightMm");
 
                             b1.Property<bool>("IsLicensePlateConfidential")
-                                .ValueGeneratedOnAdd()
                                 .HasColumnType("boolean")
-                                .HasDefaultValue(false)
                                 .HasColumnName("IsLicensePlateConfidential");
 
                             b1.Property<int?>("LengthMm")
@@ -800,7 +798,104 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("VehicleId");
                         });
 
+                    b.OwnsOne("TransBrain.Domain.Vehicles.VehicleEquipment", "Equipment", b1 =>
+                        {
+                            b1.Property<Guid>("VehicleId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int?>("ChainTensionerCount")
+                                .HasColumnType("integer")
+                                .HasColumnName("ChainTensionerCount");
+
+                            b1.Property<bool>("HasDangerousGoodsEquipment")
+                                .HasColumnType("boolean")
+                                .HasColumnName("HasDangerousGoodsEquipment");
+
+                            b1.Property<bool>("HasDoubleDeck")
+                                .HasColumnType("boolean")
+                                .HasColumnName("HasDoubleDeck");
+
+                            b1.Property<bool>("HasDoubleDeckBeams")
+                                .HasColumnType("boolean")
+                                .HasColumnName("HasDoubleDeckBeams");
+
+                            b1.Property<bool>("HasLargeLadder")
+                                .HasColumnType("boolean")
+                                .HasColumnName("HasLargeLadder");
+
+                            b1.Property<bool>("HasLiftAxle")
+                                .HasColumnType("boolean")
+                                .HasColumnName("HasLiftAxle");
+
+                            b1.Property<bool>("HasPalletBasket")
+                                .HasColumnType("boolean")
+                                .HasColumnName("HasPalletBasket");
+
+                            b1.Property<bool>("HasPartitionWall")
+                                .HasColumnType("boolean")
+                                .HasColumnName("HasPartitionWall");
+
+                            b1.Property<bool>("HasSmallLadder")
+                                .HasColumnType("boolean")
+                                .HasColumnName("HasSmallLadder");
+
+                            b1.Property<int?>("InteriorHeightMm")
+                                .HasColumnType("integer")
+                                .HasColumnName("InteriorHeightMm");
+
+                            b1.Property<int?>("InteriorLengthMm")
+                                .HasColumnType("integer")
+                                .HasColumnName("InteriorLengthMm");
+
+                            b1.Property<int?>("InteriorWidthMm")
+                                .HasColumnType("integer")
+                                .HasColumnName("InteriorWidthMm");
+
+                            b1.Property<bool>("IsDangerousGoodsApproved")
+                                .HasColumnType("boolean")
+                                .HasColumnName("IsDangerousGoodsApproved");
+
+                            b1.Property<int?>("LashingStrapCount")
+                                .HasColumnType("integer")
+                                .HasColumnName("LashingStrapCount");
+
+                            b1.Property<int?>("LoadBarCount")
+                                .HasColumnType("integer")
+                                .HasColumnName("LoadBarCount");
+
+                            b1.Property<int?>("MarbleRackCount")
+                                .HasColumnType("integer")
+                                .HasColumnName("MarbleRackCount");
+
+                            b1.Property<string>("MarbleRackMaterial")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("MarbleRackMaterial");
+
+                            b1.Property<int?>("PalletCount")
+                                .HasColumnType("integer")
+                                .HasColumnName("PalletCount");
+
+                            b1.Property<int?>("SupportPoleCount")
+                                .HasColumnType("integer")
+                                .HasColumnName("SupportPoleCount");
+
+                            b1.Property<int?>("TankVolumeLiters")
+                                .HasColumnType("integer")
+                                .HasColumnName("TankVolumeLiters");
+
+                            b1.HasKey("VehicleId");
+
+                            b1.ToTable("vehicles");
+
+                            b1.WithOwner()
+                                .HasForeignKey("VehicleId");
+                        });
+
                     b.Navigation("Details")
+                        .IsRequired();
+
+                    b.Navigation("Equipment")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

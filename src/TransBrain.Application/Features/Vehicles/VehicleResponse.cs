@@ -30,6 +30,8 @@ public sealed record VehicleResponse(
     DateTimeOffset? ModifiedAt = null,
     string? ModifiedBy = null)
 {
+    public VehicleEquipmentData Equipment { get; init; } = new();
+
     public static VehicleResponse From(Vehicle vehicle)
     {
         VehicleDetails details = vehicle.Details;
@@ -60,6 +62,9 @@ public sealed record VehicleResponse(
             details.MaxFifthWheelLoadKg,
             details.Notes,
             vehicle.ModifiedAt,
-            vehicle.ModifiedBy);
+            vehicle.ModifiedBy)
+        {
+            Equipment = VehicleEquipmentData.From(vehicle.Equipment),
+        };
     }
 }

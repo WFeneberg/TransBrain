@@ -43,6 +43,12 @@ internal sealed class UpdateVehicleCommandHandler(
             return details.Error!;
         }
 
+        Result<VehicleEquipment> equipment = VehicleWriteMapping.ToEquipment(command.Equipment);
+        if (!equipment.IsSuccess)
+        {
+            return equipment.Error!;
+        }
+
         Result<Unit> driver = await VehicleWriteMapping.EnsureDriverExistsAsync(
             drivers, command.DefaultDriverId, cancellationToken);
         if (!driver.IsSuccess)
@@ -66,7 +72,8 @@ internal sealed class UpdateVehicleCommandHandler(
             command.LoadMeters,
             command.NextInspectionDue,
             details.Value,
-            command.DefaultDriverId);
+            command.DefaultDriverId,
+            equipment.Value);
 
         if (!updated.IsSuccess)
         {

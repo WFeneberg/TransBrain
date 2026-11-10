@@ -1,8 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import {
     AbstractControl,
     FormBuilder,
+    FormControl,
     ReactiveFormsModule,
     ValidationErrors,
     Validators,
@@ -15,6 +17,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, Router } from '@angular/router';
 import { filter, forkJoin, switchMap } from 'rxjs';
@@ -30,8 +33,12 @@ import {
     catalogOptions,
 } from './vehicle-catalog.service';
 import {
+    EMPTY_VEHICLE_EQUIPMENT,
+    MARBLE_RACK_MATERIALS,
+    MarbleRackMaterial,
     VEHICLE_TYPES,
     Vehicle,
+    VehicleEquipment,
     VehicleService,
     VehicleStatus,
     VehicleType,
@@ -54,6 +61,77 @@ function positiveOrEmpty(control: AbstractControl<number | null>): ValidationErr
     return value === null || Number(value) > 0 ? null : { positive: true };
 }
 
+/** Optional whole number: empty is fine, a filled-in value must be an integer within [min, max]. */
+function wholeNumberInRange(min: number, max: number) {
+    return (control: AbstractControl<number | null>): ValidationErrors | null => {
+        const value = control.value;
+        if (value === null || (value as unknown) === '') {
+            return null;
+        }
+        const number = Number(value);
+        return Number.isInteger(number) && number >= min && number <= max
+            ? null
+            : { range: { min, max } };
+    };
+}
+
+type EquipmentFlag = {
+    [K in keyof VehicleEquipment]: VehicleEquipment[K] extends boolean ? K : never;
+}[keyof VehicleEquipment];
+
+type EquipmentNumber = {
+    [K in keyof VehicleEquipment]: VehicleEquipment[K] extends number | null ? K : never;
+}[keyof VehicleEquipment];
+
+interface EquipmentNumberField {
+    name: EquipmentNumber;
+    min: number;
+    max: number;
+}
+
+const EQUIPMENT_FLAGS: readonly EquipmentFlag[] = [
+    'hasPartitionWall',
+    'hasPalletBasket',
+    'hasDangerousGoodsEquipment',
+    'isDangerousGoodsApproved',
+    'hasLiftAxle',
+    'hasDoubleDeck',
+    'hasDoubleDeckBeams',
+    'hasSmallLadder',
+    'hasLargeLadder',
+];
+
+const LOADING_SPACE_FIELDS: readonly EquipmentNumberField[] = [
+    { name: 'interiorLengthMm', min: 1, max: 30000 },
+    { name: 'interiorWidthMm', min: 1, max: 5000 },
+    { name: 'interiorHeightMm', min: 1, max: 5000 },
+    { name: 'tankVolumeLiters', min: 1, max: 100000 },
+];
+
+const LOAD_SECURING_FIELDS: readonly EquipmentNumberField[] = [
+    { name: 'supportPoleCount', min: 0, max: 999 },
+    { name: 'loadBarCount', min: 0, max: 999 },
+    { name: 'lashingStrapCount', min: 0, max: 999 },
+    { name: 'chainTensionerCount', min: 0, max: 999 },
+    { name: 'palletCount', min: 0, max: 999 },
+];
+
+const MARBLE_RACK_COUNT_FIELD: EquipmentNumberField = { name: 'marbleRackCount', min: 0, max: 999 };
+
+const EQUIPMENT_NUMBER_FIELDS: readonly EquipmentNumberField[] = [
+    ...LOADING_SPACE_FIELDS,
+    ...LOAD_SECURING_FIELDS,
+    MARBLE_RACK_COUNT_FIELD,
+];
+
+/** "Equipment.TankVolumeLiters" -> "equipment.tankVolumeLiters". */
+function toControlPath(field: string): string {
+    return field
+        .split('.')
+        .map((segment) => segment.charAt(0).toLowerCase() + segment.slice(1))
+        .join('.');
+}
+
 function textOrNull(value: string): string | null {
     const trimmed = value.trim();
     return trimmed === '' ? null : trimmed;
@@ -67,6 +145,7 @@ function numberOrNull(value: number | null): number | null {
     selector: 'app-vehicle-form',
     standalone: true,
     imports: [
+        NgTemplateOutlet,
         ReactiveFormsModule,
         MatButtonModule,
         MatCardModule,
@@ -75,6 +154,7 @@ function numberOrNull(value: number | null): number | null {
         MatFormFieldModule,
         MatIconModule,
         MatInputModule,
+        MatRadioModule,
         MatSelectModule,
     ],
     template: `
@@ -519,6 +599,130 @@ function numberOrNull(value: number | null): number | null {
                         </mat-card-content>
                     </mat-card>
 
+                    <mat-card
+                        appearance="outlined"
+                        class="full-width"
+                        formGroupName="equipment"
+                        data-testid="vehicle-equipment"
+                    >
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">construction</mat-icon>
+                            <mat-card-title>{{
+                                i18n.t('vehicles.section.equipment')
+                            }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content class="equipment-groups">
+                            <section class="group">
+                                <h3 class="group-title">
+                                    {{ i18n.t('vehicles.equipment.group.body') }}
+                                </h3>
+                                @for (flag of equipmentFlags; track flag) {
+                                    <mat-checkbox
+                                        [formControlName]="flag"
+                                        [attr.data-testid]="'vehicle-' + flag"
+                                    >
+                                        {{ i18n.t(equipmentKey(flag)) }}
+                                    </mat-checkbox>
+                                }
+                            </section>
+
+                            <section class="group">
+                                <h3 class="group-title">
+                                    {{ i18n.t('vehicles.equipment.group.loadingSpace') }}
+                                </h3>
+                                @for (field of loadingSpaceFields; track field.name) {
+                                    <ng-container
+                                        *ngTemplateOutlet="
+                                            numberField;
+                                            context: { $implicit: field }
+                                        "
+                                    />
+                                }
+                            </section>
+
+                            <section class="group">
+                                <h3 class="group-title">
+                                    {{ i18n.t('vehicles.equipment.group.loadSecuring') }}
+                                </h3>
+                                @for (field of loadSecuringFields; track field.name) {
+                                    <ng-container
+                                        *ngTemplateOutlet="
+                                            numberField;
+                                            context: { $implicit: field }
+                                        "
+                                    />
+                                }
+                            </section>
+
+                            <section class="group">
+                                <h3 class="group-title">
+                                    {{ i18n.t('vehicles.equipment.group.marbleRacks') }}
+                                </h3>
+                                <ng-container
+                                    *ngTemplateOutlet="
+                                        numberField;
+                                        context: { $implicit: marbleRackCountField }
+                                    "
+                                />
+                                <span id="vehicle-marbleRackMaterial-label" class="radio-label">{{
+                                    i18n.t('vehicles.equipment.marbleRackMaterial')
+                                }}</span>
+                                <mat-radio-group
+                                    class="radio-group"
+                                    formControlName="marbleRackMaterial"
+                                    aria-labelledby="vehicle-marbleRackMaterial-label"
+                                    data-testid="vehicle-marbleRackMaterial"
+                                >
+                                    <mat-radio-button
+                                        [value]="null"
+                                        data-testid="vehicle-marbleRackMaterial-none"
+                                    >
+                                        {{
+                                            i18n.t(
+                                                'vehicles.equipment.marbleRackMaterialOption.none'
+                                            )
+                                        }}
+                                    </mat-radio-button>
+                                    @for (material of marbleRackMaterials; track material) {
+                                        <mat-radio-button
+                                            [value]="material"
+                                            [attr.data-testid]="
+                                                'vehicle-marbleRackMaterial-' + material
+                                            "
+                                        >
+                                            {{ i18n.t(materialKey(material)) }}
+                                        </mat-radio-button>
+                                    }
+                                </mat-radio-group>
+                                @if (equipment.controls.marbleRackMaterial.errors; as errors) {
+                                    <mat-error
+                                        class="radio-error"
+                                        data-testid="vehicle-marbleRackMaterial-error"
+                                        >{{ fieldErrorText(errors) }}</mat-error
+                                    >
+                                }
+                            </section>
+                        </mat-card-content>
+
+                        <ng-template #numberField let-field>
+                            <mat-form-field>
+                                <mat-label>{{ i18n.t(equipmentKey(field.name)) }}</mat-label>
+                                <input
+                                    matInput
+                                    type="number"
+                                    [formControl]="numberControl(field)"
+                                    [attr.data-testid]="'vehicle-' + field.name"
+                                />
+                                @if (numberControl(field).errors; as errors) {
+                                    <mat-error
+                                        [attr.data-testid]="'vehicle-' + field.name + '-error'"
+                                        >{{ fieldErrorText(errors) }}</mat-error
+                                    >
+                                }
+                            </mat-form-field>
+                        </ng-template>
+                    </mat-card>
+
                     <mat-card appearance="outlined" class="full-width">
                         <mat-card-header>
                             <mat-icon mat-card-avatar class="avatar">notes</mat-icon>
@@ -722,6 +926,43 @@ function numberOrNull(value: number | null): number | null {
                 padding-bottom: 20px;
             }
 
+            .equipment-groups {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 8px 24px;
+            }
+
+            .group {
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+            }
+
+            .group mat-form-field {
+                width: 100%;
+            }
+
+            .group-title {
+                margin: 0 0 12px;
+                font: var(--mat-sys-title-small);
+                color: var(--mat-sys-on-surface-variant);
+            }
+
+            .radio-label {
+                font: var(--mat-sys-body-medium);
+                color: var(--mat-sys-on-surface-variant);
+            }
+
+            .radio-group {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .radio-error {
+                font: var(--mat-sys-body-small);
+                padding-left: 16px;
+            }
+
             .uppercase {
                 text-transform: uppercase;
             }
@@ -740,9 +981,16 @@ function numberOrNull(value: number | null): number | null {
                 background: var(--mat-sys-surface-container-low);
             }
 
+            @media (max-width: 959px) {
+                .equipment-groups {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
+
             @media (max-width: 599px) {
                 .fields,
-                .fields.three {
+                .fields.three,
+                .equipment-groups {
                     grid-template-columns: minmax(0, 1fr);
                 }
             }
@@ -766,6 +1014,11 @@ export class VehicleFormComponent {
     protected readonly i18n = inject(I18nService);
 
     protected readonly vehicleTypes = VEHICLE_TYPES;
+    protected readonly equipmentFlags = EQUIPMENT_FLAGS;
+    protected readonly loadingSpaceFields = LOADING_SPACE_FIELDS;
+    protected readonly loadSecuringFields = LOAD_SECURING_FIELDS;
+    protected readonly marbleRackCountField = MARBLE_RACK_COUNT_FIELD;
+    protected readonly marbleRackMaterials = MARBLE_RACK_MATERIALS;
     protected readonly vehicleId = this.route.snapshot.paramMap.get('id');
     protected readonly isEditMode = this.vehicleId !== null;
     protected readonly formError = signal<string | null>(null);
@@ -822,7 +1075,31 @@ export class VehicleFormComponent {
         grossWeightKg: this.fb.control<number | null>(null, positiveOrEmpty),
         maxFifthWheelLoadKg: this.fb.control<number | null>(null, positiveOrEmpty),
         notes: [''],
+        equipment: this.fb.nonNullable.group({
+            hasPartitionWall: [false],
+            hasPalletBasket: [false],
+            hasDangerousGoodsEquipment: [false],
+            isDangerousGoodsApproved: [false],
+            hasLiftAxle: [false],
+            hasDoubleDeck: [false],
+            hasDoubleDeckBeams: [false],
+            hasSmallLadder: [false],
+            hasLargeLadder: [false],
+            tankVolumeLiters: this.equipmentNumber('tankVolumeLiters'),
+            interiorLengthMm: this.equipmentNumber('interiorLengthMm'),
+            interiorWidthMm: this.equipmentNumber('interiorWidthMm'),
+            interiorHeightMm: this.equipmentNumber('interiorHeightMm'),
+            supportPoleCount: this.equipmentNumber('supportPoleCount'),
+            loadBarCount: this.equipmentNumber('loadBarCount'),
+            lashingStrapCount: this.equipmentNumber('lashingStrapCount'),
+            palletCount: this.equipmentNumber('palletCount'),
+            chainTensionerCount: this.equipmentNumber('chainTensionerCount'),
+            marbleRackCount: this.equipmentNumber('marbleRackCount'),
+            marbleRackMaterial: this.fb.control<MarbleRackMaterial | null>(null),
+        }),
     });
+
+    protected readonly equipment = this.form.controls.equipment;
 
     constructor() {
         this.session.ready
@@ -888,6 +1165,7 @@ export class VehicleFormComponent {
                             grossWeightKg: vehicle.grossWeightKg ?? null,
                             maxFifthWheelLoadKg: vehicle.maxFifthWheelLoadKg ?? null,
                             notes: vehicle.notes ?? '',
+                            equipment: { ...EMPTY_VEHICLE_EQUIPMENT, ...vehicle.equipment },
                         });
                     },
                     error: (error: HttpErrorResponse) =>
@@ -904,6 +1182,18 @@ export class VehicleFormComponent {
 
     protected typeKey(type: VehicleType) {
         return `vehicles.typeOption.${type}` as const;
+    }
+
+    protected equipmentKey(field: EquipmentFlag | EquipmentNumber) {
+        return `vehicles.equipment.${field}` as const;
+    }
+
+    protected materialKey(material: MarbleRackMaterial) {
+        return `vehicles.equipment.marbleRackMaterialOption.${material}` as const;
+    }
+
+    protected numberControl(field: EquipmentNumberField): FormControl<number | null> {
+        return this.equipment.controls[field.name];
     }
 
     protected optionLabel(option: VehicleCatalogOption): string {
@@ -936,6 +1226,12 @@ export class VehicleFormComponent {
         }
         if (errors['positive']) {
             return this.i18n.t('common.fieldPositive');
+        }
+        if (errors['range']) {
+            return this.i18n.t(
+                'common.fieldRange',
+                errors['range'] as { min: number; max: number },
+            );
         }
         return this.i18n.t('common.fieldInvalid');
     }
@@ -1036,7 +1332,25 @@ export class VehicleFormComponent {
             grossWeightKg: numberOrNull(raw.grossWeightKg),
             maxFifthWheelLoadKg: numberOrNull(raw.maxFifthWheelLoadKg),
             notes: textOrNull(raw.notes),
+            equipment: {
+                ...raw.equipment,
+                tankVolumeLiters: numberOrNull(raw.equipment.tankVolumeLiters),
+                interiorLengthMm: numberOrNull(raw.equipment.interiorLengthMm),
+                interiorWidthMm: numberOrNull(raw.equipment.interiorWidthMm),
+                interiorHeightMm: numberOrNull(raw.equipment.interiorHeightMm),
+                supportPoleCount: numberOrNull(raw.equipment.supportPoleCount),
+                loadBarCount: numberOrNull(raw.equipment.loadBarCount),
+                lashingStrapCount: numberOrNull(raw.equipment.lashingStrapCount),
+                palletCount: numberOrNull(raw.equipment.palletCount),
+                chainTensionerCount: numberOrNull(raw.equipment.chainTensionerCount),
+                marbleRackCount: numberOrNull(raw.equipment.marbleRackCount),
+            },
         };
+    }
+
+    private equipmentNumber(name: EquipmentNumber): FormControl<number | null> {
+        const field = EQUIPMENT_NUMBER_FIELDS.find((candidate) => candidate.name === name)!;
+        return this.fb.control<number | null>(null, wholeNumberInRange(field.min, field.max));
     }
 
     // Phase 1 forbade binding ProblemDetails' `errors` dictionary here, because it was keyed
@@ -1046,19 +1360,19 @@ export class VehicleFormComponent {
     // correct - this supersedes that earlier rule. The dictionary key is still the .NET
     // property name (PascalCase, e.g. "LicensePlate"), while this form's controls use the
     // camelCase names the rest of the wire format uses, so each key is lowercased on its first
-    // character before the control lookup.
+    // character before the control lookup. Nested fields come keyed by their dotted path
+    // ("Equipment.TankVolumeLiters"), so every segment is converted the same way.
     private applyServerErrors(error: HttpErrorResponse): void {
         const problem = error.error as ProblemDetailsBody | null;
 
         if (problem?.errors) {
             for (const [field, messages] of Object.entries(problem.errors)) {
-                const controlName = field.charAt(0).toLowerCase() + field.slice(1);
-                const control = this.form.get(controlName);
+                const control = this.form.get(toControlPath(field));
                 const message = messages.join(' ');
-                if (control) {
+                if (control instanceof FormControl) {
                     control.setErrors({ server: message });
                 } else {
-                    // A failure keyed to something this form has no control for still needs
+                    // A failure keyed to something this form has no field control for still needs
                     // to reach the user - fall back to the form-level message.
                     this.formError.update((existing) =>
                         existing ? `${existing} ${message}` : message,

@@ -6,9 +6,14 @@ import {
     changeVehicleStatus,
     createVehicle,
     getVehicle,
+    MARBLE_RACK_MATERIALS,
     updateVehicle,
     VEHICLE_TYPES,
+    type MarbleRackMaterial,
     type Vehicle,
+    type VehicleEquipment,
+    type VehicleEquipmentFlag,
+    type VehicleEquipmentNumber,
     type VehicleStatus,
     type VehicleWriteRequest,
 } from '../api/vehicles';
@@ -113,8 +118,85 @@ const OPTIONAL_POSITIVE_FIELDS: TextField[] = [
     'maxFifthWheelLoadKg',
 ];
 
+interface EquipmentFlagField {
+    key: VehicleEquipmentFlag;
+    label: MessageKey;
+}
+
+interface EquipmentNumberField {
+    key: VehicleEquipmentNumber;
+    label: MessageKey;
+    min: number;
+    max: number;
+}
+
+const equipmentFlagFields: EquipmentFlagField[] = [
+    { key: 'hasPartitionWall', label: 'vehicles.equipment.hasPartitionWall' },
+    { key: 'hasPalletBasket', label: 'vehicles.equipment.hasPalletBasket' },
+    { key: 'hasDangerousGoodsEquipment', label: 'vehicles.equipment.hasDangerousGoodsEquipment' },
+    { key: 'isDangerousGoodsApproved', label: 'vehicles.equipment.isDangerousGoodsApproved' },
+    { key: 'hasLiftAxle', label: 'vehicles.equipment.hasLiftAxle' },
+    { key: 'hasDoubleDeck', label: 'vehicles.equipment.hasDoubleDeck' },
+    { key: 'hasDoubleDeckBeams', label: 'vehicles.equipment.hasDoubleDeckBeams' },
+    { key: 'hasSmallLadder', label: 'vehicles.equipment.hasSmallLadder' },
+    { key: 'hasLargeLadder', label: 'vehicles.equipment.hasLargeLadder' },
+];
+
+const equipmentNumberGroups: { title: MessageKey; fields: EquipmentNumberField[]; withMaterial?: boolean }[] = [
+    {
+        title: 'vehicles.equipment.group.loadingSpace',
+        fields: [
+            { key: 'interiorLengthMm', label: 'vehicles.equipment.interiorLengthMm', min: 1, max: 30000 },
+            { key: 'interiorWidthMm', label: 'vehicles.equipment.interiorWidthMm', min: 1, max: 5000 },
+            { key: 'interiorHeightMm', label: 'vehicles.equipment.interiorHeightMm', min: 1, max: 5000 },
+            { key: 'tankVolumeLiters', label: 'vehicles.equipment.tankVolumeLiters', min: 1, max: 100000 },
+        ],
+    },
+    {
+        title: 'vehicles.equipment.group.loadSecuring',
+        fields: [
+            { key: 'supportPoleCount', label: 'vehicles.equipment.supportPoleCount', min: 0, max: 999 },
+            { key: 'loadBarCount', label: 'vehicles.equipment.loadBarCount', min: 0, max: 999 },
+            { key: 'lashingStrapCount', label: 'vehicles.equipment.lashingStrapCount', min: 0, max: 999 },
+            { key: 'chainTensionerCount', label: 'vehicles.equipment.chainTensionerCount', min: 0, max: 999 },
+            { key: 'palletCount', label: 'vehicles.equipment.palletCount', min: 0, max: 999 },
+        ],
+    },
+    {
+        title: 'vehicles.equipment.group.marbleRacks',
+        fields: [{ key: 'marbleRackCount', label: 'vehicles.equipment.marbleRackCount', min: 0, max: 999 }],
+        withMaterial: true,
+    },
+];
+
+const equipmentNumberFields = equipmentNumberGroups.flatMap((group) => group.fields);
+
+const equipmentFlags = reactive(
+    Object.fromEntries(equipmentFlagFields.map((field) => [field.key, false])) as Record<VehicleEquipmentFlag, boolean>,
+);
+const equipmentNumbers = reactive(
+    Object.fromEntries(equipmentNumberFields.map((field) => [field.key, ''])) as Record<VehicleEquipmentNumber, string>,
+);
+const marbleRackMaterial = ref<MarbleRackMaterial | ''>('');
+
+const materialOptions = computed(() => [
+    { value: '', label: t('vehicles.equipment.material.none'), testId: 'vehicle-marbleRackMaterial-none' },
+    ...MARBLE_RACK_MATERIALS.map((material) => ({
+        value: material,
+        label: t(`vehicles.equipment.material.${material}`),
+        testId: `vehicle-marbleRackMaterial-${material}`,
+    })),
+]);
+
+// Equipment errors are keyed by the dotted path the API reports them under, camel-cased.
 const fieldErrors = reactive<Record<string, string | null>>(
-    Object.fromEntries(Object.keys(form).map((field) => [field, null])),
+    Object.fromEntries(
+        [
+            ...Object.keys(form),
+            ...equipmentNumberFields.map((field) => `equipment.${field.key}`),
+            'equipment.marbleRackMaterial',
+        ].map((field) => [field, null]),
+    ),
 );
 
 // Gates field error rendering the same way Angular Material's default ErrorStateMatcher does
@@ -232,11 +314,43 @@ async function loadVehicle(): Promise<void> {
         form.grossWeightKg = numberText(loaded.grossWeightKg);
         form.maxFifthWheelLoadKg = numberText(loaded.maxFifthWheelLoadKg);
         form.notes = loaded.notes ?? '';
+        loadEquipment(loaded.equipment);
     } catch (error) {
         // A failed load is not a failed save - give it its own wording so a dispatcher
         // opening a deleted vehicle isn't told a save just failed.
         formError.value = describeFailure(error, t('vehicles.loadFailed'));
     }
+}
+
+// A response without `equipment` (or with fields missing) falls back to the new-vehicle defaults.
+function loadEquipment(equipment: Partial<VehicleEquipment> | null | undefined): void {
+    for (const field of equipmentFlagFields) {
+        equipmentFlags[field.key] = equipment?.[field.key] ?? false;
+    }
+    for (const field of equipmentNumberFields) {
+        equipmentNumbers[field.key] = numberText(equipment?.[field.key]);
+    }
+    marbleRackMaterial.value = equipment?.marbleRackMaterial ?? '';
+}
+
+function equipmentRequest(): VehicleEquipment {
+    const numbers = Object.fromEntries(
+        equipmentNumberFields.map((field) => [field.key, optionalNumber(equipmentNumbers[field.key])]),
+    ) as Record<VehicleEquipmentNumber, number | null>;
+    return { ...equipmentFlags, ...numbers, marbleRackMaterial: marbleRackMaterial.value || null };
+}
+
+function rangeError(value: number | null, min: number, max: number): string | null {
+    if (value === null) {
+        return null;
+    }
+    if (!Number.isInteger(value)) {
+        return t('common.mustBeWholeNumber');
+    }
+    if (value < min) {
+        return min > 0 ? t('common.mustBePositive') : t('common.mustNotBeNegative');
+    }
+    return value > max ? t('common.mustNotExceed', { max }) : null;
 }
 
 function numberText(value: number | null | undefined): string {
@@ -256,7 +370,7 @@ function optionalNumber(value: string): number | null {
     return trimmed(value) === '' ? null : Number(trimmed(value));
 }
 
-function errorsFor(field: FormField): string[] {
+function errorsFor(field: string): string[] {
     const message = fieldErrors[field];
     return attemptedSubmit.value && message ? [message] : [];
 }
@@ -279,6 +393,13 @@ function validate(): boolean {
         if (value !== null && !(value > 0)) {
             fieldErrors[field] = t('common.mustBePositive');
         }
+    }
+    for (const field of equipmentNumberFields) {
+        fieldErrors[`equipment.${field.key}`] = rangeError(
+            optionalNumber(equipmentNumbers[field.key]),
+            field.min,
+            field.max,
+        );
     }
     return Object.values(fieldErrors).every((message) => message === null);
 }
@@ -314,6 +435,7 @@ async function save(): Promise<void> {
         grossWeightKg: optionalNumber(form.grossWeightKg),
         maxFifthWheelLoadKg: optionalNumber(form.maxFifthWheelLoadKg),
         notes: optionalText(form.notes),
+        equipment: equipmentRequest(),
     };
 
     try {
@@ -357,14 +479,19 @@ async function confirmDecommission(): Promise<void> {
 // group every failure under its real field name instead, so binding it is now correct - this
 // supersedes that earlier rule. The dictionary key is still the .NET property name (PascalCase,
 // e.g. "LicensePlate"), while this form's fields use the camelCase names the rest of the wire
-// format uses, so each key is lowercased on its first character before the field lookup.
+// format uses, so each key is lowercased on its first character before the field lookup. Nested
+// properties come as a dotted path ("Equipment.TankVolumeLiters"), so every segment is
+// lowercased that way ("equipment.tankVolumeLiters").
 function applyServerErrors(error: unknown): void {
     if (axios.isAxiosError(error)) {
         const problem = error.response?.data as ProblemDetailsBody | undefined;
 
         if (problem?.errors) {
             for (const [field, messages] of Object.entries(problem.errors)) {
-                const fieldName = field.charAt(0).toLowerCase() + field.slice(1);
+                const fieldName = field
+                    .split('.')
+                    .map((segment) => segment.charAt(0).toLowerCase() + segment.slice(1))
+                    .join('.');
                 const message = messages.join(' ');
                 if (fieldName in fieldErrors) {
                     fieldErrors[fieldName] = message;
@@ -626,6 +753,72 @@ function describeFailure(error: unknown, fallback: string): string {
                 </v-col>
 
                 <v-col cols="12">
+                    <v-card border flat class="section-card" data-testid="vehicle-equipment">
+                        <v-card-item prepend-icon="mdi-toolbox-outline" :title="t('vehicles.section.equipment')" />
+                        <v-card-text>
+                            <v-row>
+                                <v-col cols="12" md="6" lg="3">
+                                    <div class="equipment-group-title">{{ t('vehicles.equipment.group.body') }}</div>
+                                    <v-checkbox
+                                        v-for="field in equipmentFlagFields"
+                                        :key="field.key"
+                                        v-model="equipmentFlags[field.key]"
+                                        v-native-testid="`vehicle-${field.key}`"
+                                        :label="t(field.label)"
+                                        density="compact"
+                                        hide-details
+                                    />
+                                </v-col>
+                                <v-col v-for="group in equipmentNumberGroups" :key="group.title" cols="12" md="6" lg="3">
+                                    <div class="equipment-group-title">{{ t(group.title) }}</div>
+                                    <div class="equipment-fields">
+                                        <v-text-field
+                                            v-for="field in group.fields"
+                                            :key="field.key"
+                                            v-model="equipmentNumbers[field.key]"
+                                            v-native-testid="`vehicle-${field.key}`"
+                                            :label="t(field.label)"
+                                            type="number"
+                                            step="1"
+                                            :min="field.min"
+                                            :max="field.max"
+                                            :error-messages="errorsFor(`equipment.${field.key}`)"
+                                            variant="outlined"
+                                            density="comfortable"
+                                            hide-details="auto"
+                                        >
+                                            <template #message="{ message }">
+                                                <span :data-testid="`vehicle-${field.key}-error`">{{ message }}</span>
+                                            </template>
+                                        </v-text-field>
+                                        <v-radio-group
+                                            v-if="group.withMaterial"
+                                            v-model="marbleRackMaterial"
+                                            :label="t('vehicles.equipment.marbleRackMaterial')"
+                                            :error-messages="errorsFor('equipment.marbleRackMaterial')"
+                                            density="compact"
+                                            hide-details="auto"
+                                            data-testid="vehicle-marbleRackMaterial"
+                                        >
+                                            <v-radio
+                                                v-for="option in materialOptions"
+                                                :key="option.testId"
+                                                v-native-testid="option.testId"
+                                                :label="option.label"
+                                                :value="option.value"
+                                            />
+                                            <template #message="{ message }">
+                                                <span data-testid="vehicle-marbleRackMaterial-error">{{ message }}</span>
+                                            </template>
+                                        </v-radio-group>
+                                    </div>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+
+                <v-col cols="12">
                     <v-card border flat class="section-card">
                         <v-card-item prepend-icon="mdi-note-text-outline" :title="t('vehicles.section.notes')" />
                         <v-card-text>
@@ -720,6 +913,19 @@ function describeFailure(error: unknown, fallback: string): string {
 
 .section-card {
     height: 100%;
+}
+
+.equipment-group-title {
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+
+.equipment-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .form-actions {
