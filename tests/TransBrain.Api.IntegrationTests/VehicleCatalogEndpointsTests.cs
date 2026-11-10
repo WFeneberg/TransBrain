@@ -24,6 +24,25 @@ public class VehicleCatalogEndpointsTests(TransBrainApiFactory factory) : IClass
     }
 
     [Fact]
+    public async Task GetCarrierGroups_FreshDatabase_ReturnsTheSeededLegacyGroups()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("viewer").GetAsync("/api/vehicle-catalog/CarrierGroup");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        VehicleCatalogEntryResponse[] entries = (await response.Content.ReadFromJsonAsync<VehicleCatalogEntryResponse[]>())!;
+        entries.Select(e => (e.Code, e.Name)).Should().Contain(
+        [
+            ("Other", "Sonstige"),
+            ("HuterVils", "Huter Vils"),
+            ("HuterFuessen", "Huter Füssen"),
+            ("Fixed", "Fixe Frächter"),
+            ("Regular", "Regelmäßig beschäftigte Frächter"),
+            ("Rental", "Leihfahrzeuge")
+        ]);
+        entries.Should().AllSatisfy(e => e.Kind.Should().Be("CarrierGroup"));
+    }
+
+    [Fact]
     public async Task GetCatalog_UnknownKind_ReturnsBadRequest()
     {
         HttpResponseMessage response = await factory.CreateClientAs("viewer").GetAsync("/api/vehicle-catalog/1");

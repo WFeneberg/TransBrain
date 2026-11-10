@@ -344,6 +344,54 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000201"),
+                            Code = "Other",
+                            IsActive = true,
+                            Kind = "CarrierGroup",
+                            Name = "Sonstige"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000202"),
+                            Code = "HuterVils",
+                            IsActive = true,
+                            Kind = "CarrierGroup",
+                            Name = "Huter Vils"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000203"),
+                            Code = "HuterFuessen",
+                            IsActive = true,
+                            Kind = "CarrierGroup",
+                            Name = "Huter Füssen"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000204"),
+                            Code = "Fixed",
+                            IsActive = true,
+                            Kind = "CarrierGroup",
+                            Name = "Fixe Frächter"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000205"),
+                            Code = "Regular",
+                            IsActive = true,
+                            Kind = "CarrierGroup",
+                            Name = "Regelmäßig beschäftigte Frächter"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000206"),
+                            Code = "Rental",
+                            IsActive = true,
+                            Kind = "CarrierGroup",
+                            Name = "Leihfahrzeuge"
+                        },
+                        new
+                        {
                             Id = new Guid("0199a6c0-0000-7000-8000-000000000101"),
                             Code = "ADR",
                             IsActive = true,

@@ -276,9 +276,9 @@ Alle angemeldeten Benutzer sehen die Listen, ändern dürfen sie nur Administrat
   **Carrier groups** (Frächtergruppen), **Insurance companies** (Versicherungsgesellschaften
   für Fahrzeug- und Transportversicherung) und **Document types** (Sonderpapier-Arten). Beim
   ersten Start sind die Fahrzeugklassen des Altsystems (Sonstige, Tank, Kühler, Plane, Kipper,
-  Leihfahrzeug) und sieben Sonderpapier-Arten (ADR,
-  ATP, CEMT, Tachograph, UVV, Kran, Ladebordwand) bereits angelegt; Frächtergruppen und
-  Versicherungen legen Sie selbst an.
+  Leihfahrzeug), seine Frächtergruppen (Sonstige, Huter Vils, Huter Füssen, Fixe Frächter,
+  Regelmäßig beschäftigte Frächter, Leihfahrzeuge) und sieben Sonderpapier-Arten (ADR, ATP,
+  CEMT, Tachograph, UVV, Kran, Ladebordwand) bereits angelegt; Versicherungen legen Sie selbst an.
 - **Spalten:** Code, Name (Bezeichnung), Status (**Active** grün / **Inactive** grau) und
   **Used by** – wie viele Fahrzeuge den Eintrag gerade verwenden (bei Versicherungen als Fahrzeug-
   oder Transportversicherung, bei Sonderpapier-Arten mit einem Sonderpapier dieser Art).
