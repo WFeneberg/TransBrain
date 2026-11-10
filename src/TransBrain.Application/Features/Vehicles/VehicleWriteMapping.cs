@@ -1,4 +1,5 @@
 using TransBrain.Application.Abstractions;
+using TransBrain.Application.Features.VehicleCatalog;
 using TransBrain.Domain.Common;
 using TransBrain.Domain.Vehicles;
 
@@ -15,32 +16,44 @@ internal static class VehicleWriteMapping
             ? parsed
             : Error.Validation("Vehicle.UnknownType", $"'{type}' is not a known vehicle type.");
 
-    public static bool TryParseClass(string value, out VehicleClass vehicleClass) =>
-        Enum.TryParse(value, ignoreCase: true, out vehicleClass) && Enum.IsDefined(vehicleClass);
-
-    public static Result<VehicleDetails> ToDetails(IVehicleWriteCommand command)
+    /// <param name="current">The vehicle's details before an update; null when a vehicle is created.</param>
+    public static async Task<Result<VehicleDetails>> ToDetailsAsync(
+        IVehicleWriteCommand command,
+        IVehicleCatalogRepository catalog,
+        VehicleDetails? current,
+        CancellationToken cancellationToken)
     {
-        VehicleClass? vehicleClass = null;
-
-        if (!string.IsNullOrWhiteSpace(command.VehicleClass))
+        Result<string?> vehicleClass = await VehicleCatalogLookup.ResolveAsync(
+            catalog,
+            VehicleCatalogKind.VehicleClass,
+            command.VehicleClass,
+            current?.VehicleClass,
+            nameof(IVehicleWriteCommand.VehicleClass),
+            cancellationToken);
+        if (!vehicleClass.IsSuccess)
         {
-            if (!TryParseClass(command.VehicleClass, out VehicleClass parsed))
-            {
-                return Error.Validation(
-                    "Vehicle.UnknownClass", $"'{command.VehicleClass}' is not a known vehicle class.");
-            }
-
-            vehicleClass = parsed;
+            return vehicleClass.Error!;
         }
 
+        Result<string?> carrierGroup = await VehicleCatalogLookup.ResolveAsync(
+            catalog,
+            VehicleCatalogKind.CarrierGroup,
+            command.CarrierGroup,
+            current?.CarrierGroup,
+            nameof(IVehicleWriteCommand.CarrierGroup),
+            cancellationToken);
+        if (!carrierGroup.IsSuccess)
+        {
+            return carrierGroup.Error!;
+        }
         return VehicleDetails.Create(
             command.IsLicensePlateConfidential,
             command.Make,
             command.Model,
             command.ManufacturedOn,
             command.PowerKw,
-            vehicleClass,
-            command.CarrierGroup,
+            vehicleClass.Value,
+            carrierGroup.Value,
             command.ChassisNumber,
             command.EngineNumber,
             command.LengthMm,

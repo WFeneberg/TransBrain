@@ -17,17 +17,21 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, Router } from '@angular/router';
-import { filter, switchMap } from 'rxjs';
+import { filter, forkJoin, switchMap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { Driver, DriverService } from '../drivers/driver.service';
 import { I18nService } from '../i18n/i18n.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from './confirm-dialog.component';
 import { formatDateTime } from './vehicle-format';
 import {
-    VEHICLE_CLASSES,
+    VehicleCatalogEntry,
+    VehicleCatalogOption,
+    VehicleCatalogService,
+    catalogOptions,
+} from './vehicle-catalog.service';
+import {
     VEHICLE_TYPES,
     Vehicle,
-    VehicleClass,
     VehicleService,
     VehicleStatus,
     VehicleType,
@@ -209,9 +213,9 @@ function numberOrNull(value: number | null): number | null {
                                     data-testid="vehicle-vehicleClass"
                                 >
                                     <mat-option [value]="null">–</mat-option>
-                                    @for (option of vehicleClasses; track option) {
-                                        <mat-option [value]="option">{{
-                                            i18n.t(classKey(option))
+                                    @for (option of vehicleClassOptions(); track option.code) {
+                                        <mat-option [value]="option.code">{{
+                                            optionLabel(option)
                                         }}</mat-option>
                                     }
                                 </mat-select>
@@ -251,12 +255,17 @@ function numberOrNull(value: number | null): number | null {
                             </mat-form-field>
                             <mat-form-field>
                                 <mat-label>{{ i18n.t('vehicles.carrierGroup') }}</mat-label>
-                                <input
-                                    matInput
+                                <mat-select
                                     formControlName="carrierGroup"
-                                    maxlength="100"
                                     data-testid="vehicle-carrierGroup"
-                                />
+                                >
+                                    <mat-option [value]="null">–</mat-option>
+                                    @for (option of carrierGroupOptions(); track option.code) {
+                                        <mat-option [value]="option.code">{{
+                                            optionLabel(option)
+                                        }}</mat-option>
+                                    }
+                                </mat-select>
                                 @if (form.controls.carrierGroup.errors; as errors) {
                                     <mat-error data-testid="vehicle-carrierGroup-error">{{
                                         fieldErrorText(errors)
@@ -743,6 +752,7 @@ function numberOrNull(value: number | null): number | null {
 export class VehicleFormComponent {
     private readonly service = inject(VehicleService);
     private readonly driverService = inject(DriverService);
+    private readonly catalogService = inject(VehicleCatalogService);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
@@ -756,7 +766,6 @@ export class VehicleFormComponent {
     protected readonly i18n = inject(I18nService);
 
     protected readonly vehicleTypes = VEHICLE_TYPES;
-    protected readonly vehicleClasses = VEHICLE_CLASSES;
     protected readonly vehicleId = this.route.snapshot.paramMap.get('id');
     protected readonly isEditMode = this.vehicleId !== null;
     protected readonly formError = signal<string | null>(null);
@@ -766,6 +775,17 @@ export class VehicleFormComponent {
     // The loaded vehicle as last answered by the server - drives the status chip, the status
     // buttons and the audit line, which a status change updates without touching the form.
     protected readonly vehicle = signal<Vehicle | null>(null);
+
+    private readonly vehicleClasses = signal<VehicleCatalogEntry[]>([]);
+    private readonly carrierGroups = signal<VehicleCatalogEntry[]>([]);
+    // Active entries only, plus the code the vehicle is SAVED with if that one has since been
+    // deactivated - the server accepts keeping it, but rejects choosing any other inactive code.
+    protected readonly vehicleClassOptions = computed(() =>
+        catalogOptions(this.vehicleClasses(), this.vehicle()?.vehicleClass ?? null),
+    );
+    protected readonly carrierGroupOptions = computed(() =>
+        catalogOptions(this.carrierGroups(), this.vehicle()?.carrierGroup ?? null),
+    );
 
     protected readonly modifiedText = computed(() => {
         const vehicle = this.vehicle();
@@ -782,10 +802,10 @@ export class VehicleFormComponent {
         licensePlate: ['', Validators.required],
         isLicensePlateConfidential: [false],
         type: ['Tractor' as VehicleType, Validators.required],
-        vehicleClass: this.fb.control<VehicleClass | null>(null),
+        vehicleClass: this.fb.control<string | null>(null),
         make: [''],
         model: [''],
-        carrierGroup: [''],
+        carrierGroup: this.fb.control<string | null>(null),
         defaultDriverId: this.fb.control<string | null>(null),
         // "YYYY-MM" as produced by <input type="month">; the API wants "YYYY-MM-01".
         manufacturedOn: [''],
@@ -819,6 +839,26 @@ export class VehicleFormComponent {
                 error: () => this.driverError.set(true),
             });
 
+        this.session.ready
+            .pipe(
+                switchMap(() =>
+                    forkJoin([
+                        this.catalogService.list('VehicleClass'),
+                        this.catalogService.list('CarrierGroup'),
+                    ]),
+                ),
+            )
+            .subscribe({
+                next: ([vehicleClasses, carrierGroups]) => {
+                    this.vehicleClasses.set(vehicleClasses);
+                    this.carrierGroups.set(carrierGroups);
+                },
+                error: (error: HttpErrorResponse) =>
+                    this.formError.set(
+                        `${this.i18n.t('vehicles.error.catalogs')} (HTTP ${error.status})`,
+                    ),
+            });
+
         if (this.isEditMode) {
             this.session.ready
                 .pipe(switchMap(() => this.service.getById(this.vehicleId!)))
@@ -832,7 +872,7 @@ export class VehicleFormComponent {
                             vehicleClass: vehicle.vehicleClass ?? null,
                             make: vehicle.make ?? '',
                             model: vehicle.model ?? '',
-                            carrierGroup: vehicle.carrierGroup ?? '',
+                            carrierGroup: vehicle.carrierGroup ?? null,
                             defaultDriverId: vehicle.defaultDriverId ?? null,
                             manufacturedOn: vehicle.manufacturedOn?.slice(0, 7) ?? '',
                             powerKw: vehicle.powerKw ?? null,
@@ -866,8 +906,10 @@ export class VehicleFormComponent {
         return `vehicles.typeOption.${type}` as const;
     }
 
-    protected classKey(vehicleClass: VehicleClass) {
-        return `vehicles.class.${vehicleClass}` as const;
+    protected optionLabel(option: VehicleCatalogOption): string {
+        return option.isActive
+            ? option.name
+            : this.i18n.t('vehicles.catalogInactive', { name: option.name });
     }
 
     protected statusTone(status: VehicleStatus): string {
@@ -983,7 +1025,7 @@ export class VehicleFormComponent {
             manufacturedOn: raw.manufacturedOn ? `${raw.manufacturedOn.slice(0, 7)}-01` : null,
             powerKw: numberOrNull(raw.powerKw),
             vehicleClass: raw.vehicleClass,
-            carrierGroup: textOrNull(raw.carrierGroup),
+            carrierGroup: raw.carrierGroup,
             defaultDriverId: raw.defaultDriverId,
             chassisNumber: textOrNull(raw.chassisNumber),
             engineNumber: textOrNull(raw.engineNumber),

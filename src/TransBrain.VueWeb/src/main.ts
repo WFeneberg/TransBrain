@@ -11,6 +11,7 @@ import App from './App.vue';
 import Home from './views/Home.vue';
 import VehicleList from './views/VehicleList.vue';
 import VehicleForm from './views/VehicleForm.vue';
+import VehicleCatalog from './views/VehicleCatalog.vue';
 import DriverList from './views/DriverList.vue';
 import DriverForm from './views/DriverForm.vue';
 import CustomerList from './views/CustomerList.vue';
@@ -36,6 +37,8 @@ const router = createRouter({
         // as an id.
         { path: '/vehicles/new', component: VehicleForm, meta: { capability: 'masterData.write' } },
         { path: '/vehicles/:id', component: VehicleForm, meta: { capability: 'masterData.write' } },
+        // Readable by every signed-in role like '/vehicles'; the write controls inside are gated.
+        { path: '/vehicle-catalog', component: VehicleCatalog },
         { path: '/drivers', component: DriverList },
         { path: '/drivers/new', component: DriverForm, meta: { capability: 'masterData.write' } },
         { path: '/drivers/:id', component: DriverForm, meta: { capability: 'masterData.write' } },

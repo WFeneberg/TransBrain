@@ -16,8 +16,59 @@ public class UpdateVehicleCommandHandlerTests
     private static UpdateVehicleCommandHandler CreateHandler(
         InMemoryVehicleRepository repository,
         InMemoryCacheService cache,
-        InMemoryDriverRepository? drivers = null) =>
-        new(repository, drivers ?? new InMemoryDriverRepository(), cache, new StubCurrentUser("dispo"), new FixedTimeProvider());
+        InMemoryDriverRepository? drivers = null,
+        InMemoryVehicleCatalogRepository? catalog = null) =>
+        new(
+            repository,
+            drivers ?? new InMemoryDriverRepository(),
+            catalog ?? InMemoryVehicleCatalogRepository.WithStandardEntries(repository),
+            cache,
+            new StubCurrentUser("dispo"),
+            new FixedTimeProvider());
+
+    [Fact]
+    public async Task Handle_InactiveClassTheVehicleAlreadyHas_KeepsIt()
+    {
+        InMemoryVehicleRepository repository = new();
+        InMemoryVehicleCatalogRepository catalog = new(repository);
+        catalog.Seed(VehicleCatalogKind.VehicleClass, "Silo", "Silo", isActive: false);
+        catalog.Seed(VehicleCatalogKind.CarrierGroup, "Alt", "Alte Gruppe", isActive: false);
+        Vehicle vehicle = Vehicle.Create(
+            LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            VehicleDetails.Create(vehicleClass: "Silo", carrierGroup: "Alt").Value).Value;
+        repository.Seed(vehicle);
+        UpdateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService(), catalog: catalog);
+
+        Result<VehicleResponse> result = await handler.Handle(
+            new UpdateVehicleCommand(
+                vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+                VehicleClass: "silo", CarrierGroup: "Alt", Make: "MAN"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.VehicleClass.Should().Be("Silo");
+        result.Value.CarrierGroup.Should().Be("Alt");
+    }
+
+    [Fact]
+    public async Task Handle_SwitchToAnInactiveClass_ReturnsValidationErrorAndDoesNotSave()
+    {
+        InMemoryVehicleRepository repository = new();
+        InMemoryVehicleCatalogRepository catalog = InMemoryVehicleCatalogRepository.WithStandardEntries(repository);
+        catalog.Seed(VehicleCatalogKind.VehicleClass, "Silo", "Silo", isActive: false);
+        Vehicle vehicle = ExistingVehicle();
+        repository.Seed(vehicle);
+        UpdateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService(), catalog: catalog);
+
+        Result<VehicleResponse> result = await handler.Handle(
+            new UpdateVehicleCommand(
+                vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31), VehicleClass: "Silo"),
+            CancellationToken.None);
+
+        result.Error!.Failures.Should().ContainKey("VehicleClass");
+        repository.SaveChangesCallCount.Should().Be(0);
+        vehicle.Details.VehicleClass.Should().BeNull();
+    }
 
     [Fact]
     public async Task Handle_MasterDataFields_ReplacesDetailsDriverAndAuditStamp()
@@ -33,12 +84,12 @@ public class UpdateVehicleCommandHandlerTests
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(
                 vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
-                Make: "Mercedes-Benz", VehicleClass: "Box", DefaultDriverId: driver.Id, Notes: "Neu"),
+                Make: "Mercedes-Benz", VehicleClass: "Tank", DefaultDriverId: driver.Id, Notes: "Neu"),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         vehicle.Details.Make.Should().Be("Mercedes-Benz");
-        vehicle.Details.VehicleClass.Should().Be(VehicleClass.Box);
+        vehicle.Details.VehicleClass.Should().Be("Tank");
         vehicle.DefaultDriverId.Should().Be(driver.Id);
         vehicle.ModifiedBy.Should().Be("dispo");
         vehicle.ModifiedAt.Should().Be(FixedTimeProvider.Default);

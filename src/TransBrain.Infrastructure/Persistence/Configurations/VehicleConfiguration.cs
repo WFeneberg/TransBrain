@@ -49,7 +49,7 @@ internal sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
             details.Property(d => d.ManufacturedOn).HasColumnName("ManufacturedOn");
             details.Property(d => d.PowerKw).HasColumnName("PowerKw");
             details.Property(d => d.VehicleClass)
-                .HasColumnName("VehicleClass").HasConversion<string>().HasMaxLength(20);
+                .HasColumnName("VehicleClass").HasMaxLength(VehicleCatalogEntry.MaxCodeLength);
             details.Property(d => d.CarrierGroup)
                 .HasColumnName("CarrierGroup").HasMaxLength(VehicleDetails.MaxNameLength);
             details.Property(d => d.ChassisNumber)

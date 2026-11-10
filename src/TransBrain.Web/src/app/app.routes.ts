@@ -3,6 +3,8 @@ import { requireAuthentication, requireCapability } from './auth/capability.guar
 
 const loadVehicleList = () => import('./vehicles/vehicle-list.component').then((m) => m.VehicleListComponent);
 const loadVehicleForm = () => import('./vehicles/vehicle-form.component').then((m) => m.VehicleFormComponent);
+const loadVehicleCatalog = () =>
+    import('./vehicles/vehicle-catalog.component').then((m) => m.VehicleCatalogComponent);
 const loadDriverList = () => import('./drivers/driver-list.component').then((m) => m.DriverListComponent);
 const loadDriverForm = () => import('./drivers/driver-form.component').then((m) => m.DriverFormComponent);
 const loadCustomerList = () => import('./customers/customer-list.component').then((m) => m.CustomerListComponent);
@@ -28,6 +30,9 @@ export const routes: Routes = [
     // a ':id' route registered first would swallow '/vehicles/new' by treating "new" as an id.
     { path: 'vehicles/new', loadComponent: loadVehicleForm, canActivate: [requireCapability('masterData.write')] },
     { path: 'vehicles/:id', loadComponent: loadVehicleForm, canActivate: [requireCapability('masterData.write')] },
+    // Readable by every signed-in role like the vehicle list; the write controls inside are gated
+    // on masterData.write individually.
+    { path: 'vehicle-catalog', loadComponent: loadVehicleCatalog, canActivate: [requireAuthentication] },
     { path: 'drivers', loadComponent: loadDriverList, canActivate: [requireAuthentication] },
     { path: 'drivers/new', loadComponent: loadDriverForm, canActivate: [requireCapability('masterData.write')] },
     { path: 'drivers/:id', loadComponent: loadDriverForm, canActivate: [requireCapability('masterData.write')] },

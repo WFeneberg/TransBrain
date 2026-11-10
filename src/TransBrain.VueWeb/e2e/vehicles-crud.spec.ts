@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { signIn } from './login';
+import { chooseOption } from './select';
 
 // A licence plate unique per run - the plate column carries a unique index, so a fixed
 // literal would collide and 409 on any second run against a database that isn't reset
@@ -35,8 +36,8 @@ test('adminUser_createEditAndDeleteVehicle_throughTheUi', async ({ page }) => {
     await page.getByTestId('vehicle-isLicensePlateConfidential').check();
     await page.getByTestId('vehicle-make').fill('Volvo');
     await page.getByTestId('vehicle-model').fill('FH 16');
-    await page.getByTestId('vehicle-vehicleClass').click();
-    await page.getByRole('option', { name: 'Tank' }).click();
+    // The class options are catalog entries ordered by name, so "Tank" may need scrolling to.
+    await chooseOption(page, 'vehicle-vehicleClass', 'Tank');
     await page.getByTestId('vehicle-manufacturedOn').fill('2020-05');
     await page.getByTestId('vehicle-powerKw').fill('368');
     await page.getByTestId('vehicle-chassisNumber').fill(chassisNumber);

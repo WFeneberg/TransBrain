@@ -7,13 +7,13 @@ import {
     createVehicle,
     getVehicle,
     updateVehicle,
-    VEHICLE_CLASSES,
     VEHICLE_TYPES,
     type Vehicle,
     type VehicleStatus,
     type VehicleWriteRequest,
 } from '../api/vehicles';
 import { listDrivers, type Driver } from '../api/drivers';
+import { listVehicleCatalog, type VehicleCatalogEntry } from '../api/vehicleCatalog';
 import { useVehicleLabels } from '../composables/useVehicleLabels';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useAuthStore } from '../stores/auth';
@@ -31,7 +31,7 @@ const DRIVER_PAGE_SIZE = 100;
 
 const auth = useAuthStore();
 const { t } = useI18n();
-const { typeLabel, classLabel, statusLabel, statusColor, formatDateTime } = useVehicleLabels();
+const { typeLabel, statusLabel, statusColor, formatDateTime } = useVehicleLabels();
 const route = useRoute();
 const router = useRouter();
 
@@ -125,15 +125,15 @@ const formError = ref<string | null>(null);
 
 const vehicle = ref<Vehicle | null>(null);
 const drivers = ref<Driver[]>([]);
+const vehicleClasses = ref<VehicleCatalogEntry[]>([]);
+const carrierGroups = ref<VehicleCatalogEntry[]>([]);
 const statusBusy = ref(false);
 const decommissionDialogOpen = ref(false);
 
 const typeOptions = computed(() => VEHICLE_TYPES.map((type) => ({ title: typeLabel(type), value: type })));
 
-const classOptions = computed(() => [
-    { title: '–', value: '' },
-    ...VEHICLE_CLASSES.map((vehicleClass) => ({ title: classLabel(vehicleClass), value: vehicleClass })),
-]);
+const classOptions = computed(() => catalogOptions(vehicleClasses.value, vehicle.value?.vehicleClass ?? null));
+const carrierGroupOptions = computed(() => catalogOptions(carrierGroups.value, vehicle.value?.carrierGroup ?? null));
 
 const driverOptions = computed(() => [
     { title: t('vehicles.noDefaultDriver'), value: '' },
@@ -158,8 +158,43 @@ const modifiedLine = computed(() => {
 });
 
 onMounted(async () => {
-    await Promise.all([loadDrivers(), isEditMode.value ? loadVehicle() : Promise.resolve()]);
+    await Promise.all([loadDrivers(), loadCatalogs(), isEditMode.value ? loadVehicle() : Promise.resolve()]);
 });
+
+/**
+ * Only active entries are offered for a new choice. The vehicle's own current code stays
+ * selectable even when it has been deactivated since - the API accepts keeping it - and is
+ * marked as inactive; a code the catalog does not know at all is shown as-is.
+ */
+function catalogOptions(entries: VehicleCatalogEntry[], current: string | null): { title: string; value: string }[] {
+    const currentKey = current?.toLowerCase() ?? null;
+    const options = entries
+        .filter((entry) => entry.isActive || entry.code.toLowerCase() === currentKey)
+        .map((entry) => ({
+            title: entry.isActive ? entry.name : t('vehicles.inactiveOption', { name: entry.name }),
+            value: entry.code,
+        }));
+    if (current && !entries.some((entry) => entry.code.toLowerCase() === currentKey)) {
+        options.push({ title: current, value: current });
+    }
+    return [{ title: '–', value: '' }, ...options];
+}
+
+// Unlike the driver picker, the catalogs are not optional: without them the class and carrier
+// group a vehicle already has could not even be displayed, so the failure is reported.
+async function loadCatalogs(): Promise<void> {
+    try {
+        const [classes, groups] = await Promise.all([
+            listVehicleCatalog('VehicleClass'),
+            listVehicleCatalog('CarrierGroup'),
+        ]);
+        vehicleClasses.value = classes;
+        carrierGroups.value = groups;
+    } catch {
+        const message = t('vehicles.catalogLoadFailed');
+        formError.value = formError.value ? `${formError.value} ${message}` : message;
+    }
+}
 
 // The driver picker is optional: without the list only "No default driver" is offered, and the
 // rest of the form still works.
@@ -268,7 +303,7 @@ async function save(): Promise<void> {
         manufacturedOn: form.manufacturedOn ? `${form.manufacturedOn}-01` : null,
         powerKw: optionalNumber(form.powerKw),
         vehicleClass: form.vehicleClass || null,
-        carrierGroup: optionalText(form.carrierGroup),
+        carrierGroup: form.carrierGroup || null,
         defaultDriverId: form.defaultDriverId || null,
         chassisNumber: optionalText(form.chassisNumber),
         engineNumber: optionalText(form.engineNumber),
@@ -527,19 +562,20 @@ function describeFailure(error: unknown, fallback: string): string {
                                     </v-text-field>
                                 </v-col>
                                 <v-col cols="12" sm="6">
-                                    <v-text-field
+                                    <v-select
                                         v-model="form.carrierGroup"
-                                        v-native-testid="'vehicle-carrierGroup'"
                                         :label="t('vehicles.carrierGroup')"
+                                        :items="carrierGroupOptions"
                                         :error-messages="errorsFor('carrierGroup')"
                                         variant="outlined"
                                         density="comfortable"
                                         hide-details="auto"
+                                        data-testid="vehicle-carrierGroup"
                                     >
                                         <template #message="{ message }">
                                             <span data-testid="vehicle-carrierGroup-error">{{ message }}</span>
                                         </template>
-                                    </v-text-field>
+                                    </v-select>
                                 </v-col>
                                 <v-col cols="12" sm="6">
                                     <v-select

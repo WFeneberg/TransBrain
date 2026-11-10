@@ -8,21 +8,6 @@ export type VehicleType = (typeof VEHICLE_TYPES)[number];
 export const VEHICLE_STATUSES = ['Available', 'InWorkshop', 'Decommissioned'] as const;
 export type VehicleStatus = (typeof VEHICLE_STATUSES)[number];
 
-export const VEHICLE_CLASSES = [
-    'Tarpaulin',
-    'Box',
-    'Refrigerated',
-    'Tank',
-    'Silo',
-    'Tipper',
-    'Flatbed',
-    'Container',
-    'CarTransporter',
-    'LowLoader',
-    'Other',
-] as const;
-export type VehicleClass = (typeof VEHICLE_CLASSES)[number];
-
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
 export interface VehicleWriteRequest {
     licensePlate: string;
@@ -36,7 +21,9 @@ export interface VehicleWriteRequest {
     /** Month precision, always sent as "YYYY-MM-01". */
     manufacturedOn: string | null;
     powerKw: number | null;
-    vehicleClass: VehicleClass | null;
+    /** Code of a VehicleClass entry of the vehicle catalog (see vehicle-catalog.service.ts). */
+    vehicleClass: string | null;
+    /** Code of a CarrierGroup entry of the vehicle catalog. */
     carrierGroup: string | null;
     defaultDriverId: string | null;
     chassisNumber: string | null;

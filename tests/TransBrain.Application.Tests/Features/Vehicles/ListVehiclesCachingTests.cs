@@ -69,7 +69,12 @@ public class ListVehiclesCachingTests
         InMemoryCacheService cache = new();
         ListVehiclesQueryHandler list = new(repository, cache);
         CreateVehicleCommandHandler create = new(
-            repository, new InMemoryDriverRepository(), cache, new StubCurrentUser("admin"), TimeProvider.System);
+            repository,
+            new InMemoryDriverRepository(),
+            new InMemoryVehicleCatalogRepository(repository),
+            cache,
+            new StubCurrentUser("admin"),
+            TimeProvider.System);
 
         await list.Handle(new ListVehiclesQuery(), CancellationToken.None);
         await create.Handle(

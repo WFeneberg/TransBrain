@@ -7,7 +7,10 @@ const STATUS_COLORS: Record<string, string> = {
     Decommissioned: 'grey',
 };
 
-/** Localized labels and colours for the vehicle enums the API sends as plain strings. */
+/**
+ * Localized labels and colours for the vehicle enums the API sends as plain strings. Vehicle
+ * class and carrier group are not enums: their names come from the vehicle catalog.
+ */
 export function useVehicleLabels() {
     const { t, locale } = useI18n();
 
@@ -19,10 +22,6 @@ export function useVehicleLabels() {
 
     function typeLabel(type: string): string {
         return label('vehicles.type', type);
-    }
-
-    function classLabel(vehicleClass: string | null): string {
-        return vehicleClass ? label('vehicles.class', vehicleClass) : '–';
     }
 
     function statusLabel(status: string): string {
@@ -47,5 +46,5 @@ export function useVehicleLabels() {
         return new Date(iso).toLocaleString(dateTag(), { dateStyle: 'short', timeStyle: 'short' });
     }
 
-    return { typeLabel, classLabel, statusLabel, statusColor, formatDate, formatDateTime };
+    return { typeLabel, statusLabel, statusColor, formatDate, formatDateTime };
 }

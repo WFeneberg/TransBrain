@@ -69,11 +69,21 @@ public class VehicleDetailsTests
     }
 
     [Fact]
-    public void Create_UndefinedClass_ReturnsValidationError()
+    public void Create_TooLongVehicleClassCode_ReturnsValidationError()
     {
-        Result<VehicleDetails> result = VehicleDetails.Create(vehicleClass: (VehicleClass)99);
+        Result<VehicleDetails> result = VehicleDetails.Create(
+            vehicleClass: new string('C', VehicleCatalogEntry.MaxCodeLength + 1));
 
-        result.Error!.Code.Should().Be("Vehicle.UnknownClass");
+        result.Error!.Code.Should().Be("Vehicle.VehicleClassTooLong");
+    }
+
+    [Fact]
+    public void Create_VehicleClassAndCarrierGroupWithBlanks_StoresTrimmedCodesOrNull()
+    {
+        VehicleDetails details = VehicleDetails.Create(vehicleClass: " Tank ", carrierGroup: "   ").Value;
+
+        details.VehicleClass.Should().Be("Tank");
+        details.CarrierGroup.Should().BeNull();
     }
 
     [Theory]
@@ -118,7 +128,7 @@ public class VehicleDetailsTests
         VehicleDetails details = VehicleDetails.Create(
             isLicensePlateConfidential: true,
             powerKw: 375,
-            vehicleClass: VehicleClass.Tank,
+            vehicleClass: "Tank",
             lengthMm: 6_100,
             heightMm: 3_950,
             curbWeightKg: 8_200,
@@ -127,7 +137,7 @@ public class VehicleDetailsTests
 
         details.IsLicensePlateConfidential.Should().BeTrue();
         details.PowerKw.Should().Be(375);
-        details.VehicleClass.Should().Be(VehicleClass.Tank);
+        details.VehicleClass.Should().Be("Tank");
         details.LengthMm.Should().Be(6_100);
         details.HeightMm.Should().Be(3_950);
         details.GrossWeightKg.Should().Be(18_000);

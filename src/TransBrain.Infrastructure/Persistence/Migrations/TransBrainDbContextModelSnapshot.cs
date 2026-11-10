@@ -262,6 +262,128 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.ToTable("vehicles", (string)null);
                 });
 
+            modelBuilder.Entity("TransBrain.Domain.Vehicles.VehicleCatalogEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "Code")
+                        .IsUnique();
+
+                    b.ToTable("vehicle_catalog_entries", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000001"),
+                            Code = "Tarpaulin",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Plane"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000002"),
+                            Code = "Box",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Koffer"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000003"),
+                            Code = "Refrigerated",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Kühlkoffer"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000004"),
+                            Code = "Tank",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Tank"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000005"),
+                            Code = "Silo",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Silo"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000006"),
+                            Code = "Tipper",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Kipper"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000007"),
+                            Code = "Flatbed",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Pritsche"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000008"),
+                            Code = "Container",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Container"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000009"),
+                            Code = "CarTransporter",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Autotransporter"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000000a"),
+                            Code = "LowLoader",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Tieflader"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000000b"),
+                            Code = "Other",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Sonstige"
+                        });
+                });
+
             modelBuilder.Entity("TransBrain.Domain.Customers.Customer", b =>
                 {
                     b.OwnsOne("TransBrain.Domain.Common.Address", "Address", b1 =>

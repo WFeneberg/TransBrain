@@ -104,13 +104,13 @@ Startseite. Hier pflegen Sie die Stammdaten des Fuhrparks.
 - Unter der Überschrift steht die Anzahl der geladenen Fahrzeuge (z. B. „3 vehicles“).
 - **Filterleiste:**
   - **Vehicle search** sucht ohne Beachtung der Groß-/Kleinschreibung in Kennzeichen,
-    Marke, Typbezeichnung, Fahrgestellnummer und Frächtergruppe.
+    Marke, Typbezeichnung, Fahrgestellnummer und Frächtergruppe (Code und Bezeichnung).
   - **Status** und **Vehicle type** schränken die Liste auf einen Status bzw. eine
     Fahrzeugart ein („All“ hebt den Filter auf).
   - Alle Filter wirken sofort und lassen sich kombinieren. Passt kein Fahrzeug, erscheint
     „No vehicles found.“
 - **Spalten:** License plate, Vehicle type, Make / Model, Vehicle class, Payload (kg),
-  Default driver, Next inspection, Status. Ein Klick auf eine Spaltenüberschrift sortiert
+  Default driver, Next inspection, Status. Die Spalte Vehicle class zeigt die Bezeichnung aus\n  den Fahrzeug-Stammdaten. Ein Klick auf eine Spaltenüberschrift sortiert
   auf- bzw. absteigend.
 - **Markierungen:**
   - Ein **Schloss** neben dem Kennzeichen bedeutet „Kennzeichen geheim“.
@@ -118,6 +118,8 @@ Startseite. Hier pflegen Sie die Stammdaten des Fuhrparks.
     und **gelb**, wenn sie in den nächsten 30 Tagen fällig wird.
   - Der Status erscheint als farbiger Chip: Available (grün), In workshop (orange),
     Decommissioned (grau).
+- **„Master data lists“** oben rechts (für alle Benutzer) öffnet die
+  [Fahrzeug-Stammdaten](#fahrzeug-stammdaten).
 - **Aktionen** (nur für Administratoren sichtbar):
   - **„Add vehicle“** oben rechts legt ein neues Fahrzeug an.
   - Pro Zeile öffnet das **Stift-Symbol** das Fahrzeug zum Bearbeiten.
@@ -142,9 +144,9 @@ wenn sie ausgefüllt sind, größer als 0 sein.
 | General | License plate | Kennzeichen | ja | eindeutig, max. 15 Zeichen |
 | General | License plate confidential | Kennzeichen geheim | – | Häkchen; Schloss-Symbol in der Liste |
 | General | Vehicle type | Fahrzeugart | ja | Tractor (Zugmaschine), Rigid truck (Motorwagen), Van (Transporter) |
-| General | Vehicle class | Aufbau / Fahrzeugklasse | – | Tarpaulin, Box, Refrigerated, Tank, Silo, Tipper, Flatbed, Container, Car transporter, Low loader, Other |
+| General | Vehicle class | Aufbau / Fahrzeugklasse | – | Auswahl aus den aktiven Fahrzeugklassen der [Fahrzeug-Stammdaten](#fahrzeug-stammdaten) oder „–“ |
 | General | Make / Model | Marke / Typbezeichnung | – | je max. 100 Zeichen |
-| General | Carrier group | Frächtergruppe (Freitext) | – | max. 100 Zeichen |
+| General | Carrier group | Frächtergruppe | – | Auswahl aus den aktiven Frächtergruppen der [Fahrzeug-Stammdaten](#fahrzeug-stammdaten) oder „–“ |
 | General | Default driver | Stammfahrer | – | Auswahl aus der Fahrerliste oder „No default driver“ |
 | Technical data | Year of manufacture (month/year) | Baujahr, monatsgenau | – | ab 1900 |
 | Technical data | Power (kW) | Motorleistung | – | 1–2000 |
@@ -189,6 +191,37 @@ by {Benutzer}“. Jedes Speichern und jede Statusänderung aktualisiert ihn.
   gelöscht wurde) erscheint als Meldung oberhalb des Formulars.
 - Wird ein Fahrer gelöscht, der als Stammfahrer eingetragen ist, verlieren die betroffenen
   Fahrzeuge lediglich ihren Stammfahrer.
+
+## Fahrzeug-Stammdaten
+
+Erreichbar über die Schaltfläche **„Master data lists“** oben in der Fahrzeugliste
+(`/vehicle-catalog`). Hier pflegen Sie die Auswahllisten des Fahrzeugformulars.
+Alle angemeldeten Benutzer sehen die Listen, ändern dürfen sie nur Administratoren.
+**„Back to vehicles“** führt zurück zur Fahrzeugliste.
+
+![Fahrzeug-Stammdaten](img/web/fahrzeug-stammdaten.png)
+
+- **Reiter:** **Vehicle classes** (Fahrzeugklassen, z. B. Plane, Kühlkoffer, Tank) und
+  **Carrier groups** (Frächtergruppen). Beim ersten Start sind die bisherigen elf
+  Fahrzeugklassen bereits angelegt; Frächtergruppen legen Sie selbst an.
+- **Spalten:** Code, Name (Bezeichnung), Status (**Active** grün / **Inactive** grau) und
+  **Used by** – wie viele Fahrzeuge den Eintrag gerade verwenden.
+- **„Add entry“** (nur Administratoren) öffnet den Dialog für einen neuen Eintrag:
+
+  | Feld | Bedeutung | Pflicht | Regeln |
+  |---|---|:---:|---|
+  | Code | Schlüssel, der am Fahrzeug gespeichert wird | ja | max. 20 Zeichen, nur Buchstaben, Ziffern, `-` und `_`; je Liste eindeutig (ohne Beachtung der Groß-/Kleinschreibung); **später nicht änderbar** |
+  | Name | Bezeichnung, die in Formular und Liste erscheint | ja | max. 100 Zeichen; wird in allen Sprachen so angezeigt, wie sie erfasst wurde |
+  | Active | Eintrag wird im Fahrzeugformular angeboten | – | Häkchen, standardmäßig gesetzt |
+
+  Ein bereits vergebener Code wird mit einer Meldung im Dialog abgelehnt (HTTP 409).
+- **Stift-Symbol:** ändert Bezeichnung und Aktiv-Status; der Code ist nur lesbar. Eine
+  geänderte Bezeichnung erscheint sofort bei allen Fahrzeugen, die den Eintrag verwenden.
+- **Papierkorb-Symbol:** löscht den Eintrag nach einer Sicherheitsabfrage („Delete entry …?“).
+  Solange Fahrzeuge den Eintrag verwenden, ist es gesperrt („In use – deactivate instead“).
+- **Deaktivieren statt löschen:** Ein inaktiver Eintrag wird für neue Auswahlen nicht mehr
+  angeboten. Fahrzeuge, die ihn bereits haben, behalten ihn; im Formular erscheint er dort
+  mit dem Zusatz „(inactive)“ und kann beim Speichern beibehalten werden.
 
 ## Fahrerliste
 
