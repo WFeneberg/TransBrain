@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Vehicle equipment ("Ausstattung"), modelled on page 2 of the legacy vehicle screen: partition wall, pallet basket, dangerous-goods equipment, dangerous-goods approval (ADR), lift axle, double deck, double-deck beams, small/large ladder, tank volume (l), interior length/width/height (mm), and the number of support poles, load bars, lashing straps, pallets, chain tensioners and marble racks plus the marble-rack material (`Steel`/`Aluminium`). Vehicle requests and `VehicleResponse` carry it as a nested `equipment` object (omitted means "none", `PUT` replaces it as a whole); out-of-range values answer `400` keyed by the dotted path, e.g. `Equipment.TankVolumeLiters`. Both frontends show it as a new "Equipment" card in the vehicle form (migration `AddVehicleEquipment`)
 - Maintainable vehicle master-data lists ("Fahrzeug-Stammdaten"): vehicle classes and carrier groups are now catalogs with code, name and active flag, maintained under `/api/vehicle-catalog/{kind}` (`VehicleClass`, `CarrierGroup`; writes `admin` only) and on the new page `/vehicle-catalog` in both frontends (reachable from the vehicle list). Vehicles store the entry's code; unknown or newly chosen inactive codes answer `400` keyed `VehicleClass`/`CarrierGroup`, an inactive code a vehicle already has may be kept. Codes are fixed once created, entries still used by vehicles cannot be deleted (`409`) — deactivate them instead. The former fixed vehicle classes are seeded with German names (migration `AddVehicleCatalog`); the vehicle form offers both lists as selections and the vehicle list shows the catalog names
 - Extended vehicle master data, modelled on the legacy vehicle screen: confidential-plate flag, make, model, first registration (month/year), power (kW), vehicle class (body type, e.g. tarpaulin, refrigerated, tank), carrier group, default driver, chassis (VIN) and engine number, outer dimensions L/W/H in mm, curb weight, gross weight and max. fifth-wheel load (kg) and free-text notes. `CreateVehicle`/`UpdateVehicle` accept the new fields as optional (`404` for an unknown default driver, `400` keyed by field for out-of-range values); `VehicleResponse` carries them plus `modifiedAt`/`modifiedBy`, stamped on every write. Deleting a driver clears them as default driver on their vehicles (migration `AddVehicleMasterData`)
 - `POST /api/vehicles/{id}/status` (`admin`) sets a vehicle to `Available`, `InWorkshop` or `Decommissioned`; reviving a decommissioned vehicle answers `409`
@@ -64,6 +65,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Sign-out in both frontends, which neither had before
 - A `realm-roles-in-id-token` protocol mapper on the `transbrain-spa` client, so `realm_access.roles` reaches the id token and userinfo in the same shape the API already reads from the access token; without it a client cannot see its own roles without parsing an access token that is not addressed to it
 - Playwright `home.spec.ts` in both frontends: all four realm roles, sign-out, and the route guards — 30 tests per frontend in total
+
+### Fixed
+- Unticking "License plate confidential" on an existing vehicle now persists. EF Core treated `false` as "not set" on the model-level column default and left the old `true` in the database; the default is now only applied by the migration
 
 ### Changed
 - `ICurrentUser` exposes `UserName` (Keycloak `preferred_username`, falling back to the subject) for audit stamps

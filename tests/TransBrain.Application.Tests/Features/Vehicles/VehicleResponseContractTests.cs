@@ -25,4 +25,10 @@ public class VehicleResponseContractTests
             ["Available", "InWorkshop", "Decommissioned"]);
     }
 
+    [Fact]
+    public void MarbleRackMaterial_Members_MatchThePinnedContractStrings()
+    {
+        Enum.GetValues<MarbleRackMaterial>().Select(m => m.ToString()).Should().BeEquivalentTo(
+            ["Steel", "Aluminium"]);
+    }
 }

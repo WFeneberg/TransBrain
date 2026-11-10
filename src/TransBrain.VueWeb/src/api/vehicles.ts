@@ -29,6 +29,8 @@ export interface Vehicle {
     grossWeightKg: number | null;
     maxFifthWheelLoadKg: number | null;
     notes: string | null;
+    /** Never null in a response; all flags false and all values null when nothing is recorded. */
+    equipment: VehicleEquipment;
     /** Read-only, set by the server on every create, update and status change. */
     modifiedAt: string | null;
     modifiedBy: string | null;
@@ -38,6 +40,42 @@ export type VehicleStatus = 'Available' | 'InWorkshop' | 'Decommissioned';
 
 export const VEHICLE_STATUSES: readonly VehicleStatus[] = ['Available', 'InWorkshop', 'Decommissioned'];
 export const VEHICLE_TYPES = ['Tractor', 'RigidTruck', 'Van'] as const;
+
+export type MarbleRackMaterial = 'Steel' | 'Aluminium';
+
+export const MARBLE_RACK_MATERIALS: readonly MarbleRackMaterial[] = ['Steel', 'Aluminium'];
+
+/** Equipment of the legacy fleet screen "Seite2". Numbers are whole numbers, null when not recorded. */
+export interface VehicleEquipment {
+    hasPartitionWall: boolean;
+    hasPalletBasket: boolean;
+    hasDangerousGoodsEquipment: boolean;
+    isDangerousGoodsApproved: boolean;
+    hasLiftAxle: boolean;
+    hasDoubleDeck: boolean;
+    hasDoubleDeckBeams: boolean;
+    hasSmallLadder: boolean;
+    hasLargeLadder: boolean;
+    tankVolumeLiters: number | null;
+    interiorLengthMm: number | null;
+    interiorWidthMm: number | null;
+    interiorHeightMm: number | null;
+    supportPoleCount: number | null;
+    loadBarCount: number | null;
+    lashingStrapCount: number | null;
+    palletCount: number | null;
+    chainTensionerCount: number | null;
+    marbleRackCount: number | null;
+    marbleRackMaterial: MarbleRackMaterial | null;
+}
+
+export type VehicleEquipmentFlag = {
+    [K in keyof VehicleEquipment]: VehicleEquipment[K] extends boolean ? K : never;
+}[keyof VehicleEquipment];
+
+export type VehicleEquipmentNumber = {
+    [K in keyof VehicleEquipment]: VehicleEquipment[K] extends number | null ? K : never;
+}[keyof VehicleEquipment];
 
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
 export interface VehicleWriteRequest {
@@ -63,6 +101,8 @@ export interface VehicleWriteRequest {
     grossWeightKg: number | null;
     maxFifthWheelLoadKg: number | null;
     notes: string | null;
+    /** PUT replaces the whole equipment, so the complete object is always sent. */
+    equipment: VehicleEquipment;
 }
 
 export interface PagedResult<T> {

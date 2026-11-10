@@ -115,6 +115,67 @@ public class UpdateVehicleCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_Equipment_ReplacesThePreviousEquipment()
+    {
+        InMemoryVehicleRepository repository = new();
+        Vehicle vehicle = Vehicle.Create(
+            LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            equipment: VehicleEquipment.Create(hasLiftAxle: true, palletCount: 4).Value).Value;
+        repository.Seed(vehicle);
+        UpdateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService());
+
+        Result<VehicleResponse> result = await handler.Handle(
+            new UpdateVehicleCommand(
+                vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+                Equipment: new VehicleEquipmentData(HasSmallLadder: true, MarbleRackMaterial: "steel")),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        vehicle.Equipment.HasLiftAxle.Should().BeFalse();
+        vehicle.Equipment.PalletCount.Should().BeNull();
+        vehicle.Equipment.HasSmallLadder.Should().BeTrue();
+        result.Value.Equipment.Should().Be(new VehicleEquipmentData(HasSmallLadder: true, MarbleRackMaterial: "Steel"));
+    }
+
+    [Fact]
+    public async Task Handle_OmittedEquipment_ClearsPreviousEquipment()
+    {
+        InMemoryVehicleRepository repository = new();
+        Vehicle vehicle = Vehicle.Create(
+            LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            equipment: VehicleEquipment.Create(hasLiftAxle: true).Value).Value;
+        repository.Seed(vehicle);
+        UpdateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService());
+
+        Result<VehicleResponse> result = await handler.Handle(
+            new UpdateVehicleCommand(vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31)),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        vehicle.Equipment.Should().Be(VehicleEquipment.Empty);
+        result.Value.Equipment.Should().Be(new VehicleEquipmentData());
+    }
+
+    [Fact]
+    public async Task Handle_UnknownMarbleRackMaterial_ReturnsValidationErrorAndDoesNotSave()
+    {
+        InMemoryVehicleRepository repository = new();
+        Vehicle vehicle = ExistingVehicle();
+        repository.Seed(vehicle);
+        UpdateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService());
+
+        Result<VehicleResponse> result = await handler.Handle(
+            new UpdateVehicleCommand(
+                vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+                Equipment: new VehicleEquipmentData(HasLiftAxle: true, MarbleRackMaterial: "Wood")),
+            CancellationToken.None);
+
+        result.Error!.Code.Should().Be("Vehicle.UnknownMarbleRackMaterial");
+        vehicle.Equipment.HasLiftAxle.Should().BeFalse();
+        repository.SaveChangesCallCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task Handle_UnknownDefaultDriver_ReturnsNotFoundAndDoesNotSave()
     {
         InMemoryVehicleRepository repository = new();

@@ -49,4 +49,7 @@ public interface IVehicleWriteCommand
     int? MaxFifthWheelLoadKg { get; }
 
     string? Notes { get; }
+
+    /// <summary>Null means no equipment at all; an update replaces the whole equipment.</summary>
+    VehicleEquipmentData? Equipment { get; }
 }

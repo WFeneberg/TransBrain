@@ -124,7 +124,8 @@ public sealed record UpdateVehicleRequest(
     int? CurbWeightKg = null,
     int? GrossWeightKg = null,
     int? MaxFifthWheelLoadKg = null,
-    string? Notes = null)
+    string? Notes = null,
+    VehicleEquipmentData? Equipment = null)
 {
     public UpdateVehicleCommand ToCommand(Guid id) => new(
         id,
@@ -149,7 +150,8 @@ public sealed record UpdateVehicleRequest(
         CurbWeightKg,
         GrossWeightKg,
         MaxFifthWheelLoadKg,
-        Notes);
+        Notes,
+        Equipment);
 }
 
 /// <summary>Body of a vehicle status change.</summary>
