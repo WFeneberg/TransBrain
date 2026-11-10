@@ -3,6 +3,9 @@ import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { deleteDriver, listDrivers, type Driver } from '../api/drivers';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
+import { DRIVER_STATUSES, formatCalendarDate, statusColor } from '../composables/statusColor';
+import { vNativeTestid } from '../directives/nativeTestId';
 import { useAuthStore } from '../stores/auth';
 import { useI18n } from '../i18n';
 
@@ -15,21 +18,49 @@ import { useI18n } from '../i18n';
 const LIST_PAGE_SIZE = 100;
 
 const auth = useAuthStore();
-const { t } = useI18n();
+const { locale, t } = useI18n();
 const router = useRouter();
 const drivers = ref<Driver[]>([]);
+const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 // Separate from errorMessage: a failed delete must not hide the table the way a failed list
 // load does (mirrors VehicleList.vue's actionError - see that file for why).
 const actionError = ref<string | null>(null);
 
+const search = ref<string | null>('');
+const statusFilter = ref('');
+
+const deleteDialogOpen = ref(false);
+const deleteTarget = ref<Driver | null>(null);
+
+const statusOptions = computed(() => [
+    { title: t('common.all'), value: '' },
+    ...DRIVER_STATUSES.map((status) => ({ title: status, value: status })),
+]);
+
 const headers = computed(() => [
     { title: t('drivers.lastName'), key: 'lastName' },
     { title: t('drivers.firstName'), key: 'firstName' },
-    { title: t('drivers.licenseClasses'), key: 'licenseClasses' },
+    { title: t('drivers.licenseClasses'), key: 'licenseClasses', value: (driver: Driver) => driver.licenseClasses.join(', ') },
+    { title: t('drivers.licenseValidUntil'), key: 'licenseValidUntil' },
     { title: t('common.status'), key: 'status' },
-    { title: t('common.actions'), key: 'actions', sortable: false },
+    { title: t('common.actions'), key: 'actions', sortable: false, align: 'end' as const },
 ]);
+
+const filteredDrivers = computed(() => {
+    const term = (search.value ?? '').trim().toLowerCase();
+    return drivers.value.filter((driver) => {
+        if (statusFilter.value && driver.status !== statusFilter.value) {
+            return false;
+        }
+        if (!term) {
+            return true;
+        }
+        return [driver.firstName, driver.lastName, ...driver.licenseClasses].some((value) =>
+            value.toLowerCase().includes(term),
+        );
+    });
+});
 
 onMounted(async () => {
     if (auth.isAuthenticated) {
@@ -38,10 +69,24 @@ onMounted(async () => {
 });
 
 async function refresh(): Promise<void> {
+    loading.value = true;
     try {
         drivers.value = (await listDrivers(LIST_PAGE_SIZE)).items;
     } catch (error) {
         errorMessage.value = describe(error, t('drivers.listLoadFailed'));
+    } finally {
+        loading.value = false;
+    }
+}
+
+function askDelete(driver: Driver): void {
+    deleteTarget.value = driver;
+    deleteDialogOpen.value = true;
+}
+
+async function confirmDelete(): Promise<void> {
+    if (deleteTarget.value) {
+        await remove(deleteTarget.value);
     }
 }
 
@@ -76,46 +121,145 @@ function describe(error: unknown, fallback: string): string {
 </script>
 
 <template>
-    <v-container>
+    <v-container class="page-container">
         <template v-if="auth.isAuthenticated">
-            <h1>{{ t('nav.drivers') }}</h1>
-            <v-btn
-                v-if="auth.can('masterData.write')"
-                data-testid="driver-add"
-                @click="router.push('/drivers/new')"
-                >{{ t('drivers.add') }}</v-btn
-            >
-            <p v-if="actionError" data-testid="driver-action-error">{{ actionError }}</p>
-            <p v-if="errorMessage" data-testid="driver-list-error">{{ errorMessage }}</p>
+            <div class="page-header">
+                <div>
+                    <h1 class="text-h4">{{ t('nav.drivers') }}</h1>
+                    <p class="text-medium-emphasis page-subtitle">{{ t('drivers.count', { count: drivers.length }) }}</p>
+                </div>
+                <div class="header-actions">
+                    <v-btn
+                        v-if="auth.can('masterData.write')"
+                        color="primary"
+                        prepend-icon="mdi-plus"
+                        data-testid="driver-add"
+                        @click="router.push('/drivers/new')"
+                        >{{ t('drivers.add') }}</v-btn
+                    >
+                </div>
+            </div>
+
+            <v-card border flat class="filter-bar">
+                <v-card-text>
+                    <v-row dense>
+                        <v-col cols="12" md="6">
+                            <v-text-field
+                                v-model="search"
+                                v-native-testid="'driver-search'"
+                                :label="t('drivers.search')"
+                                prepend-inner-icon="mdi-magnify"
+                                variant="outlined"
+                                density="compact"
+                                clearable
+                                hide-details
+                            />
+                        </v-col>
+                        <v-col cols="12" sm="6" md="3">
+                            <v-select
+                                v-model="statusFilter"
+                                :label="t('common.status')"
+                                :items="statusOptions"
+                                variant="outlined"
+                                density="compact"
+                                hide-details
+                                data-testid="driver-status-filter"
+                            />
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+            </v-card>
+
+            <p v-if="actionError" class="text-error error-line" data-testid="driver-action-error">{{ actionError }}</p>
+            <p v-if="errorMessage" class="text-error error-line" data-testid="driver-list-error">{{ errorMessage }}</p>
             <!-- items-per-page="-1": the API already returned one page, and Vuetify would
                  paginate that page AGAIN at ten rows, so a record the server did return could
                  still be invisible. One pagination - the server's - is enough, and it is what
                  the Angular app does. -->
-            <v-data-table
-                v-else
-                :headers="headers"
-                :items="drivers"
-                :items-per-page="-1"
-                item-value="id"
-                data-testid="driver-table"
-            >
-                <template #item.lastName="{ item }">
-                    <span data-testid="driver-lastname">{{ item.lastName }}</span>
-                </template>
-                <template #item.firstName="{ item }">
-                    <span data-testid="driver-firstname">{{ item.firstName }}</span>
-                </template>
-                <template #item.licenseClasses="{ item }">
-                    {{ item.licenseClasses.join(', ') }}
-                </template>
-                <template #item.actions="{ item }">
-                    <template v-if="auth.can('masterData.write')">
-                        <v-btn data-testid="driver-edit" @click="router.push(`/drivers/${item.id}`)">{{ t('common.edit') }}</v-btn>
-                        <v-btn data-testid="driver-delete" @click="remove(item)">{{ t('common.delete') }}</v-btn>
+            <v-card v-else border flat class="table-card">
+                <v-data-table
+                    :headers="headers"
+                    :items="filteredDrivers"
+                    :items-per-page="-1"
+                    :loading="loading"
+                    :no-data-text="t('drivers.empty')"
+                    item-value="id"
+                    hide-default-footer
+                    hover
+                    data-testid="driver-table"
+                >
+                    <template #item.lastName="{ item }">
+                        <span class="font-weight-bold" data-testid="driver-lastname">{{ item.lastName }}</span>
                     </template>
-                </template>
-            </v-data-table>
+                    <template #item.firstName="{ item }">
+                        <span data-testid="driver-firstname">{{ item.firstName }}</span>
+                    </template>
+                    <template #item.licenseClasses="{ item }">
+                        <div class="license-chips">
+                            <v-chip v-for="licenseClass in item.licenseClasses" :key="licenseClass" size="small" variant="outlined">{{
+                                licenseClass
+                            }}</v-chip>
+                        </div>
+                    </template>
+                    <template #item.licenseValidUntil="{ item }">{{ formatCalendarDate(item.licenseValidUntil, locale) }}</template>
+                    <template #item.status="{ item }">
+                        <v-chip :color="statusColor(item.status)" size="small" variant="tonal" data-testid="driver-status">{{
+                            item.status
+                        }}</v-chip>
+                    </template>
+                    <template #item.actions="{ item }">
+                        <div v-if="auth.can('masterData.write')" class="row-actions">
+                            <v-tooltip :text="t('common.edit')" location="top">
+                                <template #activator="{ props: tooltip }">
+                                    <v-btn
+                                        v-bind="tooltip"
+                                        icon="mdi-pencil"
+                                        variant="text"
+                                        size="small"
+                                        :aria-label="t('common.edit')"
+                                        data-testid="driver-edit"
+                                        @click="router.push(`/drivers/${item.id}`)"
+                                    />
+                                </template>
+                            </v-tooltip>
+                            <v-tooltip :text="t('common.delete')" location="top">
+                                <template #activator="{ props: tooltip }">
+                                    <v-btn
+                                        v-bind="tooltip"
+                                        icon="mdi-delete"
+                                        variant="text"
+                                        size="small"
+                                        color="error"
+                                        :aria-label="t('common.delete')"
+                                        data-testid="driver-delete"
+                                        @click="askDelete(item)"
+                                    />
+                                </template>
+                            </v-tooltip>
+                        </div>
+                    </template>
+                </v-data-table>
+            </v-card>
+
+            <ConfirmDialog
+                v-model="deleteDialogOpen"
+                :title="t('drivers.deleteTitle')"
+                :message="
+                    t('drivers.deleteConfirm', { name: deleteTarget ? `${deleteTarget.lastName}, ${deleteTarget.firstName}` : '' })
+                "
+                test-id-prefix="driver-delete"
+                @confirm="confirmDelete"
+            />
         </template>
         <p v-else>{{ t('drivers.signInHint') }}</p>
     </v-container>
 </template>
+
+<style scoped>
+.license-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+</style>
+

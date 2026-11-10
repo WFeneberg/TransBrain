@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { signIn } from './login';
+import { chooseOption } from './select';
 
 // dispo.user: planning tours is dispatch work, and DispatchWrite admits a dispatcher.
 async function signInAsDispatcher(page: Page): Promise<void> {
@@ -88,8 +89,8 @@ async function createTour(page: Page, date: string, plate: string, driverLastNam
     await page.getByTestId('tour-add').click();
     await expect(page.getByRole('heading', { name: 'New tour' })).toBeVisible();
     await page.getByTestId('tour-tourDate').fill(date);
-    await page.getByTestId('tour-vehicleId').selectOption({ label: plate });
-    await page.getByTestId('tour-driverId').selectOption({ label: `${driverLastName}, Frank` });
+    await chooseOption(page, 'tour-vehicleId', plate);
+    await chooseOption(page, 'tour-driverId', `${driverLastName}, Frank`);
     await page.getByTestId('tour-save').click();
 }
 

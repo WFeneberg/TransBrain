@@ -306,19 +306,36 @@ Alle angemeldeten Benutzer sehen die Listen, ändern dürfen sie nur Administrat
 
 ## Fahrerliste
 
-Erreichbar über `/drivers` oder den Menüpunkt **Drivers**.
+Erreichbar über `/drivers` oder den Menüpunkt **Drivers**. Die Seite ist wie die
+Fahrzeugliste aufgebaut.
 
+![Fahrerliste](img/web/fahrerliste.png)
+
+- Unter der Überschrift steht die Anzahl der angezeigten Fahrer (z. B. „4 drivers“).
+- **Filterleiste:** **Driver search** sucht ohne Beachtung der Groß-/Kleinschreibung in
+  Vor- und Nachname sowie den Führerscheinklassen; **Status** schränkt auf `Available`,
+  `Absent` oder `Inactive` ein („All“ hebt den Filter auf). Passt kein Fahrer, erscheint
+  „No drivers found.“
 - Angezeigte Spalten: Last name (Nachname), First name (Vorname), License classes
-  (Führerscheinklassen), Status.
+  (Führerscheinklassen), License valid until (Führerschein gültig bis), Status. Ein Klick auf
+  einen Spaltenkopf sortiert die Liste.
+- **License valid until** ist farbig markiert: rot, wenn der Führerschein abgelaufen ist,
+  orange, wenn er innerhalb der nächsten 30 Tage abläuft.
 - Schaltfläche **„Add driver“** legt einen neuen Fahrer an.
-- Pro Zeile: **„Edit“** öffnet den Fahrer, **„Delete“** löscht ihn sofort, ohne
-  Sicherheitsabfrage.
-- Die Fahrerliste hat keine Such-, Filter- oder Sortiermöglichkeit.
+- Pro Zeile: **Stift-Symbol** öffnet den Fahrer, **Papierkorb-Symbol** löscht ihn nach einer
+  Sicherheitsabfrage („Do you really want to delete driver …?“). Beide Symbole erscheinen nur
+  mit Schreibrecht auf Stammdaten (`admin`).
 
 ## Fahrerformular (Anlegen / Bearbeiten)
 
-Erreichbar über „Add driver“ (neu, `/drivers/new`) oder „Edit“ in der Liste
+Erreichbar über „Add driver“ (neu, `/drivers/new`) oder das Stift-Symbol in der Liste
 (`/drivers/{id}`).
+
+![Fahrerformular](img/web/fahrerformular.png)
+
+Die Felder stehen wie im Fahrzeugformular in Karten („Personal data“, „Driving licence“);
+**„Cancel“** und **„Save“** stehen in einer Leiste, die beim Scrollen am unteren Rand
+sichtbar bleibt.
 
 | Feld (Beschriftung)  | Bedeutung                          | Pflichtfeld | Regeln                                   |
 |----------------------|--------------------------------------|:-----------:|--------------------------------------------|
@@ -339,16 +356,27 @@ Erreichbar über „Add driver“ (neu, `/drivers/new`) oder „Edit“ in der L
 Erreichbar über den Menüpunkt **Kunden** (für `admin`, `disponent` und `viewer`; für den
 Fahrer ausgeblendet).
 
-- Angezeigte Spalten: Name, PLZ und Ort, Ansprechpartner, E-Mail.
+![Kundenliste](img/web/kundenliste.png)
+
+- Unter der Überschrift steht die Anzahl der angezeigten Kunden (z. B. „3 customers“).
+- **Customer search** sucht in Name, Ort, Ansprechpartner und E-Mail. Passt kein Kunde,
+  erscheint „No customers found.“
+- Angezeigte Spalten: Name, PLZ und Ort, Ansprechpartner, E-Mail. Ein Klick auf einen
+  Spaltenkopf sortiert die Liste.
 - Schaltfläche **„Add customer“** legt einen neuen Kunden an (nur `admin`).
-- Pro Zeile: **„Edit“** und **„Delete“** (nur `admin`).
-- Es gibt keine Suche und keine Filter. Angezeigt werden die ersten 100 Kunden, alphabetisch
-  nach Name sortiert.
+- Pro Zeile: **Stift-Symbol** (Bearbeiten) und **Papierkorb-Symbol** (Löschen nach
+  Sicherheitsabfrage), nur `admin`.
+- Geladen werden die ersten 100 Kunden, alphabetisch nach Name sortiert.
 
 ## Kundenformular (Anlegen / Bearbeiten)
 
-Erreichbar über „Add customer“ (neu, `/customers/new`) oder „Edit“ in der Liste
+Erreichbar über „Add customer“ (neu, `/customers/new`) oder das Stift-Symbol in der Liste
 (`/customers/{id}`). Nur für `admin`.
+
+![Kundenformular](img/web/kundenformular.png)
+
+Die Felder sind in Karten gegliedert („Company“, „Address“, „Contact“, „Billing“);
+**„Cancel“** und **„Save“** stehen in einer Leiste am unteren Rand.
 
 | Feld (Beschriftung)  | Bedeutung                          | Pflichtfeld | Regeln                                                |
 |----------------------|------------------------------------|:-----------:|-------------------------------------------------------|
@@ -375,7 +403,8 @@ Dieser Abschnitt erscheint erst im Bearbeitungsmodus, also nachdem der Kunde ges
 
 - Schaltfläche **„Add delivery location“** öffnet ein Formular für einen neuen Anlieferort
   (`/customers/{id}/locations/new`).
-- Pro Zeile: **„Edit“** und **„Delete“** (nur `admin`).
+- Pro Zeile: **Stift-Symbol** und **Papierkorb-Symbol** (nur `admin`); das Löschen fragt
+  vorher nach („Do you really want to delete delivery location …?“).
 - Felder: Bezeichnung des Anlieferorts (Pflicht), Straße, PLZ, Ort und Land (Pflicht, wie beim
   Kunden), Ansprechperson, deren Telefon und E-Mail (optional).
 - Die Adresse eines Anlieferorts ist unabhängig von der Firmenadresse des Kunden. Im Bearbeitungsmodus zeigt eine Karte die Lage des Anlieferorts. Die Position wird aus der Adresse über Nominatim (OpenStreetMap) bestimmt. Der Dienst ist frei und braucht keinen Schlüssel. Ist die Adresse unbekannt, sagt ein Hinweis das ausdrücklich. Wird ein Kunde
@@ -387,8 +416,13 @@ Erreichbar über `/orders`.
 
 ![Auftragsliste](img/web/auftragsliste.png)
 
+- Unter der Überschrift steht die Anzahl der angezeigten Aufträge (z. B. „5 orders“).
+- **Order search** sucht in Auftragsnummer, Absender, Empfänger und Ladung. Passt kein
+  Auftrag, erscheint „No orders found.“
 - Angezeigte Spalten: Order number (Auftragsnummer), Consignor (Absender), Consignee
-  (Empfänger), Cargo (Ladung), Pickup (Beginn des Abholfensters), Status.
+  (Empfänger), Cargo (Ladung), Pickup (Beginn des Abholfensters), Status. Absender und
+  Empfänger zeigen unter dem Namen PLZ und Ort. Ein Klick auf einen Spaltenkopf sortiert die
+  Liste.
 - Die **Auftragsnummer wird vom Server vergeben**, im Format `TB-2027-00042` — Jahr und
   eine fortlaufende Nummer innerhalb dieses Jahres. Sie kann nicht eingegeben oder
   geändert werden, auch nicht beim Bearbeiten.
@@ -396,8 +430,9 @@ Erreichbar über `/orders`.
 - Das Auswahlfeld **„Status“** filtert die Liste. „All“ zeigt alle Aufträge; die übrigen
   Einträge entsprechen den fünf Status `Draft`, `Planned`, `InTransit`, `Delivered` und
   `Cancelled`.
-- Pro Zeile: **„Edit“** öffnet den Auftrag zum Bearbeiten, **„Cancel order“** storniert
-  ihn.
+- Pro Zeile: **Stift-Symbol** öffnet den Auftrag zum Bearbeiten, **Verbots-Symbol**
+  („Cancel order“) storniert ihn. Beide erscheinen nur mit Schreibrecht für die Disposition
+  (`admin`, `disponent`).
 
 **Stornieren ist kein Löschen.** Ein Auftrag wird nie entfernt. Nach dem Stornieren
 bleibt die Zeile in der Liste stehen, ihr Status wechselt lediglich auf `Cancelled`. Das
@@ -405,10 +440,10 @@ ist beabsichtigt: Das Unternehmen behält den Nachweis über einen erteilten und
 zurückgezogenen Auftrag — für Rückfragen zur Abrechnung und weil die Auftragsnummer dem
 Kunden gegenüber bereits genannt wurde.
 
-**Sicherheitsabfrage beim Stornieren:** Wie beim Löschen von Fahrzeugen (und anders als
-beim Löschen von Fahrern) wird hier nachgefragt. Ein Klick auf „Cancel order“ ersetzt die Schaltfläche in
-derselben Zeile durch **„Confirm cancel“** und **„Keep order“**. Erst „Confirm cancel“
-storniert tatsächlich; „Keep order“ bricht ab und ändert nichts.
+**Sicherheitsabfrage beim Stornieren:** Wie beim Löschen von Fahrzeugen und Fahrern wird
+hier nachgefragt. Ein Klick auf „Cancel order“ öffnet den Dialog „Do you really want to cancel
+order …?“. Erst **„Confirm cancel“** im Dialog storniert tatsächlich; **„Keep order“** schließt
+den Dialog und ändert nichts.
 
 ## Auftragsformular (Anlegen / Bearbeiten)
 
@@ -418,7 +453,7 @@ Anlieferorts gefüllt und können danach noch geändert werden. Der Auftrag spei
 sie beim Speichern eingetragen ist; spätere Änderungen am Anlieferort wirken nicht auf bestehende
 Aufträge. Ohne Auswahl tragen Sie die Empfängeradresse wie bisher von Hand ein.
 
-Erreichbar über „Add order“ (`/orders/new`) oder „Edit“ (`/orders/{id}`).
+Erreichbar über „Add order“ (`/orders/new`) oder das Stift-Symbol (`/orders/{id}`).
 
 ![Auftragsformular](img/web/auftragsformular.png)
 
@@ -504,11 +539,14 @@ Erreichbar über `/tours`.
 Eine **Tour** ist die Tagesarbeit eines Fahrzeugs mit einem Fahrer: eine geordnete Liste von
 Stopps, die eine Menge von Aufträgen bedient.
 
+- Unter der Überschrift steht die Anzahl der angezeigten Touren (z. B. „3 tours“).
 - Angezeigte Spalten: Date (Tourdatum), Vehicle (Kennzeichen), Driver (Fahrer), Stops (Anzahl
-  der Stopps), Status.
+  der Stopps), Status. Ein Klick auf einen Spaltenkopf sortiert die Liste.
 - Schaltfläche **„Add tour“** oberhalb der Tabelle plant eine neue Tour.
-- Drei Filter: **Date**, **Vehicle** und **Driver**. Sie wirken gemeinsam.
-- Pro Zeile öffnet **„Open“** die Detailseite — dort findet die eigentliche Arbeit statt.
+- Filterleiste: **Tour search** (Kennzeichen, Fahrer) sowie die Filter **Date**, **Vehicle**,
+  **Driver** und **Status**. Sie wirken gemeinsam. Passt keine Tour, erscheint „No tours found.“
+- Pro Zeile öffnet das **Öffnen-Symbol** („Open“) die Detailseite — dort findet die eigentliche
+  Arbeit statt.
 
 ## Tourenformular (Anlegen)
 
@@ -554,9 +592,14 @@ Erreichbar über „Open“ in der Liste (`/tours/{id}`).
 
 ![Tourendetail](img/web/tourendetail.png)
 
-Die Seite gliedert sich in fünf Bereiche:
+Die Seite gliedert sich in eine Kopfzeile und vier Bereiche:
 
-**1. Kopfdaten** — Datum, Fahrzeug, Fahrer und Status der Tour.
+**Kopfzeile** — Überschrift mit dem Status der Tour, rechts je nach Status **„Start tour“**
+(nur bei `Planned`) bzw. **„Complete tour“** (nur bei `InProgress`) und **„Back to tours“**.
+Schaltflächen, die im aktuellen Status ohnehin abgelehnt würden, werden ausgeblendet — anders
+als beim Stornieren eines Auftrags, wo die Ablehnung die Regel erklärt.
+
+**1. Tour data** — Datum, Fahrzeug und Fahrer der Tour.
 
 **2. Capacity (Auslastung)** — zwei Anzeigen mit Balken:
 
@@ -566,26 +609,20 @@ Die Seite gliedert sich in fünf Bereiche:
 Diese Zahlen sind der Grund, warum die Seite existiert: Sie sehen **vor** dem Zuordnen, wie viel
 Luft noch bleibt.
 
-**3. Stops** — die Stoppliste in Reihenfolge. Je zugeordnetem Auftrag entstehen **automatisch
+**3. Stops** — oben das Auswahlfeld **„Assign an order“** mit der Schaltfläche **„Assign“**,
+darunter die Stoppliste in Reihenfolge. Je zugeordnetem Auftrag entstehen **automatisch
 zwei** Stopps: ein `Pickup` (Abholung) und ein `Delivery` (Zustellung), wobei die Abholung immer
-die kleinere Nummer trägt. Die Schaltfläche **„Remove“** an der Abholzeile nimmt den ganzen
-Auftrag wieder von der Tour; die verbleibenden Stopps werden lückenlos neu nummeriert.
-
-**4. Route** — Strecke, Fahrzeit, Karte mit den Stopps und die Lenk- und Ruhezeiten der Tour.
-Der Bereich wird unten unter „Route der Tour“ beschrieben.
-
-**5. Assign an order (Auftrag zuordnen)** — ein Auswahlfeld mit den zuordenbaren Aufträgen und
-die Schaltfläche **„Assign“**.
+die kleinere Nummer trägt. Das **Entfernen-Symbol** („Remove“) an der Abholzeile nimmt den ganzen
+Auftrag ohne Rückfrage wieder von der Tour; die verbleibenden Stopps werden lückenlos neu
+nummeriert.
 
 **Angeboten werden nur Aufträge im Status `Draft`.** Jeder andere Status würde vom Server
 abgelehnt, und eine Auswahl anzubieten, die anschließend abgelehnt wird, ist schlechter, als sie
 gar nicht anzubieten. Ein Auftrag, der bereits auf einer anderen Tour liegt, ist deshalb nicht in
 der Liste.
 
-Darunter erscheinen je nach Status die Schaltflächen **„Start tour“** (nur bei `Planned`) und
-**„Complete tour“** (nur bei `InProgress`). Schaltflächen, die im aktuellen Status ohnehin
-abgelehnt würden, werden hier ausgeblendet — anders als beim Stornieren eines Auftrags, wo die
-Ablehnung die Regel erklärt.
+**4. Route** — Strecke, Fahrzeit, Karte mit den Stopps und die Lenk- und Ruhezeiten der Tour.
+Der Bereich wird unten unter „Route der Tour“ beschrieben.
 
 ### Route der Tour
 
@@ -720,13 +757,13 @@ dann die passende Oberfläche.
 
 ## Bekannte Einschränkungen (Zusammenfassung)
 
-- Sortieren lässt sich bisher nur die Fahrzeugliste.
 - Die Kennzahlen und Arbeitslisten der Startseite werden beim Öffnen einmal geladen; sie
   aktualisieren sich nicht von selbst, solange die Seite offen bleibt.
-- Löschen von Fahrern erfolgt sofort, ohne Sicherheitsabfrage; das Löschen von Fahrzeugen
-  und das Stornieren eines Auftrags fragen dagegen nach.
-- In der Auftragsliste lässt sich nur nach Status filtern; die Filter nach Abholzeitraum,
-  die die API anbietet, haben noch keine Bedienelemente.
+- Das Entfernen eines Auftrags von einer Tour erfolgt sofort, ohne Sicherheitsabfrage; das
+  Löschen von Stammdaten und das Stornieren eines Auftrags fragen dagegen nach.
+- Suche und Sortierung wirken nur auf die geladenen Einträge (siehe unten).
+- In der Auftragsliste lässt sich nur nach Status filtern und suchen; die Filter nach
+  Abholzeitraum, die die API anbietet, haben noch keine Bedienelemente.
 - Eine Tour lässt sich nach dem Anlegen weder umplanen noch löschen. Eine falsch geplante Tour
   bleibt als leere Tour stehen, nachdem ihre Aufträge entfernt wurden — und belegt Fahrzeug und
   Fahrer für diesen Tag weiter.

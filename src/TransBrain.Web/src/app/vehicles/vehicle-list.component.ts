@@ -16,7 +16,7 @@ import { filter, switchMap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { DriverService } from '../drivers/driver.service';
 import { I18nService } from '../i18n/i18n.service';
-import { ConfirmDialogComponent, ConfirmDialogData } from './confirm-dialog.component';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import { InspectionUrgency, formatDate, inspectionUrgency, makeAndModel } from './vehicle-format';
 import {
     VehicleCatalogEntry,

@@ -26,7 +26,7 @@ import { filter, forkJoin, switchMap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { Driver, DriverService } from '../drivers/driver.service';
 import { I18nService, TranslationKey } from '../i18n/i18n.service';
-import { ConfirmDialogComponent, ConfirmDialogData } from './confirm-dialog.component';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import { InspectionUrgency, formatDate, formatDateTime, inspectionUrgency } from './vehicle-format';
 import {
     VehicleCatalogEntry,

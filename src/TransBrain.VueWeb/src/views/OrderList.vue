@@ -3,6 +3,8 @@ import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { cancelOrder, listOrders, type Order } from '../api/orders';
+import { ORDER_STATUSES, statusColor } from '../composables/statusColor';
+import { vNativeTestid } from '../directives/nativeTestId';
 import { useAuthStore } from '../stores/auth';
 import { useI18n } from '../i18n';
 
@@ -18,24 +20,46 @@ const auth = useAuthStore();
 const { locale, t } = useI18n();
 const router = useRouter();
 const orders = ref<Order[]>([]);
+const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 // Separate from errorMessage: a failed cancel must not hide the table the way a failed list
 // load does (mirrors DriverList.vue's actionError).
 const actionError = ref<string | null>(null);
+const search = ref<string | null>('');
 const statusFilter = ref('');
 const pendingCancelId = ref<string | null>(null);
 
-const statusOptions = ['Draft', 'Planned', 'InTransit', 'Delivered', 'Cancelled'];
+const statusOptions = computed(() => [
+    { title: t('common.all'), value: '' },
+    ...ORDER_STATUSES.map((status) => ({ title: status, value: status })),
+]);
 
 const headers = computed(() => [
     { title: t('orders.orderNumber'), key: 'orderNumber' },
-    { title: t('orders.consignor'), key: 'consignor' },
-    { title: t('orders.consignee'), key: 'consignee' },
+    { title: t('orders.consignor'), key: 'consignor', value: (order: Order) => order.consignor.name },
+    { title: t('orders.consignee'), key: 'consignee', value: (order: Order) => order.consignee.name },
     { title: t('orders.cargo'), key: 'cargoDescription' },
     { title: t('orders.pickup'), key: 'pickupFrom' },
     { title: t('common.status'), key: 'status' },
-    { title: t('common.actions'), key: 'actions', sortable: false },
+    { title: t('common.actions'), key: 'actions', sortable: false, align: 'end' as const },
 ]);
+
+const filteredOrders = computed(() => {
+    const term = (search.value ?? '').trim().toLowerCase();
+    if (!term) {
+        return orders.value;
+    }
+    return orders.value.filter((order) =>
+        [
+            order.orderNumber,
+            order.consignor.name,
+            order.consignor.city,
+            order.consignee.name,
+            order.consignee.city,
+            order.cargoDescription,
+        ].some((value) => value.toLowerCase().includes(term)),
+    );
+});
 
 onMounted(async () => {
     if (auth.isAuthenticated) {
@@ -44,15 +68,19 @@ onMounted(async () => {
 });
 
 async function refresh(): Promise<void> {
+    loading.value = true;
     try {
         orders.value = (await listOrders(statusFilter.value, LIST_PAGE_SIZE)).items;
     } catch (error) {
         errorMessage.value = describe(error, t('orders.listLoadFailed'));
+    } finally {
+        loading.value = false;
     }
 }
 
-async function filterByStatus(status: string): Promise<void> {
-    statusFilter.value = status;
+// Server-side, unlike the search: the status is a query parameter of the order list.
+async function filterByStatus(status: string | null): Promise<void> {
+    statusFilter.value = status ?? '';
     pendingCancelId.value = null;
     await refresh();
 }
@@ -101,77 +129,151 @@ function describe(error: unknown, fallback: string): string {
 </script>
 
 <template>
-    <v-container>
+    <v-container class="page-container">
         <template v-if="auth.isAuthenticated">
-            <h1>{{ t('nav.orders') }}</h1>
-            <v-btn
-                v-if="auth.can('dispatch.write')"
-                data-testid="order-add"
-                @click="router.push('/orders/new')"
-                >{{ t('orders.add') }}</v-btn
-            >
-            <!-- A plain <select>, not <v-select>: Vuetify's select renders an overlay listbox
-                 rather than native options, and the same testid-lands-on-a-wrapper-div problem
-                 DriverForm.vue documents for v-text-field applies to it. -->
-            <div>
-                <label for="order-status-filter">{{ t('common.status') }}</label>
-                <select
-                    id="order-status-filter"
-                    data-testid="order-status-filter"
-                    :value="statusFilter"
-                    @change="filterByStatus(($event.target as HTMLSelectElement).value)"
-                >
-                    <option value="">{{ t('common.all') }}</option>
-                    <option v-for="status in statusOptions" :key="status" :value="status">{{ status }}</option>
-                </select>
+            <div class="page-header">
+                <div>
+                    <h1 class="text-h4">{{ t('nav.orders') }}</h1>
+                    <p class="text-medium-emphasis page-subtitle">{{ t('orders.count', { count: orders.length }) }}</p>
+                </div>
+                <div class="header-actions">
+                    <v-btn
+                        v-if="auth.can('dispatch.write')"
+                        color="primary"
+                        prepend-icon="mdi-plus"
+                        data-testid="order-add"
+                        @click="router.push('/orders/new')"
+                        >{{ t('orders.add') }}</v-btn
+                    >
+                </div>
             </div>
-            <p v-if="actionError" data-testid="order-action-error">{{ actionError }}</p>
-            <p v-if="errorMessage" data-testid="order-list-error">{{ errorMessage }}</p>
+
+            <v-card border flat class="filter-bar">
+                <v-card-text>
+                    <v-row dense>
+                        <v-col cols="12" md="6">
+                            <v-text-field
+                                v-model="search"
+                                v-native-testid="'order-search'"
+                                :label="t('orders.search')"
+                                prepend-inner-icon="mdi-magnify"
+                                variant="outlined"
+                                density="compact"
+                                clearable
+                                hide-details
+                            />
+                        </v-col>
+                        <v-col cols="12" sm="6" md="3">
+                            <v-select
+                                :model-value="statusFilter"
+                                :label="t('common.status')"
+                                :items="statusOptions"
+                                variant="outlined"
+                                density="compact"
+                                hide-details
+                                data-testid="order-status-filter"
+                                @update:model-value="filterByStatus"
+                            />
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+            </v-card>
+
+            <p v-if="actionError" class="text-error error-line" data-testid="order-action-error">{{ actionError }}</p>
+            <p v-if="errorMessage" class="text-error error-line" data-testid="order-list-error">{{ errorMessage }}</p>
             <!-- items-per-page="-1": the API already returned one page, and Vuetify would
                  paginate that page AGAIN at ten rows, so a record the server did return could
                  still be invisible. One pagination - the server's - is enough, and it is what
                  the Angular app does. -->
-            <v-data-table
-                v-else
-                :headers="headers"
-                :items="orders"
-                :items-per-page="-1"
-                item-value="id"
-                data-testid="order-table"
-            >
-                <template #item.orderNumber="{ item }">
-                    <span data-testid="order-number">{{ item.orderNumber }}</span>
-                </template>
-                <template #item.consignor="{ item }">
-                    <span data-testid="order-consignor">{{ item.consignor.name }}</span>
-                </template>
-                <template #item.consignee="{ item }">
-                    <span data-testid="order-consignee">{{ item.consignee.name }}</span>
-                </template>
-                <template #item.cargoDescription="{ item }">
-                    <span data-testid="order-cargo">{{ item.cargoDescription }}</span>
-                </template>
-                <template #item.pickupFrom="{ item }">
-                    {{ formatInstant(item.pickupFrom) }}
-                </template>
-                <template #item.status="{ item }">
-                    <span data-testid="order-status">{{ item.status }}</span>
-                </template>
-                <template #item.actions="{ item }">
-                    <template v-if="auth.can('dispatch.write')">
-                    <v-btn data-testid="order-edit" @click="router.push(`/orders/${item.id}`)">{{ t('common.edit') }}</v-btn>
-                    <!-- Inline confirmation rather than window.confirm(): a native dialog blocks
-                         until a Playwright dialog handler answers it, and an in-DOM confirmation
-                         is what the e2e spec can assert. Mirrors the Angular list. -->
-                    <template v-if="pendingCancelId === item.id">
-                        <v-btn data-testid="order-cancel-confirm" @click="cancel(item)">{{ t('orders.confirmCancel') }}</v-btn>
-                        <v-btn data-testid="order-cancel-abort" @click="abortCancel()">{{ t('orders.keep') }}</v-btn>
+            <v-card v-else border flat class="table-card">
+                <v-data-table
+                    :headers="headers"
+                    :items="filteredOrders"
+                    :items-per-page="-1"
+                    :loading="loading"
+                    :no-data-text="t('orders.empty')"
+                    item-value="id"
+                    hide-default-footer
+                    hover
+                    data-testid="order-table"
+                >
+                    <template #item.orderNumber="{ item }">
+                        <span class="font-weight-bold" data-testid="order-number">{{ item.orderNumber }}</span>
                     </template>
-                    <v-btn v-else data-testid="order-cancel" @click="askToCancel(item)">{{ t('orders.cancel') }}</v-btn>
+                    <template #item.consignor="{ item }">
+                        <span data-testid="order-consignor">{{ item.consignor.name }}</span>
+                        <div class="text-caption text-medium-emphasis">{{ item.consignor.postalCode }} {{ item.consignor.city }}</div>
                     </template>
-                </template>
-            </v-data-table>
+                    <template #item.consignee="{ item }">
+                        <span data-testid="order-consignee">{{ item.consignee.name }}</span>
+                        <div class="text-caption text-medium-emphasis">{{ item.consignee.postalCode }} {{ item.consignee.city }}</div>
+                    </template>
+                    <template #item.cargoDescription="{ item }">
+                        <span data-testid="order-cargo">{{ item.cargoDescription }}</span>
+                    </template>
+                    <template #item.pickupFrom="{ item }">{{ formatInstant(item.pickupFrom) }}</template>
+                    <template #item.status="{ item }">
+                        <v-chip :color="statusColor(item.status)" size="small" variant="tonal" data-testid="order-status">{{
+                            item.status
+                        }}</v-chip>
+                    </template>
+                    <template #item.actions="{ item }">
+                        <div v-if="auth.can('dispatch.write')" class="row-actions">
+                            <v-tooltip :text="t('common.edit')" location="top">
+                                <template #activator="{ props: tooltip }">
+                                    <v-btn
+                                        v-bind="tooltip"
+                                        icon="mdi-pencil"
+                                        variant="text"
+                                        size="small"
+                                        :aria-label="t('common.edit')"
+                                        data-testid="order-edit"
+                                        @click="router.push(`/orders/${item.id}`)"
+                                    />
+                                </template>
+                            </v-tooltip>
+                            <!-- Inline confirmation rather than window.confirm(): a native dialog
+                                 blocks until a Playwright dialog handler answers it, and an in-DOM
+                                 confirmation is what the e2e spec can assert. Mirrors the Angular
+                                 list. -->
+                            <template v-if="pendingCancelId === item.id">
+                                <v-btn
+                                    color="error"
+                                    variant="tonal"
+                                    size="small"
+                                    data-testid="order-cancel-confirm"
+                                    @click="cancel(item)"
+                                    >{{ t('orders.confirmCancel') }}</v-btn
+                                >
+                                <v-btn variant="text" size="small" data-testid="order-cancel-abort" @click="abortCancel()">{{
+                                    t('orders.keep')
+                                }}</v-btn>
+                            </template>
+                            <v-tooltip v-else :text="t('orders.cancel')" location="top">
+                                <template #activator="{ props: tooltip }">
+                                    <v-btn
+                                        v-bind="tooltip"
+                                        icon="mdi-cancel"
+                                        variant="text"
+                                        size="small"
+                                        color="error"
+                                        :aria-label="t('orders.cancel')"
+                                        data-testid="order-cancel"
+                                        @click="askToCancel(item)"
+                                    />
+                                </template>
+                            </v-tooltip>
+                        </div>
+                    </template>
+                </v-data-table>
+            </v-card>
         </template>
         <p v-else>{{ t('orders.signInHint') }}</p>
     </v-container>
 </template>
+
+<style scoped>
+.row-actions {
+    align-items: center;
+}
+</style>

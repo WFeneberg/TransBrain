@@ -12,6 +12,7 @@ import {
     type OrderWriteRequest,
 } from '../api/orders';
 import LocationMap from '../components/LocationMap.vue';
+import { vNativeTestid } from '../directives/nativeTestId';
 import { useI18n, type MessageKey } from '../i18n';
 
 interface ProblemDetailsBody {
@@ -33,6 +34,35 @@ type Party = (typeof parties)[number];
 
 const partyLabels: Record<Party, MessageKey> = { consignor: 'orders.consignor', consignee: 'orders.consignee' };
 const partyPinLabels: Record<Party, string> = { consignor: 'A', consignee: 'B' };
+const partyIcons: Record<Party, string> = {
+    consignor: 'mdi-account-arrow-right-outline',
+    consignee: 'mdi-account-arrow-left-outline',
+};
+
+const addressFields = [
+    { name: 'name', label: 'common.name', sm: 12 },
+    { name: 'street', label: 'orders.street', sm: 12 },
+    { name: 'postalCode', label: 'orders.postalCode', sm: 4 },
+    { name: 'city', label: 'orders.city', sm: 5 },
+    { name: 'country', label: 'orders.country', sm: 3 },
+] as const;
+
+const windows = [
+    {
+        key: 'pickup',
+        icon: 'mdi-calendar-arrow-right',
+        title: 'orders.pickupWindow',
+        from: 'pickupFrom',
+        to: 'pickupTo',
+    },
+    {
+        key: 'delivery',
+        icon: 'mdi-calendar-check-outline',
+        title: 'orders.deliveryWindow',
+        from: 'deliveryFrom',
+        to: 'deliveryTo',
+    },
+] as const;
 
 const form = reactive({
     consignor: { name: '', street: '', postalCode: '', city: '', country: 'DE' },
@@ -80,6 +110,14 @@ const locationOptions = ref<CustomerLocationOption[]>([]);
 const locationPickerError = ref<string | null>(null);
 
 const unlocatedParties = computed(() => parties.filter((party) => locations.value?.[party] === null));
+
+const locationItems = computed(() => [
+    { title: t('orders.consigneeLocation.none'), value: '' },
+    ...locationOptions.value.map((option) => ({
+        title: `${option.customerName}: ${option.name}, ${option.city}`,
+        value: option.id,
+    })),
+]);
 
 const mapMarkers = computed(() =>
     parties.flatMap((party) => {
@@ -165,8 +203,8 @@ async function loadLocationOptions(): Promise<void> {
 
 // Picking a location only copies its address into the consignee fields. The order keeps that
 // copy and the reference, so later edits to the location do not change this order.
-function onLocationChange(event: Event): void {
-    const id = (event.target as HTMLSelectElement).value;
+function onLocationChange(id: string | null): void {
+    form.consigneeLocationId = id ?? '';
     const option = locationOptions.value.find((o) => o.id === id);
     if (!option) {
         return;
@@ -214,6 +252,11 @@ async function save(): Promise<void> {
 
 function cancel(): void {
     router.push('/orders');
+}
+
+function errorsFor(field: string): string[] {
+    const message = fieldErrors[field];
+    return attemptedSubmit.value && message ? [message] : [];
 }
 
 // A datetime-local input has no zone, so its value is the user's wall-clock time. Sending it
@@ -280,227 +323,196 @@ function describeFailure(error: unknown, fallback: string): string {
 </script>
 
 <template>
-    <v-container>
-        <h1>{{ isEditMode ? t('orders.edit') : t('orders.new') }}</h1>
-        <p v-if="formError" data-testid="order-form-error">{{ formError }}</p>
+    <v-container class="page-container">
+        <div class="page-header form-header">
+            <div class="title-row">
+                <h1 class="text-h4">{{ isEditMode ? t('orders.edit') : t('orders.new') }}</h1>
+            </div>
+        </div>
+        <p v-if="formError" class="text-error form-error" data-testid="order-form-error">{{ formError }}</p>
         <!-- novalidate: see VehicleForm.vue for why - Angular's [formGroup] directive sets this
              automatically, and without the Vue equivalent a native input constraint (e.g. a
              number field's default step=1 rejecting 8.4 load meters) silently blocks the
              "submit" event before this component's handler ever runs. -->
         <form novalidate @submit.prevent="save">
-            <!-- Plain <input> elements, not <v-text-field>: Vuetify's control wraps the real
-                 <input> in a root <div>, and a data-testid on the component lands on that div,
-                 which makes Playwright's fill() fail. See DriverForm.vue. -->
-            <fieldset>
-                <legend>{{ t('orders.consigneeLocation') }}</legend>
-                <div>
-                    <label for="order-consigneeLocation">{{ t('orders.consigneeLocation') }}</label>
-                    <select
-                        id="order-consigneeLocation"
-                        v-model="form.consigneeLocationId"
-                        data-testid="order-consigneeLocation"
-                        @change="onLocationChange"
-                    >
-                        <option value="">{{ t('orders.consigneeLocation.none') }}</option>
-                        <option v-for="option in locationOptions" :key="option.id" :value="option.id">
-                            {{ option.customerName }}: {{ option.name }}, {{ option.city }}
-                        </option>
-                    </select>
-                </div>
-                <p v-if="locationPickerError" data-testid="order-consigneeLocation-error">{{ locationPickerError }}</p>
-            </fieldset>
+            <!-- v-native-testid, not data-testid, on every text field: Playwright's fill() needs
+                 the testid on the native <input>, not on Vuetify's root <div> (see
+                 VehicleForm.vue). The v-select keeps data-testid on the root. -->
+            <v-row>
+                <v-col v-for="party in parties" :key="party" cols="12" md="6">
+                    <v-card border flat class="section-card">
+                        <v-card-item :prepend-icon="partyIcons[party]" :title="t(partyLabels[party])" />
+                        <v-card-text>
+                            <v-row dense>
+                                <v-col v-if="party === 'consignee'" cols="12">
+                                    <v-select
+                                        :model-value="form.consigneeLocationId"
+                                        :label="t('orders.consigneeLocation')"
+                                        :items="locationItems"
+                                        :error-messages="locationPickerError ? [locationPickerError] : []"
+                                        prepend-inner-icon="mdi-map-marker-outline"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                        data-testid="order-consigneeLocation"
+                                        @update:model-value="onLocationChange"
+                                    >
+                                        <template #message="{ message }">
+                                            <span data-testid="order-consigneeLocation-error">{{ message }}</span>
+                                        </template>
+                                    </v-select>
+                                </v-col>
+                                <v-col v-for="field in addressFields" :key="field.name" cols="12" :sm="field.sm">
+                                    <v-text-field
+                                        v-model="form[party][field.name]"
+                                        v-native-testid="`order-${party}-${field.name}`"
+                                        :label="`${t(field.label)} *`"
+                                        :error-messages="errorsFor(`${party}.${field.name}`)"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span :data-testid="`order-${party}-${field.name}-error`">{{ message }}</span>
+                                        </template>
+                                    </v-text-field>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
 
-            <fieldset v-for="party in parties" :key="party">
-                <legend>{{ t(partyLabels[party]) }}</legend>
-                <div>
-                    <label :for="`order-${party}-name`">{{ t('common.name') }}</label>
-                    <input
-                        :id="`order-${party}-name`"
-                        v-model="form[party].name"
-                        :data-testid="`order-${party}-name`"
-                    />
-                </div>
-                <p
-                    v-if="attemptedSubmit && fieldErrors[`${party}.name`]"
-                    :data-testid="`order-${party}-name-error`"
-                >
-                    {{ fieldErrors[`${party}.name`] }}
-                </p>
+                <v-col cols="12">
+                    <v-card border flat class="section-card">
+                        <v-card-item prepend-icon="mdi-package-variant-closed" :title="t('orders.cargo')" />
+                        <v-card-text>
+                            <v-row dense>
+                                <v-col cols="12" md="6">
+                                    <v-text-field
+                                        v-model="form.cargoDescription"
+                                        v-native-testid="'order-cargoDescription'"
+                                        :label="`${t('orders.description')} *`"
+                                        :error-messages="errorsFor('cargoDescription')"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span data-testid="order-cargoDescription-error">{{ message }}</span>
+                                        </template>
+                                    </v-text-field>
+                                </v-col>
+                                <v-col cols="12" sm="6" md="3">
+                                    <v-text-field
+                                        v-model="form.cargoWeightKg"
+                                        v-native-testid="'order-cargoWeightKg'"
+                                        :label="`${t('orders.weight')} *`"
+                                        type="number"
+                                        :error-messages="errorsFor('cargoWeightKg')"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span data-testid="order-cargoWeightKg-error">{{ message }}</span>
+                                        </template>
+                                    </v-text-field>
+                                </v-col>
+                                <v-col cols="12" sm="6" md="3">
+                                    <!-- step="any" as well as the form's novalidate: the default
+                                         step=1 makes a native number input reject a decimal like
+                                         8.4 outright. -->
+                                    <v-text-field
+                                        v-model="form.cargoLoadMeters"
+                                        v-native-testid="'order-cargoLoadMeters'"
+                                        :label="`${t('common.loadMeters')} *`"
+                                        type="number"
+                                        step="any"
+                                        :error-messages="errorsFor('cargoLoadMeters')"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span data-testid="order-cargoLoadMeters-error">{{ message }}</span>
+                                        </template>
+                                    </v-text-field>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
 
-                <div>
-                    <label :for="`order-${party}-street`">{{ t('orders.street') }}</label>
-                    <input
-                        :id="`order-${party}-street`"
-                        v-model="form[party].street"
-                        :data-testid="`order-${party}-street`"
-                    />
-                </div>
-                <p
-                    v-if="attemptedSubmit && fieldErrors[`${party}.street`]"
-                    :data-testid="`order-${party}-street-error`"
-                >
-                    {{ fieldErrors[`${party}.street`] }}
-                </p>
+                <v-col v-for="timeWindow in windows" :key="timeWindow.key" cols="12" md="6">
+                    <v-card border flat class="section-card">
+                        <v-card-item :prepend-icon="timeWindow.icon" :title="t(timeWindow.title)" />
+                        <v-card-text>
+                            <v-row dense>
+                                <v-col cols="12" sm="6">
+                                    <v-text-field
+                                        v-model="form[timeWindow.from]"
+                                        v-native-testid="`order-${timeWindow.from}`"
+                                        :label="`${t('common.from')} *`"
+                                        type="datetime-local"
+                                        :error-messages="errorsFor(timeWindow.from)"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span :data-testid="`order-${timeWindow.from}-error`">{{ message }}</span>
+                                        </template>
+                                    </v-text-field>
+                                </v-col>
+                                <v-col cols="12" sm="6">
+                                    <v-text-field
+                                        v-model="form[timeWindow.to]"
+                                        v-native-testid="`order-${timeWindow.to}`"
+                                        :label="`${t('common.to')} *`"
+                                        type="datetime-local"
+                                        :error-messages="errorsFor(timeWindow.to)"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span :data-testid="`order-${timeWindow.to}-error`">{{ message }}</span>
+                                        </template>
+                                    </v-text-field>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
 
-                <div>
-                    <label :for="`order-${party}-postalCode`">{{ t('orders.postalCode') }}</label>
-                    <input
-                        :id="`order-${party}-postalCode`"
-                        v-model="form[party].postalCode"
-                        :data-testid="`order-${party}-postalCode`"
-                    />
-                </div>
-                <p
-                    v-if="attemptedSubmit && fieldErrors[`${party}.postalCode`]"
-                    :data-testid="`order-${party}-postalCode-error`"
-                >
-                    {{ fieldErrors[`${party}.postalCode`] }}
-                </p>
+                <v-col v-if="isEditMode" cols="12">
+                    <v-card border flat class="section-card" data-testid="order-map-section">
+                        <v-card-item prepend-icon="mdi-map-outline" :title="t('map.title')" />
+                        <v-card-text>
+                            <p v-if="locationsError" class="text-error error-line" data-testid="order-map-error">{{ locationsError }}</p>
+                            <p
+                                v-for="party in unlocatedParties"
+                                :key="party"
+                                class="text-medium-emphasis section-hint error-line"
+                                data-testid="order-map-not-located"
+                            >
+                                <v-icon icon="mdi-map-marker-off-outline" size="small" />
+                                {{ t('map.notLocated', { party: t(partyLabels[party]) }) }}
+                            </p>
+                            <div v-if="mapMarkers.length" class="map-frame">
+                                <LocationMap :markers="mapMarkers" data-testid="order-map" />
+                            </div>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+            </v-row>
 
-                <div>
-                    <label :for="`order-${party}-city`">{{ t('orders.city') }}</label>
-                    <input
-                        :id="`order-${party}-city`"
-                        v-model="form[party].city"
-                        :data-testid="`order-${party}-city`"
-                    />
-                </div>
-                <p
-                    v-if="attemptedSubmit && fieldErrors[`${party}.city`]"
-                    :data-testid="`order-${party}-city-error`"
-                >
-                    {{ fieldErrors[`${party}.city`] }}
-                </p>
-
-                <div>
-                    <label :for="`order-${party}-country`">{{ t('orders.country') }}</label>
-                    <input
-                        :id="`order-${party}-country`"
-                        v-model="form[party].country"
-                        :data-testid="`order-${party}-country`"
-                    />
-                </div>
-                <p
-                    v-if="attemptedSubmit && fieldErrors[`${party}.country`]"
-                    :data-testid="`order-${party}-country-error`"
-                >
-                    {{ fieldErrors[`${party}.country`] }}
-                </p>
-            </fieldset>
-
-            <fieldset>
-                <legend>{{ t('orders.cargo') }}</legend>
-                <div>
-                    <label for="order-cargoDescription">{{ t('orders.description') }}</label>
-                    <input
-                        id="order-cargoDescription"
-                        v-model="form.cargoDescription"
-                        data-testid="order-cargoDescription"
-                    />
-                </div>
-                <p v-if="attemptedSubmit && fieldErrors.cargoDescription" data-testid="order-cargoDescription-error">
-                    {{ fieldErrors.cargoDescription }}
-                </p>
-
-                <div>
-                    <label for="order-cargoWeightKg">{{ t('orders.weight') }}</label>
-                    <input
-                        id="order-cargoWeightKg"
-                        v-model="form.cargoWeightKg"
-                        type="number"
-                        data-testid="order-cargoWeightKg"
-                    />
-                </div>
-                <p v-if="attemptedSubmit && fieldErrors.cargoWeightKg" data-testid="order-cargoWeightKg-error">
-                    {{ fieldErrors.cargoWeightKg }}
-                </p>
-
-                <div>
-                    <label for="order-cargoLoadMeters">{{ t('common.loadMeters') }}</label>
-                    <!-- step="any" as well as the form's novalidate: the default step=1 makes a
-                         native number input reject a decimal like 8.4 outright. -->
-                    <input
-                        id="order-cargoLoadMeters"
-                        v-model="form.cargoLoadMeters"
-                        type="number"
-                        step="any"
-                        data-testid="order-cargoLoadMeters"
-                    />
-                </div>
-                <p v-if="attemptedSubmit && fieldErrors.cargoLoadMeters" data-testid="order-cargoLoadMeters-error">
-                    {{ fieldErrors.cargoLoadMeters }}
-                </p>
-            </fieldset>
-
-            <fieldset>
-                <legend>{{ t('orders.pickupWindow') }}</legend>
-                <div>
-                    <label for="order-pickupFrom">{{ t('common.from') }}</label>
-                    <input
-                        id="order-pickupFrom"
-                        v-model="form.pickupFrom"
-                        type="datetime-local"
-                        data-testid="order-pickupFrom"
-                    />
-                </div>
-                <p v-if="attemptedSubmit && fieldErrors.pickupFrom" data-testid="order-pickupFrom-error">
-                    {{ fieldErrors.pickupFrom }}
-                </p>
-
-                <div>
-                    <label for="order-pickupTo">{{ t('common.to') }}</label>
-                    <input
-                        id="order-pickupTo"
-                        v-model="form.pickupTo"
-                        type="datetime-local"
-                        data-testid="order-pickupTo"
-                    />
-                </div>
-                <p v-if="attemptedSubmit && fieldErrors.pickupTo" data-testid="order-pickupTo-error">
-                    {{ fieldErrors.pickupTo }}
-                </p>
-            </fieldset>
-
-            <fieldset>
-                <legend>{{ t('orders.deliveryWindow') }}</legend>
-                <div>
-                    <label for="order-deliveryFrom">{{ t('common.from') }}</label>
-                    <input
-                        id="order-deliveryFrom"
-                        v-model="form.deliveryFrom"
-                        type="datetime-local"
-                        data-testid="order-deliveryFrom"
-                    />
-                </div>
-                <p v-if="attemptedSubmit && fieldErrors.deliveryFrom" data-testid="order-deliveryFrom-error">
-                    {{ fieldErrors.deliveryFrom }}
-                </p>
-
-                <div>
-                    <label for="order-deliveryTo">{{ t('common.to') }}</label>
-                    <input
-                        id="order-deliveryTo"
-                        v-model="form.deliveryTo"
-                        type="datetime-local"
-                        data-testid="order-deliveryTo"
-                    />
-                </div>
-                <p v-if="attemptedSubmit && fieldErrors.deliveryTo" data-testid="order-deliveryTo-error">
-                    {{ fieldErrors.deliveryTo }}
-                </p>
-            </fieldset>
-
-            <v-btn type="submit" data-testid="order-save">{{ t('common.save') }}</v-btn>
-            <v-btn type="button" data-testid="order-cancel-edit" @click="cancel">{{ t('common.cancel') }}</v-btn>
+            <div class="form-actions">
+                <v-btn type="button" variant="text" data-testid="order-cancel-edit" @click="cancel">{{ t('common.cancel') }}</v-btn>
+                <v-btn type="submit" color="primary" prepend-icon="mdi-content-save-outline" data-testid="order-save">{{
+                    t('common.save')
+                }}</v-btn>
+            </div>
         </form>
-
-        <section v-if="isEditMode" data-testid="order-map-section">
-            <h2>{{ t('map.title') }}</h2>
-            <p v-if="locationsError" data-testid="order-map-error">{{ locationsError }}</p>
-            <p v-for="party in unlocatedParties" :key="party" data-testid="order-map-not-located">
-                {{ t('map.notLocated', { party: t(partyLabels[party]) }) }}
-            </p>
-            <LocationMap v-if="mapMarkers.length" :markers="mapMarkers" data-testid="order-map" />
-        </section>
     </v-container>
 </template>

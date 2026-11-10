@@ -40,8 +40,9 @@ test('adminUser_createEditAndDeleteDriver_throughTheUi', async ({ page }) => {
     const updatedRow = page.locator('tr').filter({ hasText: lastName });
     await expect(updatedRow.getByTestId('driver-firstname')).toHaveText('Franz');
 
-    // Delete through the UI: the row disappears from the list.
+    // Delete through the UI: confirm the dialog, then the row disappears from the list.
     await updatedRow.getByTestId('driver-delete').click();
+    await page.getByTestId('driver-delete-confirm').click();
     await expect(page.locator('tr').filter({ hasText: lastName })).toHaveCount(0);
 });
 

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { signIn } from './login';
+import { chooseOption } from './select';
 
 // dispo.user, not admin.user: orders are dispatch data, and DispatchWrite admits a dispatcher.
 // Logging in as the role that will actually use this screen proves the policy choice from the
@@ -74,6 +75,8 @@ test('dispatcher_createEditAndCancelOrder_throughTheUi', async ({ page }) => {
     // message must reach the user rather than failing silently.
     await cancelledRow.getByTestId('order-edit').click();
     await expect(page.getByRole('heading', { name: 'Edit order' })).toBeVisible();
+    // Wait for the loaded order, otherwise it overwrites the typed value.
+    await expect(page.getByTestId('order-cargoDescription')).toHaveValue('Kuehlware');
     await page.getByTestId('order-cargoDescription').fill('Zu spaet');
     await page.getByTestId('order-save').click();
     await expect(page.getByTestId('order-form-error')).toBeVisible();
@@ -109,10 +112,10 @@ test('cancelledOrders_remainVisibleUnderTheStatusFilter', async ({ page }) => {
     );
 
     // Filtering to Cancelled keeps it; filtering to Draft must not.
-    await page.getByTestId('order-status-filter').selectOption('Cancelled');
+    await chooseOption(page, 'order-status-filter', 'Cancelled');
     await expect(page.locator('tr').filter({ hasText: consignor })).toBeVisible();
 
-    await page.getByTestId('order-status-filter').selectOption('Draft');
+    await chooseOption(page, 'order-status-filter', 'Draft');
     await expect(page.locator('tr').filter({ hasText: consignor })).toHaveCount(0);
 });
 
