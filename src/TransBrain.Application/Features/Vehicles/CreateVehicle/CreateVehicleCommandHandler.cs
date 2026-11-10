@@ -43,6 +43,13 @@ internal sealed class CreateVehicleCommandHandler(
             return equipment.Error!;
         }
 
+        Result<VehicleCommercialInfo> commercial = await VehicleWriteMapping.ToCommercialAsync(
+            command.Commercial, catalog, current: null, cancellationToken);
+        if (!commercial.IsSuccess)
+        {
+            return commercial.Error!;
+        }
+
         Result<Unit> driver = await VehicleWriteMapping.EnsureDriverExistsAsync(
             drivers, command.DefaultDriverId, cancellationToken);
         if (!driver.IsSuccess)
@@ -65,7 +72,8 @@ internal sealed class CreateVehicleCommandHandler(
             command.NextInspectionDue,
             details.Value,
             command.DefaultDriverId,
-            equipment.Value);
+            equipment.Value,
+            commercial.Value);
 
         if (!vehicle.IsSuccess)
         {

@@ -115,15 +115,19 @@ The two master-data aggregates expose the same shape of CRUD endpoint group:
 
 | Method | Route                | Policy            | Notes                                              |
 |--------|----------------------|--------------------|-----------------------------------------------------|
-| POST   | `/api/vehicles`      | `MasterDataWrite` | Per-field validation errors (nested `equipment` fields keyed e.g. `Equipment.TankVolumeLiters`); `409` on a duplicate plate |
+| POST   | `/api/vehicles`      | `MasterDataWrite` | Per-field validation errors (nested `equipment`/`commercial` fields keyed e.g. `Equipment.TankVolumeLiters`, `Commercial.PurchasePrice`); `409` on a duplicate plate |
 | GET    | `/api/vehicles`      | `Read`             | Paged; filters: `page`, `pageSize`, `status`, `type` |
 | GET    | `/api/vehicles/{id}` | `Read`             | `404` if not found                                   |
 | PUT    | `/api/vehicles/{id}` | `MasterDataWrite` | `404` if not found, `409` on a duplicate plate       |
-| DELETE | `/api/vehicles/{id}` | `MasterDataWrite` | `404` if not found                                   |
-| GET    | `/api/vehicle-catalog/{kind}` | `Read`    | `kind` = `VehicleClass` or `CarrierGroup`; all entries incl. inactive, with usage count |
+| DELETE | `/api/vehicles/{id}` | `MasterDataWrite` | `404` if not found; also removes the vehicle's special documents |
+| GET    | `/api/vehicles/{id}/documents` | `Read` | Special documents, soonest expiry first; `404` for an unknown vehicle |
+| POST   | `/api/vehicles/{id}/documents` | `MasterDataWrite` | `{documentType, lastCheckedOn, validUntil, remark}`; `400` keyed by field, `409` if the vehicle already has that type |
+| PUT    | `/api/vehicles/{id}/documents/{documentId}` | `MasterDataWrite` | Same body; `404` if not found, `409` on a duplicate type |
+| DELETE | `/api/vehicles/{id}/documents/{documentId}` | `MasterDataWrite` | `404` if not found |
+| GET    | `/api/vehicle-catalog/{kind}` | `Read`    | `kind` = `VehicleClass`, `CarrierGroup`, `InsuranceCompany` or `DocumentType`; all entries incl. inactive, with usage count |
 | POST   | `/api/vehicle-catalog/{kind}` | `MasterDataWrite` | `{code, name, isActive}`; `409` on a duplicate code |
 | PUT    | `/api/vehicle-catalog/{kind}/{id}` | `MasterDataWrite` | `{name, isActive}` (code is fixed); `404` if not found |
-| DELETE | `/api/vehicle-catalog/{kind}/{id}` | `MasterDataWrite` | `404` if not found, `409` while vehicles use the entry |
+| DELETE | `/api/vehicle-catalog/{kind}/{id}` | `MasterDataWrite` | `404` if not found, `409` while vehicles (or their documents) use the entry |
 | POST   | `/api/drivers`       | `MasterDataWrite` | Per-field validation errors                          |
 | GET    | `/api/drivers`       | `Read`             | Paged; filters: `page`, `pageSize`, `status`         |
 | GET    | `/api/drivers/{id}`  | `Read`             | `404` if not found                                   |

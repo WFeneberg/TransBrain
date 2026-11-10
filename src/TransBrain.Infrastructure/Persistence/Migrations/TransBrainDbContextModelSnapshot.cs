@@ -381,7 +381,102 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             IsActive = true,
                             Kind = "VehicleClass",
                             Name = "Sonstige"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000101"),
+                            Code = "ADR",
+                            IsActive = true,
+                            Kind = "DocumentType",
+                            Name = "ADR-Zulassungsbescheinigung"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000102"),
+                            Code = "ATP",
+                            IsActive = true,
+                            Kind = "DocumentType",
+                            Name = "ATP-Bescheinigung"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000103"),
+                            Code = "CEMT",
+                            IsActive = true,
+                            Kind = "DocumentType",
+                            Name = "CEMT-Genehmigung"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000104"),
+                            Code = "Tachograph",
+                            IsActive = true,
+                            Kind = "DocumentType",
+                            Name = "Tachographenprüfung"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000105"),
+                            Code = "UVV",
+                            IsActive = true,
+                            Kind = "DocumentType",
+                            Name = "UVV-Prüfung"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000106"),
+                            Code = "Crane",
+                            IsActive = true,
+                            Kind = "DocumentType",
+                            Name = "Kranprüfung"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000107"),
+                            Code = "TailLift",
+                            IsActive = true,
+                            Kind = "DocumentType",
+                            Name = "Ladebordwandprüfung"
                         });
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Vehicles.VehicleDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateOnly?>("LastCheckedOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Remark")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly?>("ValidUntil")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("VehicleId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VehicleId", "DocumentType")
+                        .IsUnique();
+
+                    b.ToTable("vehicle_documents", (string)null);
                 });
 
             modelBuilder.Entity("TransBrain.Domain.Customers.Customer", b =>
@@ -714,6 +809,69 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasForeignKey("DefaultDriverId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.OwnsOne("TransBrain.Domain.Vehicles.VehicleCommercialInfo", "Commercial", b1 =>
+                        {
+                            b1.Property<Guid>("VehicleId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("CostCenter")
+                                .HasMaxLength(30)
+                                .HasColumnType("character varying(30)")
+                                .HasColumnName("CostCenter");
+
+                            b1.Property<DateOnly?>("FirstRegisteredOn")
+                                .HasColumnType("date")
+                                .HasColumnName("FirstRegisteredOn");
+
+                            b1.Property<int?>("PurchaseOdometerKm")
+                                .HasColumnType("integer")
+                                .HasColumnName("PurchaseOdometerKm");
+
+                            b1.Property<decimal?>("PurchasePrice")
+                                .HasPrecision(10, 2)
+                                .HasColumnType("numeric(10,2)")
+                                .HasColumnName("PurchasePrice");
+
+                            b1.Property<DateOnly?>("PurchasedOn")
+                                .HasColumnType("date")
+                                .HasColumnName("PurchasedOn");
+
+                            b1.Property<string>("TransportInsurancePolicyNumbers")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)")
+                                .HasColumnName("TransportInsurancePolicyNumbers");
+
+                            b1.Property<string>("TransportInsurer")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("TransportInsurer");
+
+                            b1.Property<int?>("UsefulLifeKm")
+                                .HasColumnType("integer")
+                                .HasColumnName("UsefulLifeKm");
+
+                            b1.Property<int?>("UsefulLifeYears")
+                                .HasColumnType("integer")
+                                .HasColumnName("UsefulLifeYears");
+
+                            b1.Property<string>("VehicleInsurancePolicyNumbers")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)")
+                                .HasColumnName("VehicleInsurancePolicyNumbers");
+
+                            b1.Property<string>("VehicleInsurer")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("VehicleInsurer");
+
+                            b1.HasKey("VehicleId");
+
+                            b1.ToTable("vehicles");
+
+                            b1.WithOwner()
+                                .HasForeignKey("VehicleId");
+                        });
+
                     b.OwnsOne("TransBrain.Domain.Vehicles.VehicleDetails", "Details", b1 =>
                         {
                             b1.Property<Guid>("VehicleId")
@@ -732,6 +890,11 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             b1.Property<int?>("CurbWeightKg")
                                 .HasColumnType("integer")
                                 .HasColumnName("CurbWeightKg");
+
+                            b1.Property<string>("DataSheet")
+                                .HasMaxLength(10000)
+                                .HasColumnType("character varying(10000)")
+                                .HasColumnName("DataSheet");
 
                             b1.Property<string>("EngineNumber")
                                 .HasMaxLength(30)
@@ -892,10 +1055,22 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("VehicleId");
                         });
 
+                    b.Navigation("Commercial")
+                        .IsRequired();
+
                     b.Navigation("Details")
                         .IsRequired();
 
                     b.Navigation("Equipment")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Vehicles.VehicleDocument", b =>
+                {
+                    b.HasOne("TransBrain.Domain.Vehicles.Vehicle", null)
+                        .WithMany()
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

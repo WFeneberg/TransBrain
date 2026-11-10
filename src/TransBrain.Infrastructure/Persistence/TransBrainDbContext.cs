@@ -13,6 +13,8 @@ public sealed class TransBrainDbContext(DbContextOptions<TransBrainDbContext> op
 
     public DbSet<VehicleCatalogEntry> VehicleCatalogEntries => Set<VehicleCatalogEntry>();
 
+    public DbSet<VehicleDocument> VehicleDocuments => Set<VehicleDocument>();
+
     public DbSet<Driver> Drivers => Set<Driver>();
 
     public DbSet<TransportOrder> TransportOrders => Set<TransportOrder>();

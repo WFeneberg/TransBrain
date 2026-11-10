@@ -63,6 +63,8 @@ internal sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
             details.Property(d => d.GrossWeightKg).HasColumnName("GrossWeightKg");
             details.Property(d => d.MaxFifthWheelLoadKg).HasColumnName("MaxFifthWheelLoadKg");
             details.Property(d => d.Notes).HasColumnName("Notes").HasMaxLength(VehicleDetails.MaxNotesLength);
+            details.Property(d => d.DataSheet)
+                .HasColumnName("DataSheet").HasMaxLength(VehicleDetails.MaxDataSheetLength);
         });
 
         builder.Navigation(v => v.Details).IsRequired();
@@ -104,6 +106,28 @@ internal sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
         });
 
         builder.Navigation(v => v.Equipment).IsRequired();
+
+        builder.OwnsOne(v => v.Commercial, commercial =>
+        {
+            commercial.Property(c => c.PurchasePrice).HasColumnName("PurchasePrice").HasPrecision(10, 2);
+            commercial.Property(c => c.PurchasedOn).HasColumnName("PurchasedOn");
+            commercial.Property(c => c.PurchaseOdometerKm).HasColumnName("PurchaseOdometerKm");
+            commercial.Property(c => c.FirstRegisteredOn).HasColumnName("FirstRegisteredOn");
+            commercial.Property(c => c.UsefulLifeYears).HasColumnName("UsefulLifeYears");
+            commercial.Property(c => c.UsefulLifeKm).HasColumnName("UsefulLifeKm");
+            commercial.Property(c => c.CostCenter)
+                .HasColumnName("CostCenter").HasMaxLength(VehicleCommercialInfo.MaxCostCenterLength);
+            commercial.Property(c => c.VehicleInsurer)
+                .HasColumnName("VehicleInsurer").HasMaxLength(VehicleCatalogEntry.MaxCodeLength);
+            commercial.Property(c => c.VehicleInsurancePolicyNumbers)
+                .HasColumnName("VehicleInsurancePolicyNumbers").HasMaxLength(VehicleCommercialInfo.MaxPolicyNumbersLength);
+            commercial.Property(c => c.TransportInsurer)
+                .HasColumnName("TransportInsurer").HasMaxLength(VehicleCatalogEntry.MaxCodeLength);
+            commercial.Property(c => c.TransportInsurancePolicyNumbers)
+                .HasColumnName("TransportInsurancePolicyNumbers").HasMaxLength(VehicleCommercialInfo.MaxPolicyNumbersLength);
+        });
+
+        builder.Navigation(v => v.Commercial).IsRequired();
     }
 }
 

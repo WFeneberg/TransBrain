@@ -7,7 +7,7 @@ namespace TransBrain.Application.Features.Vehicles;
 /// These rules exist to report several field problems at once, which a domain factory
 /// returning a single coded error cannot do. They deliberately mirror — and never extend —
 /// the domain's own checks (<see cref="TransBrain.Domain.Vehicles.LicensePlate.Create"/>,
-/// <see cref="Vehicle.Create"/>, <see cref="VehicleDetails.Create"/> and <see cref="VehicleEquipment.Create"/>): if these ever
+/// <see cref="Vehicle.Create"/>, <see cref="VehicleDetails.Create"/>, <see cref="VehicleEquipment.Create"/> and <see cref="VehicleCommercialInfo.Create"/>): if these ever
 /// disagree, the domain wins and this is the copy to fix.
 /// </remarks>
 internal sealed class VehicleWriteRules : AbstractValidator<IVehicleWriteCommand>
@@ -25,6 +25,7 @@ internal sealed class VehicleWriteRules : AbstractValidator<IVehicleWriteCommand
         RuleFor(c => c.ChassisNumber).MaximumLength(VehicleDetails.MaxIdentifierLength);
         RuleFor(c => c.EngineNumber).MaximumLength(VehicleDetails.MaxIdentifierLength);
         RuleFor(c => c.Notes).MaximumLength(VehicleDetails.MaxNotesLength);
+        RuleFor(c => c.DataSheet).MaximumLength(VehicleDetails.MaxDataSheetLength);
 
         RuleFor(c => c.ManufacturedOn)
             .Must(date => date is null || date.Value.Year >= VehicleDetails.MinManufactureYear)
@@ -58,6 +59,29 @@ internal sealed class VehicleWriteRules : AbstractValidator<IVehicleWriteCommand
             RuleFor(c => c.Equipment!.MarbleRackMaterial)
                 .Must(material => material is null || VehicleWriteMapping.TryParseMarbleRackMaterial(material, out _))
                 .WithMessage("Marble rack material must be 'Steel' or 'Aluminium'.");
+        });
+
+        When(c => c.Commercial is not null, () =>
+        {
+            RuleFor(c => c.Commercial!.PurchasePrice)
+                .InclusiveBetween(0m, VehicleCommercialInfo.MaxPurchasePrice)
+                .PrecisionScale(18, 2, ignoreTrailingZeros: true);
+            RuleFor(c => c.Commercial!.PurchaseOdometerKm).InclusiveBetween(0, VehicleCommercialInfo.MaxOdometerKm);
+            RuleFor(c => c.Commercial!.UsefulLifeYears).InclusiveBetween(1, VehicleCommercialInfo.MaxUsefulLifeYears);
+            RuleFor(c => c.Commercial!.UsefulLifeKm).InclusiveBetween(1, VehicleCommercialInfo.MaxOdometerKm);
+            RuleFor(c => c.Commercial!.PurchasedOn)
+                .Must(date => date is null || date.Value.Year >= VehicleDetails.MinManufactureYear)
+                .WithMessage($"The purchase date must not be before {VehicleDetails.MinManufactureYear}.");
+            RuleFor(c => c.Commercial!.FirstRegisteredOn)
+                .Must(date => date is null || date.Value.Year >= VehicleDetails.MinManufactureYear)
+                .WithMessage($"The first registration must not be before {VehicleDetails.MinManufactureYear}.");
+            RuleFor(c => c.Commercial!.CostCenter).MaximumLength(VehicleCommercialInfo.MaxCostCenterLength);
+            RuleFor(c => c.Commercial!.VehicleInsurer).MaximumLength(VehicleCatalogEntry.MaxCodeLength);
+            RuleFor(c => c.Commercial!.TransportInsurer).MaximumLength(VehicleCatalogEntry.MaxCodeLength);
+            RuleFor(c => c.Commercial!.VehicleInsurancePolicyNumbers)
+                .MaximumLength(VehicleCommercialInfo.MaxPolicyNumbersLength);
+            RuleFor(c => c.Commercial!.TransportInsurancePolicyNumbers)
+                .MaximumLength(VehicleCommercialInfo.MaxPolicyNumbersLength);
         });
     }
 }

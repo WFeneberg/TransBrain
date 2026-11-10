@@ -58,6 +58,40 @@ export const EMPTY_VEHICLE_EQUIPMENT: Readonly<VehicleEquipment> = {
     marbleRackMaterial: null,
 };
 
+/** Commercial data and insurance of a vehicle; PUT replaces it as a whole, so it is always sent complete. */
+export interface VehicleCommercial {
+    /** EUR, at most two decimals. */
+    purchasePrice: number | null;
+    /** "YYYY-MM-DD". */
+    purchasedOn: string | null;
+    purchaseOdometerKm: number | null;
+    /** "YYYY-MM-DD". */
+    firstRegisteredOn: string | null;
+    usefulLifeYears: number | null;
+    usefulLifeKm: number | null;
+    costCenter: string | null;
+    /** Code of an InsuranceCompany entry of the vehicle catalog. */
+    vehicleInsurer: string | null;
+    vehicleInsurancePolicyNumbers: string | null;
+    /** Code of an InsuranceCompany entry of the vehicle catalog. */
+    transportInsurer: string | null;
+    transportInsurancePolicyNumbers: string | null;
+}
+
+export const EMPTY_VEHICLE_COMMERCIAL: Readonly<VehicleCommercial> = {
+    purchasePrice: null,
+    purchasedOn: null,
+    purchaseOdometerKm: null,
+    firstRegisteredOn: null,
+    usefulLifeYears: null,
+    usefulLifeKm: null,
+    costCenter: null,
+    vehicleInsurer: null,
+    vehicleInsurancePolicyNumbers: null,
+    transportInsurer: null,
+    transportInsurancePolicyNumbers: null,
+};
+
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
 export interface VehicleWriteRequest {
     licensePlate: string;
@@ -87,6 +121,10 @@ export interface VehicleWriteRequest {
     notes: string | null;
     /** Omitted or null on write means "no equipment"; responses always carry it. */
     equipment: VehicleEquipment | null;
+    /** Free text kept verbatim (line breaks and leading spaces); blank is stored as null. */
+    dataSheet: string | null;
+    /** Omitted or null on write means "all empty"; responses always carry it. */
+    commercial: VehicleCommercial | null;
 }
 
 export interface Vehicle extends VehicleWriteRequest {

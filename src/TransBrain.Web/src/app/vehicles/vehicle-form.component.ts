@@ -19,20 +19,31 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { filter, forkJoin, switchMap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { Driver, DriverService } from '../drivers/driver.service';
-import { I18nService } from '../i18n/i18n.service';
+import { I18nService, TranslationKey } from '../i18n/i18n.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from './confirm-dialog.component';
-import { formatDateTime } from './vehicle-format';
+import { InspectionUrgency, formatDate, formatDateTime, inspectionUrgency } from './vehicle-format';
 import {
     VehicleCatalogEntry,
     VehicleCatalogOption,
     VehicleCatalogService,
+    catalogIndex,
+    catalogName,
     catalogOptions,
 } from './vehicle-catalog.service';
 import {
+    VehicleDocumentDialogComponent,
+    VehicleDocumentDialogData,
+} from './vehicle-document-dialog.component';
+import { VehicleDocument, VehicleDocumentService } from './vehicle-document.service';
+import { amountInRange, dateFromYear } from './vehicle-validators';
+import {
+    EMPTY_VEHICLE_COMMERCIAL,
     EMPTY_VEHICLE_EQUIPMENT,
     MARBLE_RACK_MATERIALS,
     MarbleRackMaterial,
@@ -132,6 +143,23 @@ function toControlPath(field: string): string {
         .join('.');
 }
 
+const MIN_YEAR = 1900;
+const DATA_SHEET_MAX_LENGTH = 10000;
+const BASE_DOCUMENT_COLUMNS = [
+    'type',
+    'lastCheckedOn',
+    'validUntil',
+    'status',
+    'remark',
+    'modified',
+];
+
+const DOCUMENT_STATUS: Record<InspectionUrgency, { tone: string; key: TranslationKey }> = {
+    overdue: { tone: 'error', key: 'vehicles.documents.status.expired' },
+    dueSoon: { tone: 'warning', key: 'vehicles.documents.status.expiresSoon' },
+    ok: { tone: 'success', key: 'vehicles.documents.status.valid' },
+};
+
 function textOrNull(value: string): string | null {
     const trimmed = value.trim();
     return trimmed === '' ? null : trimmed;
@@ -156,6 +184,8 @@ function numberOrNull(value: number | null): number | null {
         MatInputModule,
         MatRadioModule,
         MatSelectModule,
+        MatTableModule,
+        MatTooltipModule,
     ],
     template: `
         <div class="page">
@@ -723,6 +753,429 @@ function numberOrNull(value: number | null): number | null {
                         </ng-template>
                     </mat-card>
 
+                    <mat-card
+                        appearance="outlined"
+                        formGroupName="commercial"
+                        data-testid="vehicle-commercial"
+                    >
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">euro</mat-icon>
+                            <mat-card-title>{{
+                                i18n.t('vehicles.section.commercial')
+                            }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content class="fields">
+                            <mat-form-field>
+                                <mat-label>{{
+                                    i18n.t('vehicles.commercial.purchasePrice')
+                                }}</mat-label>
+                                <input
+                                    matInput
+                                    type="number"
+                                    step="0.01"
+                                    formControlName="purchasePrice"
+                                    data-testid="vehicle-purchasePrice"
+                                />
+                                <span matTextSuffix>€</span>
+                                @if (commercial.controls.purchasePrice.errors; as errors) {
+                                    <mat-error data-testid="vehicle-purchasePrice-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                            <mat-form-field>
+                                <mat-label>{{ i18n.t('vehicles.commercial.purchasedOn') }}</mat-label>
+                                <input
+                                    matInput
+                                    type="date"
+                                    formControlName="purchasedOn"
+                                    data-testid="vehicle-purchasedOn"
+                                />
+                                @if (commercial.controls.purchasedOn.errors; as errors) {
+                                    <mat-error data-testid="vehicle-purchasedOn-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                            <mat-form-field>
+                                <mat-label>{{
+                                    i18n.t('vehicles.commercial.purchaseOdometerKm')
+                                }}</mat-label>
+                                <input
+                                    matInput
+                                    type="number"
+                                    formControlName="purchaseOdometerKm"
+                                    data-testid="vehicle-purchaseOdometerKm"
+                                />
+                                @if (commercial.controls.purchaseOdometerKm.errors; as errors) {
+                                    <mat-error data-testid="vehicle-purchaseOdometerKm-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                            <mat-form-field>
+                                <mat-label>{{
+                                    i18n.t('vehicles.commercial.firstRegisteredOn')
+                                }}</mat-label>
+                                <input
+                                    matInput
+                                    type="date"
+                                    formControlName="firstRegisteredOn"
+                                    data-testid="vehicle-firstRegisteredOn"
+                                />
+                                @if (commercial.controls.firstRegisteredOn.errors; as errors) {
+                                    <mat-error data-testid="vehicle-firstRegisteredOn-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                            <mat-form-field>
+                                <mat-label>{{
+                                    i18n.t('vehicles.commercial.usefulLifeYears')
+                                }}</mat-label>
+                                <input
+                                    matInput
+                                    type="number"
+                                    formControlName="usefulLifeYears"
+                                    data-testid="vehicle-usefulLifeYears"
+                                />
+                                @if (commercial.controls.usefulLifeYears.errors; as errors) {
+                                    <mat-error data-testid="vehicle-usefulLifeYears-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                            <mat-form-field>
+                                <mat-label>{{
+                                    i18n.t('vehicles.commercial.usefulLifeKm')
+                                }}</mat-label>
+                                <input
+                                    matInput
+                                    type="number"
+                                    formControlName="usefulLifeKm"
+                                    data-testid="vehicle-usefulLifeKm"
+                                />
+                                @if (commercial.controls.usefulLifeKm.errors; as errors) {
+                                    <mat-error data-testid="vehicle-usefulLifeKm-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                            <mat-form-field>
+                                <mat-label>{{ i18n.t('vehicles.commercial.costCenter') }}</mat-label>
+                                <input
+                                    matInput
+                                    formControlName="costCenter"
+                                    maxlength="30"
+                                    data-testid="vehicle-costCenter"
+                                />
+                                @if (commercial.controls.costCenter.errors; as errors) {
+                                    <mat-error data-testid="vehicle-costCenter-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                        </mat-card-content>
+                    </mat-card>
+
+                    <mat-card
+                        appearance="outlined"
+                        formGroupName="commercial"
+                        data-testid="vehicle-insurance"
+                    >
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">shield</mat-icon>
+                            <mat-card-title>{{
+                                i18n.t('vehicles.section.insurance')
+                            }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content class="insurance-groups">
+                            <section class="group">
+                                <h3 class="group-title">
+                                    {{ i18n.t('vehicles.insurance.vehicle') }}
+                                </h3>
+                                <mat-form-field>
+                                    <mat-label>{{ i18n.t('vehicles.insurance.insurer') }}</mat-label>
+                                    <mat-select
+                                        formControlName="vehicleInsurer"
+                                        data-testid="vehicle-vehicleInsurer"
+                                    >
+                                        <mat-option [value]="null">–</mat-option>
+                                        @for (option of vehicleInsurerOptions(); track option.code) {
+                                            <mat-option [value]="option.code">{{
+                                                optionLabel(option)
+                                            }}</mat-option>
+                                        }
+                                    </mat-select>
+                                    @if (commercial.controls.vehicleInsurer.errors; as errors) {
+                                        <mat-error data-testid="vehicle-vehicleInsurer-error">{{
+                                            fieldErrorText(errors)
+                                        }}</mat-error>
+                                    }
+                                </mat-form-field>
+                                <mat-form-field>
+                                    <mat-label>{{
+                                        i18n.t('vehicles.insurance.policyNumbers')
+                                    }}</mat-label>
+                                    <textarea
+                                        matInput
+                                        rows="3"
+                                        formControlName="vehicleInsurancePolicyNumbers"
+                                        maxlength="500"
+                                        data-testid="vehicle-vehicleInsurancePolicyNumbers"
+                                    ></textarea>
+                                    @if (
+                                        commercial.controls.vehicleInsurancePolicyNumbers.errors;
+                                        as errors
+                                    ) {
+                                        <mat-error
+                                            data-testid="vehicle-vehicleInsurancePolicyNumbers-error"
+                                            >{{ fieldErrorText(errors) }}</mat-error
+                                        >
+                                    }
+                                </mat-form-field>
+                            </section>
+
+                            <section class="group">
+                                <h3 class="group-title">
+                                    {{ i18n.t('vehicles.insurance.transport') }}
+                                </h3>
+                                <mat-form-field>
+                                    <mat-label>{{ i18n.t('vehicles.insurance.insurer') }}</mat-label>
+                                    <mat-select
+                                        formControlName="transportInsurer"
+                                        data-testid="vehicle-transportInsurer"
+                                    >
+                                        <mat-option [value]="null">–</mat-option>
+                                        @for (
+                                            option of transportInsurerOptions();
+                                            track option.code
+                                        ) {
+                                            <mat-option [value]="option.code">{{
+                                                optionLabel(option)
+                                            }}</mat-option>
+                                        }
+                                    </mat-select>
+                                    @if (commercial.controls.transportInsurer.errors; as errors) {
+                                        <mat-error data-testid="vehicle-transportInsurer-error">{{
+                                            fieldErrorText(errors)
+                                        }}</mat-error>
+                                    }
+                                </mat-form-field>
+                                <mat-form-field>
+                                    <mat-label>{{
+                                        i18n.t('vehicles.insurance.policyNumbers')
+                                    }}</mat-label>
+                                    <textarea
+                                        matInput
+                                        rows="3"
+                                        formControlName="transportInsurancePolicyNumbers"
+                                        maxlength="500"
+                                        data-testid="vehicle-transportInsurancePolicyNumbers"
+                                    ></textarea>
+                                    @if (
+                                        commercial.controls.transportInsurancePolicyNumbers.errors;
+                                        as errors
+                                    ) {
+                                        <mat-error
+                                            data-testid="vehicle-transportInsurancePolicyNumbers-error"
+                                            >{{ fieldErrorText(errors) }}</mat-error
+                                        >
+                                    }
+                                </mat-form-field>
+                            </section>
+                        </mat-card-content>
+                    </mat-card>
+
+                    <mat-card
+                        appearance="outlined"
+                        class="full-width"
+                        data-testid="vehicle-documents"
+                    >
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">verified</mat-icon>
+                            <mat-card-title>{{
+                                i18n.t('vehicles.section.documents')
+                            }}</mat-card-title>
+                            @if (isEditMode && session.can('masterData.write')) {
+                                <button
+                                    mat-stroked-button
+                                    type="button"
+                                    class="card-action"
+                                    data-testid="vehicle-document-add"
+                                    (click)="openDocumentDialog(null)"
+                                >
+                                    <mat-icon>add</mat-icon>
+                                    {{ i18n.t('vehicles.documents.add') }}
+                                </button>
+                            }
+                        </mat-card-header>
+                        <mat-card-content>
+                            @if (!isEditMode) {
+                                <p class="hint" data-testid="vehicle-documents-hint">
+                                    <mat-icon aria-hidden="true">info</mat-icon>
+                                    {{ i18n.t('vehicles.documents.hint') }}
+                                </p>
+                            } @else {
+                                @if (documentError(); as message) {
+                                    <p class="error-banner" data-testid="vehicle-documents-error">
+                                        <mat-icon aria-hidden="true">error_outline</mat-icon
+                                        >{{ message }}
+                                    </p>
+                                }
+                                @if (documents().length > 0) {
+                                    <div class="table-scroll">
+                                        <table mat-table [dataSource]="documents()">
+                                            <ng-container matColumnDef="type">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.documents.type') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let d"
+                                                    class="document-type"
+                                                    data-testid="vehicle-document-type"
+                                                >
+                                                    {{ documentTypeName(d) }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="lastCheckedOn">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.documents.lastCheckedOn') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let d"
+                                                    data-testid="vehicle-document-lastCheckedOn"
+                                                >
+                                                    {{ date(d.lastCheckedOn) }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="validUntil">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.documents.validUntil') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let d"
+                                                    data-testid="vehicle-document-validUntil"
+                                                >
+                                                    {{ date(d.validUntil) }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="status">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('common.status') }}
+                                                </th>
+                                                <td mat-cell *matCellDef="let d">
+                                                    @if (d.validUntil) {
+                                                        <mat-chip-set>
+                                                            <mat-chip
+                                                                class="chip"
+                                                                [attr.data-tone]="
+                                                                    documentStatus(d.validUntil).tone
+                                                                "
+                                                                data-testid="vehicle-document-status"
+                                                                >{{
+                                                                    i18n.t(
+                                                                        documentStatus(d.validUntil)
+                                                                            .key
+                                                                    )
+                                                                }}</mat-chip
+                                                            >
+                                                        </mat-chip-set>
+                                                    }
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="remark">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.documents.remark') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let d"
+                                                    class="remark"
+                                                    data-testid="vehicle-document-remark"
+                                                >
+                                                    {{ d.remark }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="modified">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.documents.modified') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let d"
+                                                    class="modified"
+                                                    data-testid="vehicle-document-modified"
+                                                >
+                                                    {{ documentModified(d) }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="actions">
+                                                <th
+                                                    mat-header-cell
+                                                    *matHeaderCellDef
+                                                    class="actions-cell"
+                                                >
+                                                    <span class="cdk-visually-hidden">{{
+                                                        i18n.t('common.actions')
+                                                    }}</span>
+                                                </th>
+                                                <td mat-cell *matCellDef="let d" class="actions-cell">
+                                                    <button
+                                                        mat-icon-button
+                                                        type="button"
+                                                        data-testid="vehicle-document-edit"
+                                                        [matTooltip]="i18n.t('common.edit')"
+                                                        [attr.aria-label]="
+                                                            i18n.t('common.edit') +
+                                                            ' ' +
+                                                            documentTypeName(d)
+                                                        "
+                                                        (click)="openDocumentDialog(d)"
+                                                    >
+                                                        <mat-icon>edit</mat-icon>
+                                                    </button>
+                                                    <button
+                                                        mat-icon-button
+                                                        type="button"
+                                                        class="delete"
+                                                        data-testid="vehicle-document-delete"
+                                                        [matTooltip]="i18n.t('common.delete')"
+                                                        [attr.aria-label]="
+                                                            i18n.t('common.delete') +
+                                                            ' ' +
+                                                            documentTypeName(d)
+                                                        "
+                                                        (click)="deleteDocument(d)"
+                                                    >
+                                                        <mat-icon>delete</mat-icon>
+                                                    </button>
+                                                </td>
+                                            </ng-container>
+                                            <tr
+                                                mat-header-row
+                                                *matHeaderRowDef="documentColumns()"
+                                            ></tr>
+                                            <tr
+                                                mat-row
+                                                *matRowDef="let row; columns: documentColumns()"
+                                                data-testid="vehicle-document-row"
+                                            ></tr>
+                                        </table>
+                                    </div>
+                                } @else if (documentsLoaded()) {
+                                    <p class="hint" data-testid="vehicle-documents-empty">
+                                        <mat-icon aria-hidden="true">verified</mat-icon>
+                                        {{ i18n.t('vehicles.documents.empty') }}
+                                    </p>
+                                }
+                            }
+                        </mat-card-content>
+                    </mat-card>
+
                     <mat-card appearance="outlined" class="full-width">
                         <mat-card-header>
                             <mat-icon mat-card-avatar class="avatar">notes</mat-icon>
@@ -743,6 +1196,42 @@ function numberOrNull(value: number | null): number | null {
                                 >
                                 @if (form.controls.notes.errors; as errors) {
                                     <mat-error data-testid="vehicle-notes-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                        </mat-card-content>
+                    </mat-card>
+
+                    <mat-card
+                        appearance="outlined"
+                        class="full-width"
+                        data-testid="vehicle-dataSheet-card"
+                    >
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">article</mat-icon>
+                            <mat-card-title>{{
+                                i18n.t('vehicles.section.dataSheet')
+                            }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content class="fields one">
+                            <mat-form-field>
+                                <mat-label>{{ i18n.t('vehicles.section.dataSheet') }}</mat-label>
+                                <textarea
+                                    matInput
+                                    rows="12"
+                                    wrap="off"
+                                    class="data-sheet"
+                                    formControlName="dataSheet"
+                                    [maxlength]="dataSheetMaxLength"
+                                    data-testid="vehicle-dataSheet"
+                                ></textarea>
+                                <mat-hint align="end"
+                                    >{{ form.controls.dataSheet.value.length }} /
+                                    {{ dataSheetMaxLength }}</mat-hint
+                                >
+                                @if (form.controls.dataSheet.errors; as errors) {
+                                    <mat-error data-testid="vehicle-dataSheet-error">{{
                                         fieldErrorText(errors)
                                     }}</mat-error>
                                 }
@@ -967,6 +1456,58 @@ function numberOrNull(value: number | null): number | null {
                 text-transform: uppercase;
             }
 
+            .chip[data-tone='error'] {
+                --mat-chip-elevated-container-color: var(--mat-sys-error-container);
+                --mat-chip-label-text-color: var(--mat-sys-on-error-container);
+            }
+
+            .insurance-groups {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .card-action {
+                margin-left: auto;
+            }
+
+            .table-scroll {
+                overflow-x: auto;
+            }
+
+            .table-scroll table {
+                width: 100%;
+            }
+
+            .document-type {
+                font-weight: 500;
+            }
+
+            .remark {
+                white-space: pre-line;
+            }
+
+            .modified {
+                color: var(--mat-sys-on-surface-variant);
+                white-space: nowrap;
+            }
+
+            .actions-cell {
+                text-align: right;
+                white-space: nowrap;
+            }
+
+            .delete {
+                color: var(--mat-sys-error);
+            }
+
+            .data-sheet {
+                font-family: 'Roboto Mono', Consolas, 'Courier New', monospace;
+                white-space: pre;
+                overflow-x: auto;
+                overflow-wrap: normal;
+            }
+
             .action-bar {
                 position: sticky;
                 bottom: 0;
@@ -1001,6 +1542,7 @@ export class VehicleFormComponent {
     private readonly service = inject(VehicleService);
     private readonly driverService = inject(DriverService);
     private readonly catalogService = inject(VehicleCatalogService);
+    private readonly documentService = inject(VehicleDocumentService);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
@@ -1019,6 +1561,7 @@ export class VehicleFormComponent {
     protected readonly loadSecuringFields = LOAD_SECURING_FIELDS;
     protected readonly marbleRackCountField = MARBLE_RACK_COUNT_FIELD;
     protected readonly marbleRackMaterials = MARBLE_RACK_MATERIALS;
+    protected readonly dataSheetMaxLength = DATA_SHEET_MAX_LENGTH;
     protected readonly vehicleId = this.route.snapshot.paramMap.get('id');
     protected readonly isEditMode = this.vehicleId !== null;
     protected readonly formError = signal<string | null>(null);
@@ -1031,6 +1574,9 @@ export class VehicleFormComponent {
 
     private readonly vehicleClasses = signal<VehicleCatalogEntry[]>([]);
     private readonly carrierGroups = signal<VehicleCatalogEntry[]>([]);
+    private readonly insuranceCompanies = signal<VehicleCatalogEntry[]>([]);
+    private readonly documentTypes = signal<VehicleCatalogEntry[]>([]);
+    private readonly documentTypeIndex = computed(() => catalogIndex(this.documentTypes()));
     // Active entries only, plus the code the vehicle is SAVED with if that one has since been
     // deactivated - the server accepts keeping it, but rejects choosing any other inactive code.
     protected readonly vehicleClassOptions = computed(() =>
@@ -1038,6 +1584,27 @@ export class VehicleFormComponent {
     );
     protected readonly carrierGroupOptions = computed(() =>
         catalogOptions(this.carrierGroups(), this.vehicle()?.carrierGroup ?? null),
+    );
+    protected readonly vehicleInsurerOptions = computed(() =>
+        catalogOptions(
+            this.insuranceCompanies(),
+            this.vehicle()?.commercial?.vehicleInsurer ?? null,
+        ),
+    );
+    protected readonly transportInsurerOptions = computed(() =>
+        catalogOptions(
+            this.insuranceCompanies(),
+            this.vehicle()?.commercial?.transportInsurer ?? null,
+        ),
+    );
+
+    protected readonly documents = signal<VehicleDocument[]>([]);
+    protected readonly documentsLoaded = signal(false);
+    protected readonly documentError = signal<string | null>(null);
+    protected readonly documentColumns = computed(() =>
+        this.session.can('masterData.write')
+            ? [...BASE_DOCUMENT_COLUMNS, 'actions']
+            : BASE_DOCUMENT_COLUMNS,
     );
 
     protected readonly modifiedText = computed(() => {
@@ -1075,6 +1642,7 @@ export class VehicleFormComponent {
         grossWeightKg: this.fb.control<number | null>(null, positiveOrEmpty),
         maxFifthWheelLoadKg: this.fb.control<number | null>(null, positiveOrEmpty),
         notes: [''],
+        dataSheet: [''],
         equipment: this.fb.nonNullable.group({
             hasPartitionWall: [false],
             hasPalletBasket: [false],
@@ -1097,9 +1665,26 @@ export class VehicleFormComponent {
             marbleRackCount: this.equipmentNumber('marbleRackCount'),
             marbleRackMaterial: this.fb.control<MarbleRackMaterial | null>(null),
         }),
+        commercial: this.fb.nonNullable.group({
+            purchasePrice: this.fb.control<number | null>(null, amountInRange(0, 10000000)),
+            purchasedOn: ['', dateFromYear(MIN_YEAR)],
+            purchaseOdometerKm: this.fb.control<number | null>(
+                null,
+                wholeNumberInRange(0, 9999999),
+            ),
+            firstRegisteredOn: ['', dateFromYear(MIN_YEAR)],
+            usefulLifeYears: this.fb.control<number | null>(null, wholeNumberInRange(1, 50)),
+            usefulLifeKm: this.fb.control<number | null>(null, wholeNumberInRange(1, 9999999)),
+            costCenter: [''],
+            vehicleInsurer: this.fb.control<string | null>(null),
+            vehicleInsurancePolicyNumbers: [''],
+            transportInsurer: this.fb.control<string | null>(null),
+            transportInsurancePolicyNumbers: [''],
+        }),
     });
 
     protected readonly equipment = this.form.controls.equipment;
+    protected readonly commercial = this.form.controls.commercial;
 
     constructor() {
         this.session.ready
@@ -1122,13 +1707,17 @@ export class VehicleFormComponent {
                     forkJoin([
                         this.catalogService.list('VehicleClass'),
                         this.catalogService.list('CarrierGroup'),
+                        this.catalogService.list('InsuranceCompany'),
+                        this.catalogService.list('DocumentType'),
                     ]),
                 ),
             )
             .subscribe({
-                next: ([vehicleClasses, carrierGroups]) => {
+                next: ([vehicleClasses, carrierGroups, insuranceCompanies, documentTypes]) => {
                     this.vehicleClasses.set(vehicleClasses);
                     this.carrierGroups.set(carrierGroups);
+                    this.insuranceCompanies.set(insuranceCompanies);
+                    this.documentTypes.set(documentTypes);
                 },
                 error: (error: HttpErrorResponse) =>
                     this.formError.set(
@@ -1165,7 +1754,9 @@ export class VehicleFormComponent {
                             grossWeightKg: vehicle.grossWeightKg ?? null,
                             maxFifthWheelLoadKg: vehicle.maxFifthWheelLoadKg ?? null,
                             notes: vehicle.notes ?? '',
+                            dataSheet: vehicle.dataSheet ?? '',
                             equipment: { ...EMPTY_VEHICLE_EQUIPMENT, ...vehicle.equipment },
+                            commercial: this.toCommercialFormValue(vehicle),
                         });
                     },
                     error: (error: HttpErrorResponse) =>
@@ -1173,6 +1764,7 @@ export class VehicleFormComponent {
                             this.describeFailure(error, this.i18n.t('vehicles.error.load')),
                         ),
                 });
+            this.loadDocuments();
         }
     }
 
@@ -1233,7 +1825,90 @@ export class VehicleFormComponent {
                 errors['range'] as { min: number; max: number },
             );
         }
+        if (errors['amountRange']) {
+            return this.i18n.t(
+                'common.fieldAmountRange',
+                errors['amountRange'] as { min: number; max: number },
+            );
+        }
+        if (errors['minYear']) {
+            return this.i18n.t('common.fieldMinYear', errors['minYear'] as { year: number });
+        }
         return this.i18n.t('common.fieldInvalid');
+    }
+
+    protected documentTypeName(document: VehicleDocument): string {
+        return catalogName(this.documentTypeIndex(), document.documentType) ?? '–';
+    }
+
+    protected date(iso: string | null): string {
+        return formatDate(iso, this.i18n.locale());
+    }
+
+    protected documentStatus(validUntil: string): { tone: string; key: TranslationKey } {
+        return DOCUMENT_STATUS[inspectionUrgency(validUntil)];
+    }
+
+    protected documentModified(document: VehicleDocument): string {
+        return this.i18n.t('vehicles.documents.modifiedValue', {
+            date: formatDateTime(document.modifiedAt, this.i18n.locale()),
+            user: document.modifiedBy ?? '–',
+        });
+    }
+
+    // Special documents are saved on their own endpoints right from the dialog, independent of
+    // the vehicle's Save button - unsaved edits in the form are neither sent nor lost.
+    protected openDocumentDialog(document: VehicleDocument | null): void {
+        this.documentError.set(null);
+        this.dialog
+            .open<VehicleDocumentDialogComponent, VehicleDocumentDialogData, VehicleDocument>(
+                VehicleDocumentDialogComponent,
+                {
+                    data: {
+                        vehicleId: this.vehicleId!,
+                        document,
+                        documentTypes: this.documentTypes(),
+                    },
+                    width: '520px',
+                    autoFocus: 'first-tabbable',
+                },
+            )
+            .afterClosed()
+            .pipe(filter((saved) => !!saved))
+            .subscribe(() => this.loadDocuments());
+    }
+
+    protected deleteDocument(document: VehicleDocument): void {
+        this.documentError.set(null);
+        const data: ConfirmDialogData = {
+            title: this.i18n.t('vehicles.documents.deleteTitle'),
+            message: this.i18n.t('vehicles.documents.deleteConfirm', {
+                type: this.documentTypeName(document),
+            }),
+            confirmLabel: this.i18n.t('common.delete'),
+            cancelLabel: this.i18n.t('common.cancel'),
+            confirmTestId: 'vehicle-document-delete-confirm',
+            cancelTestId: 'vehicle-document-delete-cancel',
+            icon: 'delete',
+        };
+        this.dialog
+            .open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
+                data,
+                width: '440px',
+            })
+            .afterClosed()
+            .pipe(
+                filter((confirmed) => confirmed === true),
+                switchMap(() => this.session.ready),
+                switchMap(() => this.documentService.remove(this.vehicleId!, document.id)),
+            )
+            .subscribe({
+                next: () => this.loadDocuments(),
+                error: (error: HttpErrorResponse) =>
+                    this.documentError.set(
+                        this.describeFailure(error, this.i18n.t('vehicles.documents.error.delete')),
+                    ),
+            });
     }
 
     protected save(): void {
@@ -1345,7 +2020,52 @@ export class VehicleFormComponent {
                 chainTensionerCount: numberOrNull(raw.equipment.chainTensionerCount),
                 marbleRackCount: numberOrNull(raw.equipment.marbleRackCount),
             },
+            dataSheet: raw.dataSheet.trim() === '' ? null : raw.dataSheet,
+            commercial: {
+                purchasePrice: numberOrNull(raw.commercial.purchasePrice),
+                purchasedOn: raw.commercial.purchasedOn || null,
+                purchaseOdometerKm: numberOrNull(raw.commercial.purchaseOdometerKm),
+                firstRegisteredOn: raw.commercial.firstRegisteredOn || null,
+                usefulLifeYears: numberOrNull(raw.commercial.usefulLifeYears),
+                usefulLifeKm: numberOrNull(raw.commercial.usefulLifeKm),
+                costCenter: textOrNull(raw.commercial.costCenter),
+                vehicleInsurer: raw.commercial.vehicleInsurer,
+                vehicleInsurancePolicyNumbers: textOrNull(
+                    raw.commercial.vehicleInsurancePolicyNumbers,
+                ),
+                transportInsurer: raw.commercial.transportInsurer,
+                transportInsurancePolicyNumbers: textOrNull(
+                    raw.commercial.transportInsurancePolicyNumbers,
+                ),
+            },
         };
+    }
+
+    private toCommercialFormValue(vehicle: Vehicle) {
+        const commercial = { ...EMPTY_VEHICLE_COMMERCIAL, ...vehicle.commercial };
+        return {
+            ...commercial,
+            purchasedOn: commercial.purchasedOn?.slice(0, 10) ?? '',
+            firstRegisteredOn: commercial.firstRegisteredOn?.slice(0, 10) ?? '',
+            costCenter: commercial.costCenter ?? '',
+            vehicleInsurancePolicyNumbers: commercial.vehicleInsurancePolicyNumbers ?? '',
+            transportInsurancePolicyNumbers: commercial.transportInsurancePolicyNumbers ?? '',
+        };
+    }
+
+    private loadDocuments(): void {
+        this.session.ready
+            .pipe(switchMap(() => this.documentService.list(this.vehicleId!)))
+            .subscribe({
+                next: (documents) => {
+                    this.documents.set(documents);
+                    this.documentsLoaded.set(true);
+                },
+                error: (error: HttpErrorResponse) =>
+                    this.documentError.set(
+                        this.describeFailure(error, this.i18n.t('vehicles.documents.error.list')),
+                    ),
+            });
     }
 
     private equipmentNumber(name: EquipmentNumber): FormControl<number | null> {

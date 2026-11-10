@@ -61,6 +61,54 @@ internal sealed class VehicleRepository(TransBrainDbContext context) : IVehicleR
         return Task.CompletedTask;
     }
 
+    public async Task<IReadOnlyList<VehicleDocument>> ListDocumentsAsync(
+        Guid vehicleId, CancellationToken cancellationToken)
+        => await context.VehicleDocuments
+            .Where(d => d.VehicleId == vehicleId)
+            .OrderBy(d => d.ValidUntil == null)
+            .ThenBy(d => d.ValidUntil)
+            .ThenBy(d => d.DocumentType)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+    public Task<VehicleDocument?> GetDocumentAsync(Guid vehicleId, Guid documentId, CancellationToken cancellationToken)
+        => context.VehicleDocuments.SingleOrDefaultAsync(
+            d => d.VehicleId == vehicleId && d.Id == documentId, cancellationToken);
+
+    public Task<bool> DocumentTypeExistsAsync(
+        Guid vehicleId, string documentType, Guid? excludingId, CancellationToken cancellationToken)
+        => context.VehicleDocuments.AnyAsync(
+            d => d.VehicleId == vehicleId
+                && d.DocumentType == documentType
+                && (excludingId == null || d.Id != excludingId),
+            cancellationToken);
+
+    // The unique (VehicleId, DocumentType) index settles the race the handler's pre-check cannot.
+    public async Task<Result<VehicleDocument>> AddDocumentAsync(
+        VehicleDocument document, CancellationToken cancellationToken)
+    {
+        await context.VehicleDocuments.AddAsync(document, cancellationToken);
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            return document;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: UniqueViolation })
+        {
+            context.Entry(document).State = EntityState.Detached;
+            return Error.Conflict(
+                "VehicleDocument.DuplicateType",
+                $"This vehicle already has a '{document.DocumentType}' document.");
+        }
+    }
+
+    public async Task RemoveDocumentAsync(VehicleDocument document, CancellationToken cancellationToken)
+    {
+        context.VehicleDocuments.Remove(document);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
     private IQueryable<Vehicle> Filter(VehicleStatus? status, VehicleType? type)
         => context.Vehicles
             .Where(v => status == null || v.Status == status)

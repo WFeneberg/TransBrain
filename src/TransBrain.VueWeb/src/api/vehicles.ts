@@ -29,8 +29,12 @@ export interface Vehicle {
     grossWeightKg: number | null;
     maxFifthWheelLoadKg: number | null;
     notes: string | null;
+    /** Free text kept verbatim - line breaks and leading spaces matter. */
+    dataSheet: string | null;
     /** Never null in a response; all flags false and all values null when nothing is recorded. */
     equipment: VehicleEquipment;
+    /** Never null in a response; all values null when nothing is recorded. */
+    commercial: VehicleCommercial;
     /** Read-only, set by the server on every create, update and status change. */
     modifiedAt: string | null;
     modifiedBy: string | null;
@@ -77,6 +81,24 @@ export type VehicleEquipmentNumber = {
     [K in keyof VehicleEquipment]: VehicleEquipment[K] extends number | null ? K : never;
 }[keyof VehicleEquipment];
 
+/** Commercial data and insurance of the legacy fleet screen "Seite3". Dates are "YYYY-MM-DD". */
+export interface VehicleCommercial {
+    /** EUR, at most two decimals. */
+    purchasePrice: number | null;
+    purchasedOn: string | null;
+    purchaseOdometerKm: number | null;
+    firstRegisteredOn: string | null;
+    usefulLifeYears: number | null;
+    usefulLifeKm: number | null;
+    costCenter: string | null;
+    /** Code of an InsuranceCompany catalog entry, see api/vehicleCatalog.ts. */
+    vehicleInsurer: string | null;
+    vehicleInsurancePolicyNumbers: string | null;
+    /** Code of an InsuranceCompany catalog entry, see api/vehicleCatalog.ts. */
+    transportInsurer: string | null;
+    transportInsurancePolicyNumbers: string | null;
+}
+
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
 export interface VehicleWriteRequest {
     licensePlate: string;
@@ -101,8 +123,11 @@ export interface VehicleWriteRequest {
     grossWeightKg: number | null;
     maxFifthWheelLoadKg: number | null;
     notes: string | null;
+    dataSheet: string | null;
     /** PUT replaces the whole equipment, so the complete object is always sent. */
     equipment: VehicleEquipment;
+    /** PUT replaces the whole commercial data, so the complete object is always sent. */
+    commercial: VehicleCommercial;
 }
 
 export interface PagedResult<T> {

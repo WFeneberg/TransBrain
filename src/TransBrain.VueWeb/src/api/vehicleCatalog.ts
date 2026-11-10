@@ -2,9 +2,14 @@ import axios from 'axios';
 import { userManager } from '../auth/userManager';
 
 /** The maintainable selection lists behind the vehicle form - see VehicleCatalog.vue. */
-export type VehicleCatalogKind = 'VehicleClass' | 'CarrierGroup';
+export type VehicleCatalogKind = 'VehicleClass' | 'CarrierGroup' | 'InsuranceCompany' | 'DocumentType';
 
-export const VEHICLE_CATALOG_KINDS: readonly VehicleCatalogKind[] = ['VehicleClass', 'CarrierGroup'];
+export const VEHICLE_CATALOG_KINDS: readonly VehicleCatalogKind[] = [
+    'VehicleClass',
+    'CarrierGroup',
+    'InsuranceCompany',
+    'DocumentType',
+];
 
 export interface VehicleCatalogEntry {
     id: string;
@@ -65,6 +70,27 @@ export async function updateVehicleCatalogEntry(
 /** Answers 409 while any vehicle still uses the entry - deactivate it instead. */
 export async function deleteVehicleCatalogEntry(kind: VehicleCatalogKind, id: string): Promise<void> {
     await client.delete(`/vehicle-catalog/${kind}/${id}`);
+}
+
+/**
+ * Select options for a catalog-backed field. Only active entries are offered for a new choice.
+ * The current code stays selectable even when it has been deactivated since - the API accepts
+ * keeping it - and is labelled by `inactiveLabel`; a code the catalog does not know at all is
+ * shown as-is.
+ */
+export function catalogSelectOptions(
+    entries: readonly VehicleCatalogEntry[],
+    current: string | null | undefined,
+    inactiveLabel: (name: string) => string,
+): { title: string; value: string }[] {
+    const currentKey = current?.toLowerCase() ?? null;
+    const options = entries
+        .filter((entry) => entry.isActive || entry.code.toLowerCase() === currentKey)
+        .map((entry) => ({ title: entry.isActive ? entry.name : inactiveLabel(entry.name), value: entry.code }));
+    if (current && !entries.some((entry) => entry.code.toLowerCase() === currentKey)) {
+        options.push({ title: current, value: current });
+    }
+    return options;
 }
 
 /** Display name for a stored code: the entry's name, the code itself if unknown, '' if none. */

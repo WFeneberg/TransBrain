@@ -126,14 +126,14 @@ Startseite. Hier pflegen Sie die Stammdaten des Fuhrparks.
 ## Fahrzeugformular (Anlegen / Bearbeiten)
 
 Erreichbar über „Add vehicle“ (neu, `/vehicles/new`) oder das Stift-Symbol in der Liste
-(`/vehicles/{id}`). Das Formular ist in sechs Bereiche gegliedert, auf breiten Bildschirmen
+(`/vehicles/{id}`). Das Formular ist in zehn Bereiche gegliedert, auf breiten Bildschirmen
 in zwei Spalten.
 
 ![Fahrzeugformular](img/vueweb/fahrzeugformular.png)
 
 Alle Felder außer den mit * markierten Pflichtfeldern sind optional. Zahlenfelder müssen,
 wenn sie ausgefüllt sind, größer als 0 sein; nur die Anzahlen im Bereich Equipment
-dürfen auch 0 sein.
+dürfen auch 0 sein, ebenso Anschaffungspreis und Kilometerstand bei Anschaffung.
 
 | Bereich | Feld (Beschriftung) | Bedeutung | Pflicht | Regeln |
 |---|---|---|:---:|---|
@@ -161,7 +161,17 @@ dürfen auch 0 sein.
 | Equipment – Load securing | Support poles, Load bars, Lashing straps, Chain tensioners, Pallets | Anzahl Stützstangen, Spannlatten, Spanngurte, Kettenspanner, Paletten | – | ganze Zahl 0–999 |
 | Equipment – Marble racks | Number of marble racks | Anzahl Marmorböcke | – | ganze Zahl 0–999 |
 | Equipment – Marble racks | Material | Art der Marmorböcke | – | Auswahl „Not specified“ (keine Angabe), „Steel“ (Stahl) oder „Aluminium“ (Alu) |
+| Commercial data | Purchase price (EUR) | Anschaffungspreis in Euro | – | 0–10000000, höchstens 2 Nachkommastellen |
+| Commercial data | Purchase date | Anschaffungsdatum | – | ab 1900 |
+| Commercial data | Odometer at purchase (km) | Kilometerstand bei Anschaffung | – | ganze Zahl 0–9999999 |
+| Commercial data | First registration | Erstzulassung (Datum, unabhängig vom Baujahr) | – | ab 1900 |
+| Commercial data | Useful life (years) / Useful life (km) | geplante Nutzungsdauer | – | Jahre 1–50, km 1–9999999 |
+| Commercial data | Cost center | Kostenstelle | – | max. 30 Zeichen |
+| Insurance – Vehicle insurance | Insurance company | Versicherungsgesellschaft der Fahrzeugversicherung | – | Auswahl aus den aktiven Versicherungen der [Fahrzeug-Stammdaten](#fahrzeug-stammdaten) oder „–“ |
+| Insurance – Vehicle insurance | Policy numbers | Polizzennummern | – | max. 500 Zeichen, mehrere Zeilen erlaubt |
+| Insurance – Transport insurance | Insurance company / Policy numbers | Versicherung und Polizzennummern der Transportversicherung | – | wie bei der Fahrzeugversicherung |
 | Notes | Notes | Bemerkungen | – | max. 2000 Zeichen, mit Zeichenzähler |
+| Data sheet | Data sheet | Datenblatt (freier Text, z. B. technische Daten des Herstellers) | – | max. 10000 Zeichen, mit Zeichenzähler |
 
 Alle Gewichte werden in **Kilogramm** erfasst, alle Maße in **Millimetern**.
 
@@ -173,6 +183,22 @@ ein entferntes Häkchen oder ein geleertes Feld ist danach auch gespeichert leer
 Fahrzeugliste zeigt die Ausstattung nicht an.
 
 ![Bereich Equipment](img/vueweb/fahrzeug-ausstattung.png)
+
+**Kaufmännische Daten und Versicherungen (Commercial data, Insurance):** Zwei Bereiche
+nebeneinander erfassen Anschaffung, Nutzungsdauer und Kostenstelle sowie je eine
+Versicherungsgesellschaft mit ihren Polizzennummern für Fahrzeug- und Transportversicherung.
+Mehrere Polizzennummern schreiben Sie untereinander in das Feld. Die Versicherungen pflegen
+Sie in den [Fahrzeug-Stammdaten](#fahrzeug-stammdaten); dort ist die Liste anfangs leer. Wie
+bei der Ausstattung wird beim Speichern immer alles übernommen: ein geleertes Feld ist danach
+auch gespeichert leer.
+
+![Bereiche Commercial data und Insurance](img/vueweb/fahrzeug-kaufmaennisch.png)
+
+**Datenblatt (Data sheet):** Der letzte Bereich nimmt freien Text auf, z. B. das technische
+Datenblatt des Herstellers. Der Text wird in Festbreitenschrift und **ohne automatischen
+Zeilenumbruch** angezeigt (bei langen Zeilen erscheint eine horizontale Bildlaufleiste) und
+genau so gespeichert, wie er eingegeben wurde – Leerzeichen am Zeilenanfang bleiben erhalten,
+damit ausgerichtete Spalten ausgerichtet bleiben.
 
 **Status ändern** (nur beim Bearbeiten, nur Administratoren): Neben der Überschrift zeigt ein
 Chip den aktuellen Status. Die Schaltflächen daneben ändern ihn **sofort**, ohne „Save“:
@@ -203,6 +229,39 @@ by {Benutzer}“. Jedes Speichern und jede Statusänderung aktualisiert ihn.
 - Wird ein Fahrer gelöscht, der als Stammfahrer eingetragen ist, verlieren die betroffenen
   Fahrzeuge lediglich ihren Stammfahrer.
 
+### Sonderpapiere (Special documents)
+
+Der Bereich **Special documents** listet die Sonderpapiere und Prüfungen des Fahrzeugs, z. B.
+ADR-Zulassungsbescheinigung, Tachographenprüfung oder UVV-Prüfung. Anders als die übrigen
+Bereiche wird er **unabhängig von „Save“** gespeichert: jede Änderung im Dialog ist sofort
+gespeichert. Bei einem neuen Fahrzeug steht dort nur der Hinweis „Save the vehicle first to
+record special documents.“ – speichern Sie das Fahrzeug zuerst und öffnen Sie es dann erneut.
+
+![Bereich Special documents](img/vueweb/fahrzeug-sonderpapiere.png)
+
+- **Spalten:** Art (Bezeichnung aus den Stammdaten), Last checked (letzte Prüfung), Valid until
+  (gültig bis) mit Status, Remark (Bemerkung) und Last changed (Datum · Benutzer der letzten
+  Änderung). Die Papiere sind nach Ablaufdatum sortiert, das nächste zuerst; Papiere ohne
+  Ablaufdatum stehen am Ende.
+- **Status** (nur wenn „Valid until“ gesetzt ist): **Expired** (rot, Datum liegt in der
+  Vergangenheit), **Expires soon** (orange, läuft innerhalb der nächsten 30 Tage ab) oder
+  **Valid** (grün).
+- **„Add document“** (nur Administratoren) öffnet den Dialog „Add special document“:
+
+  | Feld | Bedeutung | Pflicht | Regeln |
+  |---|---|:---:|---|
+  | Document type | Art des Sonderpapiers | ja | Auswahl aus den aktiven Sonderpapier-Arten der [Fahrzeug-Stammdaten](#fahrzeug-stammdaten); jede Art nur einmal je Fahrzeug |
+  | Last checked | Datum der letzten Prüfung | – | ab 1900 |
+  | Valid until | Ablaufdatum | – | ab 1900, nicht vor „Last checked“ |
+  | Remark | Bemerkung | – | max. 500 Zeichen |
+
+  Hat das Fahrzeug die gewählte Art schon, lehnt der Dialog das Speichern mit „This vehicle
+  already has a '…' document.“ ab (HTTP 409) – bearbeiten Sie dann das vorhandene Papier.
+- **Stift-Symbol:** öffnet dasselbe Formular zum Bearbeiten („Edit special document“), z. B. um
+  nach einer neuen Prüfung die Daten zu verlängern.
+- **Papierkorb-Symbol:** löscht das Sonderpapier nach einer Sicherheitsabfrage.
+- Wird das Fahrzeug gelöscht, werden seine Sonderpapiere mitgelöscht.
+
 ## Fahrzeug-Stammdaten
 
 Erreichbar über die Schaltfläche **„Master data lists“** oben in der Fahrzeugliste
@@ -212,11 +271,15 @@ Alle angemeldeten Benutzer sehen die Listen, ändern dürfen sie nur Administrat
 
 ![Fahrzeug-Stammdaten](img/vueweb/fahrzeug-stammdaten.png)
 
-- **Reiter:** **Vehicle classes** (Fahrzeugklassen, z. B. Plane, Kühlkoffer, Tank) und
-  **Carrier groups** (Frächtergruppen). Beim ersten Start sind die bisherigen elf
-  Fahrzeugklassen bereits angelegt; Frächtergruppen legen Sie selbst an.
+- **Reiter:** **Vehicle classes** (Fahrzeugklassen, z. B. Plane, Kühlkoffer, Tank),
+  **Carrier groups** (Frächtergruppen), **Insurance companies** (Versicherungsgesellschaften
+  für Fahrzeug- und Transportversicherung) und **Document types** (Sonderpapier-Arten). Beim
+  ersten Start sind die bisherigen elf Fahrzeugklassen und sieben Sonderpapier-Arten (ADR,
+  ATP, CEMT, Tachograph, UVV, Kran, Ladebordwand) bereits angelegt; Frächtergruppen und
+  Versicherungen legen Sie selbst an.
 - **Spalten:** Code, Name (Bezeichnung), Status (**Active** grün / **Inactive** grau) und
-  **Used by** – wie viele Fahrzeuge den Eintrag gerade verwenden.
+  **Used by** – wie viele Fahrzeuge den Eintrag gerade verwenden (bei Versicherungen als Fahrzeug-
+  oder Transportversicherung, bei Sonderpapier-Arten mit einem Sonderpapier dieser Art).
 - **„Add entry“** (nur Administratoren) öffnet den Dialog für einen neuen Eintrag:
 
   | Feld | Bedeutung | Pflicht | Regeln |

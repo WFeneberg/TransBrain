@@ -2,7 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-export const VEHICLE_CATALOG_KINDS = ['VehicleClass', 'CarrierGroup'] as const;
+export const VEHICLE_CATALOG_KINDS = [
+    'VehicleClass',
+    'CarrierGroup',
+    'InsuranceCompany',
+    'DocumentType',
+] as const;
 export type VehicleCatalogKind = (typeof VEHICLE_CATALOG_KINDS)[number];
 
 export interface VehicleCatalogEntry {

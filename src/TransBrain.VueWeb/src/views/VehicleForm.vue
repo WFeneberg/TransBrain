@@ -11,6 +11,7 @@ import {
     VEHICLE_TYPES,
     type MarbleRackMaterial,
     type Vehicle,
+    type VehicleCommercial,
     type VehicleEquipment,
     type VehicleEquipmentFlag,
     type VehicleEquipmentNumber,
@@ -18,7 +19,8 @@ import {
     type VehicleWriteRequest,
 } from '../api/vehicles';
 import { listDrivers, type Driver } from '../api/drivers';
-import { listVehicleCatalog, type VehicleCatalogEntry } from '../api/vehicleCatalog';
+import { catalogSelectOptions, listVehicleCatalog, type VehicleCatalogEntry } from '../api/vehicleCatalog';
+import VehicleDocuments from '../components/VehicleDocuments.vue';
 import { useVehicleLabels } from '../composables/useVehicleLabels';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useAuthStore } from '../stores/auth';
@@ -66,6 +68,7 @@ const form = reactive({
     grossWeightKg: '',
     maxFifthWheelLoadKg: '',
     notes: '',
+    dataSheet: '',
 });
 
 type FormField = keyof typeof form;
@@ -188,13 +191,84 @@ const materialOptions = computed(() => [
     })),
 ]);
 
-// Equipment errors are keyed by the dotted path the API reports them under, camel-cased.
+const DATA_SHEET_MAX_LENGTH = 10000;
+const POLICY_NUMBERS_MAX_LENGTH = 500;
+const MIN_YEAR = 1900;
+
+type CommercialKey = keyof VehicleCommercial;
+type CommercialInputKey = Exclude<
+    CommercialKey,
+    'vehicleInsurer' | 'vehicleInsurancePolicyNumbers' | 'transportInsurer' | 'transportInsurancePolicyNumbers'
+>;
+
+interface CommercialField {
+    key: CommercialInputKey;
+    label: MessageKey;
+    type: 'text' | 'number' | 'date';
+    step?: string;
+    suffix?: string;
+    min?: number;
+    max?: number;
+    decimals?: boolean;
+    maxLength?: number;
+}
+
+const commercialFields: CommercialField[] = [
+    {
+        key: 'purchasePrice',
+        label: 'vehicles.commercial.purchasePrice',
+        type: 'number',
+        step: '0.01',
+        suffix: '€',
+        min: 0,
+        max: 10000000,
+        decimals: true,
+    },
+    { key: 'purchasedOn', label: 'vehicles.commercial.purchasedOn', type: 'date' },
+    {
+        key: 'purchaseOdometerKm',
+        label: 'vehicles.commercial.purchaseOdometerKm',
+        type: 'number',
+        step: '1',
+        min: 0,
+        max: 9999999,
+    },
+    { key: 'firstRegisteredOn', label: 'vehicles.commercial.firstRegisteredOn', type: 'date' },
+    { key: 'usefulLifeYears', label: 'vehicles.commercial.usefulLifeYears', type: 'number', step: '1', min: 1, max: 50 },
+    { key: 'usefulLifeKm', label: 'vehicles.commercial.usefulLifeKm', type: 'number', step: '1', min: 1, max: 9999999 },
+    { key: 'costCenter', label: 'vehicles.commercial.costCenter', type: 'text', maxLength: 30 },
+];
+
+const insuranceGroups: {
+    title: MessageKey;
+    insurer: 'vehicleInsurer' | 'transportInsurer';
+    policyNumbers: 'vehicleInsurancePolicyNumbers' | 'transportInsurancePolicyNumbers';
+}[] = [
+    { title: 'vehicles.insurance.vehicle', insurer: 'vehicleInsurer', policyNumbers: 'vehicleInsurancePolicyNumbers' },
+    {
+        title: 'vehicles.insurance.transport',
+        insurer: 'transportInsurer',
+        policyNumbers: 'transportInsurancePolicyNumbers',
+    },
+];
+
+const COMMERCIAL_KEYS: CommercialKey[] = [
+    ...commercialFields.map((field) => field.key),
+    ...insuranceGroups.flatMap((group) => [group.insurer, group.policyNumbers]),
+];
+
+const commercial = reactive(
+    Object.fromEntries(COMMERCIAL_KEYS.map((key) => [key, ''])) as Record<CommercialKey, string>,
+);
+
+// Equipment and commercial errors are keyed by the dotted path the API reports them under, camel-cased.
 const fieldErrors = reactive<Record<string, string | null>>(
     Object.fromEntries(
         [
             ...Object.keys(form),
             ...equipmentNumberFields.map((field) => `equipment.${field.key}`),
             'equipment.marbleRackMaterial',
+            ...COMMERCIAL_KEYS.map((key) => `commercial.${key}`),
         ].map((field) => [field, null]),
     ),
 );
@@ -209,6 +283,8 @@ const vehicle = ref<Vehicle | null>(null);
 const drivers = ref<Driver[]>([]);
 const vehicleClasses = ref<VehicleCatalogEntry[]>([]);
 const carrierGroups = ref<VehicleCatalogEntry[]>([]);
+const insuranceCompanies = ref<VehicleCatalogEntry[]>([]);
+const documentTypes = ref<VehicleCatalogEntry[]>([]);
 const statusBusy = ref(false);
 const decommissionDialogOpen = ref(false);
 
@@ -216,6 +292,10 @@ const typeOptions = computed(() => VEHICLE_TYPES.map((type) => ({ title: typeLab
 
 const classOptions = computed(() => catalogOptions(vehicleClasses.value, vehicle.value?.vehicleClass ?? null));
 const carrierGroupOptions = computed(() => catalogOptions(carrierGroups.value, vehicle.value?.carrierGroup ?? null));
+const insurerOptions = computed(() => ({
+    vehicleInsurer: catalogOptions(insuranceCompanies.value, vehicle.value?.commercial?.vehicleInsurer ?? null),
+    transportInsurer: catalogOptions(insuranceCompanies.value, vehicle.value?.commercial?.transportInsurer ?? null),
+}));
 
 const driverOptions = computed(() => [
     { title: t('vehicles.noDefaultDriver'), value: '' },
@@ -244,34 +324,30 @@ onMounted(async () => {
 });
 
 /**
- * Only active entries are offered for a new choice. The vehicle's own current code stays
- * selectable even when it has been deactivated since - the API accepts keeping it - and is
- * marked as inactive; a code the catalog does not know at all is shown as-is.
+ * Only active entries are offered for a new choice; the vehicle's own current code stays
+ * selectable even when it has been deactivated since, see catalogSelectOptions.
  */
 function catalogOptions(entries: VehicleCatalogEntry[], current: string | null): { title: string; value: string }[] {
-    const currentKey = current?.toLowerCase() ?? null;
-    const options = entries
-        .filter((entry) => entry.isActive || entry.code.toLowerCase() === currentKey)
-        .map((entry) => ({
-            title: entry.isActive ? entry.name : t('vehicles.inactiveOption', { name: entry.name }),
-            value: entry.code,
-        }));
-    if (current && !entries.some((entry) => entry.code.toLowerCase() === currentKey)) {
-        options.push({ title: current, value: current });
-    }
-    return [{ title: '–', value: '' }, ...options];
+    return [
+        { title: '–', value: '' },
+        ...catalogSelectOptions(entries, current, (name) => t('vehicles.inactiveOption', { name })),
+    ];
 }
 
-// Unlike the driver picker, the catalogs are not optional: without them the class and carrier
-// group a vehicle already has could not even be displayed, so the failure is reported.
+// Unlike the driver picker, the catalogs are not optional: without them the codes a vehicle
+// already has could not even be displayed, so the failure is reported.
 async function loadCatalogs(): Promise<void> {
     try {
-        const [classes, groups] = await Promise.all([
+        const [classes, groups, insurers, types] = await Promise.all([
             listVehicleCatalog('VehicleClass'),
             listVehicleCatalog('CarrierGroup'),
+            listVehicleCatalog('InsuranceCompany'),
+            listVehicleCatalog('DocumentType'),
         ]);
         vehicleClasses.value = classes;
         carrierGroups.value = groups;
+        insuranceCompanies.value = insurers;
+        documentTypes.value = types;
     } catch {
         const message = t('vehicles.catalogLoadFailed');
         formError.value = formError.value ? `${formError.value} ${message}` : message;
@@ -314,7 +390,9 @@ async function loadVehicle(): Promise<void> {
         form.grossWeightKg = numberText(loaded.grossWeightKg);
         form.maxFifthWheelLoadKg = numberText(loaded.maxFifthWheelLoadKg);
         form.notes = loaded.notes ?? '';
+        form.dataSheet = loaded.dataSheet ?? '';
         loadEquipment(loaded.equipment);
+        loadCommercial(loaded.commercial);
     } catch (error) {
         // A failed load is not a failed save - give it its own wording so a dispatcher
         // opening a deleted vehicle isn't told a save just failed.
@@ -338,6 +416,62 @@ function equipmentRequest(): VehicleEquipment {
         equipmentNumberFields.map((field) => [field.key, optionalNumber(equipmentNumbers[field.key])]),
     ) as Record<VehicleEquipmentNumber, number | null>;
     return { ...equipmentFlags, ...numbers, marbleRackMaterial: marbleRackMaterial.value || null };
+}
+
+// A response without `commercial` (or with fields missing) falls back to the new-vehicle defaults.
+function loadCommercial(loaded: Partial<VehicleCommercial> | null | undefined): void {
+    for (const key of COMMERCIAL_KEYS) {
+        const value = loaded?.[key];
+        commercial[key] = typeof value === 'number' ? String(value) : (value ?? '');
+    }
+}
+
+function commercialRequest(): VehicleCommercial {
+    return {
+        purchasePrice: optionalNumber(commercial.purchasePrice),
+        purchasedOn: commercial.purchasedOn || null,
+        purchaseOdometerKm: optionalNumber(commercial.purchaseOdometerKm),
+        firstRegisteredOn: commercial.firstRegisteredOn || null,
+        usefulLifeYears: optionalNumber(commercial.usefulLifeYears),
+        usefulLifeKm: optionalNumber(commercial.usefulLifeKm),
+        costCenter: optionalText(commercial.costCenter),
+        vehicleInsurer: commercial.vehicleInsurer || null,
+        vehicleInsurancePolicyNumbers: optionalText(commercial.vehicleInsurancePolicyNumbers),
+        transportInsurer: commercial.transportInsurer || null,
+        transportInsurancePolicyNumbers: optionalText(commercial.transportInsurancePolicyNumbers),
+    };
+}
+
+function commercialFieldError(field: CommercialField): string | null {
+    const raw = commercial[field.key];
+    if (field.type === 'date') {
+        return raw && Number(raw.slice(0, 4)) < MIN_YEAR ? t('common.yearTooEarly') : null;
+    }
+    if (field.type === 'text') {
+        return lengthError(trimmed(raw), field.maxLength!);
+    }
+    const value = optionalNumber(raw);
+    return field.decimals ? decimalError(value, field.min!, field.max!) : rangeError(value, field.min!, field.max!);
+}
+
+function decimalError(value: number | null, min: number, max: number): string | null {
+    if (value === null) {
+        return null;
+    }
+    if (Number.isNaN(value)) {
+        return t('common.invalid');
+    }
+    if (value < min) {
+        return min > 0 ? t('common.mustBePositive') : t('common.mustNotBeNegative');
+    }
+    if (value > max) {
+        return t('common.mustNotExceed', { max });
+    }
+    return Math.abs(value * 100 - Math.round(value * 100)) > 1e-6 ? t('common.atMostTwoDecimals') : null;
+}
+
+function lengthError(value: string, max: number): string | null {
+    return value.length > max ? t('common.maxLength', { max }) : null;
 }
 
 function rangeError(value: number | null, min: number, max: number): string | null {
@@ -401,6 +535,16 @@ function validate(): boolean {
             field.max,
         );
     }
+    for (const field of commercialFields) {
+        fieldErrors[`commercial.${field.key}`] = commercialFieldError(field);
+    }
+    for (const group of insuranceGroups) {
+        fieldErrors[`commercial.${group.policyNumbers}`] = lengthError(
+            trimmed(commercial[group.policyNumbers]),
+            POLICY_NUMBERS_MAX_LENGTH,
+        );
+    }
+    fieldErrors.dataSheet = lengthError(form.dataSheet, DATA_SHEET_MAX_LENGTH);
     return Object.values(fieldErrors).every((message) => message === null);
 }
 
@@ -435,7 +579,9 @@ async function save(): Promise<void> {
         grossWeightKg: optionalNumber(form.grossWeightKg),
         maxFifthWheelLoadKg: optionalNumber(form.maxFifthWheelLoadKg),
         notes: optionalText(form.notes),
+        dataSheet: form.dataSheet.trim() === '' ? null : form.dataSheet,
         equipment: equipmentRequest(),
+        commercial: commercialRequest(),
     };
 
     try {
@@ -818,6 +964,82 @@ function describeFailure(error: unknown, fallback: string): string {
                     </v-card>
                 </v-col>
 
+                <v-col cols="12" md="6">
+                    <v-card border flat class="section-card" data-testid="vehicle-commercial">
+                        <v-card-item prepend-icon="mdi-cash" :title="t('vehicles.section.commercial')" />
+                        <v-card-text>
+                            <v-row dense>
+                                <v-col v-for="field in commercialFields" :key="field.key" cols="12" sm="6">
+                                    <v-text-field
+                                        v-model="commercial[field.key]"
+                                        v-native-testid="`vehicle-${field.key}`"
+                                        :label="t(field.label)"
+                                        :type="field.type"
+                                        :step="field.step"
+                                        :min="field.min"
+                                        :max="field.max"
+                                        :suffix="field.suffix"
+                                        :counter="field.maxLength"
+                                        :error-messages="errorsFor(`commercial.${field.key}`)"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span :data-testid="`vehicle-${field.key}-error`">{{ message }}</span>
+                                        </template>
+                                    </v-text-field>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+
+                <v-col cols="12" md="6">
+                    <v-card border flat class="section-card" data-testid="vehicle-insurance">
+                        <v-card-item prepend-icon="mdi-shield-car" :title="t('vehicles.section.insurance')" />
+                        <v-card-text>
+                            <div v-for="group in insuranceGroups" :key="group.insurer" class="insurance-group">
+                                <div class="equipment-group-title">{{ t(group.title) }}</div>
+                                <div class="equipment-fields">
+                                    <v-select
+                                        v-model="commercial[group.insurer]"
+                                        :label="t('vehicles.insurance.company')"
+                                        :items="insurerOptions[group.insurer]"
+                                        :error-messages="errorsFor(`commercial.${group.insurer}`)"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                        :data-testid="`vehicle-${group.insurer}`"
+                                    >
+                                        <template #message="{ message }">
+                                            <span :data-testid="`vehicle-${group.insurer}-error`">{{ message }}</span>
+                                        </template>
+                                    </v-select>
+                                    <v-textarea
+                                        v-model="commercial[group.policyNumbers]"
+                                        v-native-testid="`vehicle-${group.policyNumbers}`"
+                                        :label="t('vehicles.insurance.policyNumbers')"
+                                        :counter="POLICY_NUMBERS_MAX_LENGTH"
+                                        :error-messages="errorsFor(`commercial.${group.policyNumbers}`)"
+                                        rows="3"
+                                        variant="outlined"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span :data-testid="`vehicle-${group.policyNumbers}-error`">{{ message }}</span>
+                                        </template>
+                                    </v-textarea>
+                                </div>
+                            </div>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+
+                <v-col cols="12">
+                    <VehicleDocuments :vehicle-id="vehicleId" :document-types="documentTypes" />
+                </v-col>
+
                 <v-col cols="12">
                     <v-card border flat class="section-card">
                         <v-card-item prepend-icon="mdi-note-text-outline" :title="t('vehicles.section.notes')" />
@@ -835,6 +1057,31 @@ function describeFailure(error: unknown, fallback: string): string {
                             >
                                 <template #message="{ message }">
                                     <span data-testid="vehicle-notes-error">{{ message }}</span>
+                                </template>
+                            </v-textarea>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+
+                <v-col cols="12">
+                    <v-card border flat class="section-card" data-testid="vehicle-dataSheet-card">
+                        <v-card-item prepend-icon="mdi-text-box-outline" :title="t('vehicles.section.dataSheet')" />
+                        <v-card-text>
+                            <v-textarea
+                                v-model="form.dataSheet"
+                                v-native-testid="'vehicle-dataSheet'"
+                                :label="t('vehicles.dataSheet')"
+                                :error-messages="errorsFor('dataSheet')"
+                                :counter="DATA_SHEET_MAX_LENGTH"
+                                rows="12"
+                                wrap="off"
+                                spellcheck="false"
+                                class="data-sheet"
+                                variant="outlined"
+                                hide-details="auto"
+                            >
+                                <template #message="{ message }">
+                                    <span data-testid="vehicle-dataSheet-error">{{ message }}</span>
                                 </template>
                             </v-textarea>
                         </v-card-text>
@@ -926,6 +1173,17 @@ function describeFailure(error: unknown, fallback: string): string {
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+.insurance-group + .insurance-group {
+    margin-top: 20px;
+}
+
+.data-sheet :deep(textarea) {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+    white-space: pre;
+    overflow-x: auto;
+    overflow-wrap: normal;
 }
 
 .form-actions {

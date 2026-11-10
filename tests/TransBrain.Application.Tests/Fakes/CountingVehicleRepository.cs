@@ -38,4 +38,20 @@ public sealed class CountingVehicleRepository : IVehicleRepository
 
     public Task RemoveAsync(Vehicle vehicle, CancellationToken cancellationToken)
         => _inner.RemoveAsync(vehicle, cancellationToken);
+
+    public Task<IReadOnlyList<VehicleDocument>> ListDocumentsAsync(Guid vehicleId, CancellationToken cancellationToken)
+        => _inner.ListDocumentsAsync(vehicleId, cancellationToken);
+
+    public Task<VehicleDocument?> GetDocumentAsync(Guid vehicleId, Guid documentId, CancellationToken cancellationToken)
+        => _inner.GetDocumentAsync(vehicleId, documentId, cancellationToken);
+
+    public Task<bool> DocumentTypeExistsAsync(
+        Guid vehicleId, string documentType, Guid? excludingId, CancellationToken cancellationToken)
+        => _inner.DocumentTypeExistsAsync(vehicleId, documentType, excludingId, cancellationToken);
+
+    public Task<Result<VehicleDocument>> AddDocumentAsync(VehicleDocument document, CancellationToken cancellationToken)
+        => _inner.AddDocumentAsync(document, cancellationToken);
+
+    public Task RemoveDocumentAsync(VehicleDocument document, CancellationToken cancellationToken)
+        => _inner.RemoveDocumentAsync(document, cancellationToken);
 }

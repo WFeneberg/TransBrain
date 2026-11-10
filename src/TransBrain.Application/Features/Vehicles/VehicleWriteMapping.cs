@@ -63,8 +63,62 @@ internal static class VehicleWriteMapping
             command.CurbWeightKg,
             command.GrossWeightKg,
             command.MaxFifthWheelLoadKg,
-            command.Notes);
+            command.Notes,
+            command.DataSheet);
     }
+
+    /// <param name="current">The vehicle's commercial data before an update; null when a vehicle is created.</param>
+    public static async Task<Result<VehicleCommercialInfo>> ToCommercialAsync(
+        VehicleCommercialData? data,
+        IVehicleCatalogRepository catalog,
+        VehicleCommercialInfo? current,
+        CancellationToken cancellationToken)
+    {
+        if (data is null)
+        {
+            return VehicleCommercialInfo.Empty;
+        }
+
+        Result<string?> vehicleInsurer = await VehicleCatalogLookup.ResolveAsync(
+            catalog,
+            VehicleCatalogKind.InsuranceCompany,
+            data.VehicleInsurer,
+            current?.VehicleInsurer,
+            CommercialField(nameof(VehicleCommercialData.VehicleInsurer)),
+            cancellationToken);
+        if (!vehicleInsurer.IsSuccess)
+        {
+            return vehicleInsurer.Error!;
+        }
+
+        Result<string?> transportInsurer = await VehicleCatalogLookup.ResolveAsync(
+            catalog,
+            VehicleCatalogKind.InsuranceCompany,
+            data.TransportInsurer,
+            current?.TransportInsurer,
+            CommercialField(nameof(VehicleCommercialData.TransportInsurer)),
+            cancellationToken);
+        if (!transportInsurer.IsSuccess)
+        {
+            return transportInsurer.Error!;
+        }
+
+        return VehicleCommercialInfo.Create(
+            data.PurchasePrice,
+            data.PurchasedOn,
+            data.PurchaseOdometerKm,
+            data.FirstRegisteredOn,
+            data.UsefulLifeYears,
+            data.UsefulLifeKm,
+            data.CostCenter,
+            vehicleInsurer.Value,
+            data.VehicleInsurancePolicyNumbers,
+            transportInsurer.Value,
+            data.TransportInsurancePolicyNumbers);
+    }
+
+    // Same dotted key FluentValidation produces for the nested rules, so clients map both alike.
+    private static string CommercialField(string name) => $"{nameof(IVehicleWriteCommand.Commercial)}.{name}";
 
     public static Result<VehicleEquipment> ToEquipment(VehicleEquipmentData? data)
     {

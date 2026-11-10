@@ -182,6 +182,47 @@ public class VehicleCatalogHandlerTests
     }
 
     [Fact]
+    public async Task List_InsuranceCompanies_CountsAVehicleOnceEvenWhenItUsesTheInsurerTwice()
+    {
+        InMemoryVehicleRepository vehicles = new();
+        vehicles.Seed(
+            VehicleInsuredBy("M-A 1", "ALLIANZ", "ALLIANZ"),
+            VehicleInsuredBy("M-A 2", "UNIQA", "ALLIANZ"),
+            VehicleInsuredBy("M-A 3", null, null));
+        InMemoryVehicleCatalogRepository catalog = InMemoryVehicleCatalogRepository.WithStandardEntries(vehicles);
+
+        Result<IReadOnlyList<VehicleCatalogEntryResponse>> result = await new ListVehicleCatalogQueryHandler(catalog)
+            .Handle(new ListVehicleCatalogQuery(VehicleCatalogKind.InsuranceCompany), CancellationToken.None);
+
+        result.Value.ToDictionary(e => e.Code, e => e.UsageCount)
+            .Should().BeEquivalentTo(new Dictionary<string, int> { ["ALLIANZ"] = 2, ["UNIQA"] = 1 });
+    }
+
+    [Fact]
+    public async Task Delete_DocumentTypeInUse_ReturnsConflict()
+    {
+        InMemoryVehicleRepository vehicles = new();
+        Vehicle vehicle = VehicleWith("M-A 1");
+        vehicles.Seed(vehicle);
+        vehicles.SeedDocuments(VehicleDocument.Create(
+            vehicle.Id, "ADR", null, null, null, "admin", DateTimeOffset.UnixEpoch).Value);
+        InMemoryVehicleCatalogRepository catalog = InMemoryVehicleCatalogRepository.WithStandardEntries(vehicles);
+        VehicleCatalogEntry adr = catalog.Entries.Single(e => e.Code == "ADR");
+
+        Result<Unit> result = await new DeleteVehicleCatalogEntryCommandHandler(catalog).Handle(
+            new DeleteVehicleCatalogEntryCommand(VehicleCatalogKind.DocumentType, adr.Id), CancellationToken.None);
+
+        result.Error!.Code.Should().Be("VehicleCatalog.InUse");
+        catalog.Entries.Should().Contain(adr);
+    }
+
+    private static Vehicle VehicleInsuredBy(string plate, string? vehicleInsurer, string? transportInsurer) =>
+        Vehicle.Create(
+            LicensePlate.Create(plate).Value, VehicleType.Tractor, 24_000, 13.6m, new DateOnly(2027, 3, 31),
+            commercial: VehicleCommercialInfo.Create(
+                vehicleInsurer: vehicleInsurer, transportInsurer: transportInsurer).Value).Value;
+
+    [Fact]
     public void CreateValidator_InvalidFields_ReportsCodeAndName()
     {
         ValidationResult result = new CreateVehicleCatalogEntryCommandValidator().Validate(
