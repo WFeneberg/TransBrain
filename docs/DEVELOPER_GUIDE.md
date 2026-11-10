@@ -40,6 +40,7 @@ tests/
 deploy/                       nginx config for the SPA containers, Keycloak production image + realm
 infra/main.bicep              Azure deployment
 docker-compose.yml            Local/demo stack
+scripts/seed-testdata.py      Seeds a running dev stack with test data (section 4)
 docs/                         This guide, installation, Keycloak, operator guides, design specs and plans
 ```
 
@@ -164,6 +165,20 @@ dotnet run --project src/TransBrain.AppHost
 
 Postgres data persists in a Docker volume (pending migrations apply on start); Keycloak has no volume and
 re-imports the realm on every start. Test users: README, "Test users".
+
+Test data: with the AppHost running and an empty database, run
+
+```bash
+python3 scripts/seed-testdata.py   # --api / --keycloak to override http://localhost:5265 / https://localhost:8080
+```
+
+It signs in as `admin.user` and creates, through the API (so every validation applies), 5 drivers, 5 vehicles
+with special documents, 5 customers with delivery locations, 5 orders and 5 tours, plus the insurer and
+customer-class catalog entries they use. Dates are relative to today, so the "expires soon" / "expired"
+cases (licence, ADR document, UVV, inspection) stay meaningful. The driver Franz Huber is linked to
+`fahrer.user` by its Keycloak id, which changes on every Keycloak start — re-link it in the driver form
+after a restart. The script refuses to run when vehicles already exist; to reseed, delete the Postgres
+volume with the AppHost stopped (`docker volume ls | grep postgres`, then `docker volume rm <name>`).
 
 ## 5. Common tasks
 
