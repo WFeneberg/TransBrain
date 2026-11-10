@@ -18,7 +18,7 @@ public sealed class InMemoryVehicleCatalogRepository(InMemoryVehicleRepository? 
     public static InMemoryVehicleCatalogRepository WithStandardEntries(InMemoryVehicleRepository? vehicles = null)
     {
         InMemoryVehicleCatalogRepository catalog = new(vehicles);
-        catalog.Seed(VehicleCatalogKind.VehicleClass, "Refrigerated", "Kühlkoffer");
+        catalog.Seed(VehicleCatalogKind.VehicleClass, "Refrigerated", "Kühler");
         catalog.Seed(VehicleCatalogKind.VehicleClass, "Tank", "Tank");
         catalog.Seed(VehicleCatalogKind.VehicleClass, "Tarpaulin", "Plane");
         catalog.Seed(VehicleCatalogKind.CarrierGroup, "Nahverkehr", "Nahverkehr Süd");

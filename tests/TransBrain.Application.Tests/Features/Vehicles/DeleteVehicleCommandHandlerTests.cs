@@ -13,7 +13,7 @@ public class DeleteVehicleCommandHandlerTests
     {
         InMemoryVehicleRepository repository = new();
         Vehicle vehicle = Vehicle.Create(
-            LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31)).Value;
+            LicensePlate.Create("M-AB 1234").Value, VehicleType.SemiTrailer, 3_000, 4.0m, new DateOnly(2027, 3, 31)).Value;
         repository.Seed(vehicle);
         InMemoryCacheService cache = new();
         DeleteVehicleCommandHandler handler = new(repository, cache);

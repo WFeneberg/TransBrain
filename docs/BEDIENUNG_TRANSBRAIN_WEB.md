@@ -110,7 +110,8 @@ Startseite. Hier pflegen Sie die Stammdaten des Fuhrparks.
   - Alle Filter wirken sofort und lassen sich kombinieren. Passt kein Fahrzeug, erscheint
     „No vehicles found.“
 - **Spalten:** License plate, Vehicle type, Make / Model, Vehicle class, Payload (kg),
-  Default driver, Next inspection, Status. Die Spalte Vehicle class zeigt die Bezeichnung aus\n  den Fahrzeug-Stammdaten. Ein Klick auf eine Spaltenüberschrift sortiert
+  Default driver, Next inspection, Status. Die Spalte Vehicle class zeigt die Bezeichnung aus
+  den Fahrzeug-Stammdaten. Ein Klick auf eine Spaltenüberschrift sortiert
   auf- bzw. absteigend.
 - **Markierungen:**
   - Ein **Schloss** neben dem Kennzeichen bedeutet „Kennzeichen geheim“.
@@ -144,7 +145,7 @@ dürfen auch 0 sein, ebenso Anschaffungspreis und Kilometerstand bei Anschaffung
 |---|---|---|:---:|---|
 | General | License plate | Kennzeichen | ja | eindeutig, max. 15 Zeichen |
 | General | License plate confidential | Kennzeichen geheim | – | Häkchen; Schloss-Symbol in der Liste |
-| General | Vehicle type | Fahrzeugart | ja | Tractor (Zugmaschine), Rigid truck (Motorwagen), Van (Transporter) |
+| General | Vehicle type | Fahrzeugart | ja | Tractor (Zugmaschine), Semi-trailer (Hänger (Sattel)) |
 | General | Vehicle class | Aufbau / Fahrzeugklasse | – | Auswahl aus den aktiven Fahrzeugklassen der [Fahrzeug-Stammdaten](#fahrzeug-stammdaten) oder „–“ |
 | General | Make / Model | Marke / Typbezeichnung | – | je max. 100 Zeichen |
 | General | Carrier group | Frächtergruppe | – | Auswahl aus den aktiven Frächtergruppen der [Fahrzeug-Stammdaten](#fahrzeug-stammdaten) oder „–“ |
@@ -276,12 +277,13 @@ Alle angemeldeten Benutzer sehen die Listen, ändern dürfen sie nur Administrat
 
 ![Fahrzeug-Stammdaten](img/web/fahrzeug-stammdaten.png)
 
-- **Reiter:** **Vehicle classes** (Fahrzeugklassen, z. B. Plane, Kühlkoffer, Tank),
+- **Reiter:** **Vehicle classes** (Fahrzeugklassen, z. B. Plane, Kühler, Tank),
   **Carrier groups** (Frächtergruppen), **Insurance companies** (Versicherungsgesellschaften
   für Fahrzeug- und Transportversicherung) und **Document types** (Sonderpapier-Arten). Beim
-  ersten Start sind die bisherigen elf Fahrzeugklassen und sieben Sonderpapier-Arten (ADR,
-  ATP, CEMT, Tachograph, UVV, Kran, Ladebordwand) bereits angelegt; Frächtergruppen und
-  Versicherungen legen Sie selbst an.
+  ersten Start sind die Fahrzeugklassen des Altsystems (Sonstige, Tank, Kühler, Plane, Kipper,
+  Leihfahrzeug), seine Frächtergruppen (Sonstige, Huter Vils, Huter Füssen, Fixe Frächter,
+  Regelmäßig beschäftigte Frächter, Leihfahrzeuge) und sieben Sonderpapier-Arten (ADR, ATP,
+  CEMT, Tachograph, UVV, Kran, Ladebordwand) bereits angelegt; Versicherungen legen Sie selbst an.
 - **Spalten:** Code, Name (Bezeichnung), Status (**Active** grün / **Inactive** grau) und
   **Used by** – wie viele Fahrzeuge den Eintrag gerade verwenden (bei Versicherungen als Fahrzeug-
   oder Transportversicherung, bei Sonderpapier-Arten mit einem Sonderpapier dieser Art).
@@ -517,7 +519,7 @@ Erreichbar über „Add tour“ (`/tours/new`).
 | Feld       | Bedeutung                          | Pflicht |
 |------------|------------------------------------|:-------:|
 | Tour date  | Datum, an dem die Tour gefahren wird | ja     |
-| Vehicle    | Fahrzeug aus dem Fahrzeugstamm      | ja      |
+| Vehicle    | Zugmaschine aus dem Fahrzeugstamm (Hänger werden nicht angeboten) | ja      |
 | Driver     | Fahrer aus dem Fahrerstamm          | ja      |
 
 Nach dem Speichern landen Sie **direkt auf der Detailseite** der neuen Tour, nicht in der Liste —

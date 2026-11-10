@@ -47,7 +47,7 @@ internal sealed record TourFixture(
     public static Vehicle AVehicle(int payloadKg = 18_000, decimal loadMeters = 13.6m) =>
         Vehicle.Create(
             LicensePlate.Create("M-AB 1234").Value,
-            VehicleType.RigidTruck,
+            VehicleType.Tractor,
             payloadKg,
             loadMeters,
             new DateOnly(2028, 1, 1)).Value;

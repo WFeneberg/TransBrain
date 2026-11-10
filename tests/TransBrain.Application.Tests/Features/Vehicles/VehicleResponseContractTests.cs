@@ -15,7 +15,7 @@ public class VehicleResponseContractTests
     public void VehicleType_Members_MatchThePinnedContractStrings()
     {
         Enum.GetValues<VehicleType>().Select(t => t.ToString()).Should().BeEquivalentTo(
-            ["Tractor", "RigidTruck", "Van"]);
+            ["Tractor", "SemiTrailer"]);
     }
 
     [Fact]

@@ -71,7 +71,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         object vehicle = new
         {
             licensePlate = "M-DUP 1",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -90,7 +90,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
             .PostAsJsonAsync("/api/vehicles", new
             {
                 licensePlate = "M-BAD 1",
-                type = "Van",
+                type = "SemiTrailer",
                 payloadKg = 0,
                 loadMeters = 4.0m,
                 nextInspectionDue = "2027-03-31"
@@ -106,7 +106,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
             .PostAsJsonAsync("/api/vehicles", new
             {
                 licensePlate = "M-2F 1",
-                type = "Van",
+                type = "SemiTrailer",
                 payloadKg = 0,
                 loadMeters = 0m,
                 nextInspectionDue = "2027-03-31"
@@ -124,7 +124,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage created = await admin.PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-2F 2",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -134,7 +134,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage response = await admin.PutAsJsonAsync($"/api/vehicles/{vehicle!.Id}", new
         {
             licensePlate = "",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 0,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -160,7 +160,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage created = await admin.PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-GV 1",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -191,7 +191,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage created = await admin.PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-PV 1",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -221,7 +221,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
             .PutAsJsonAsync($"/api/vehicles/{Guid.CreateVersion7()}", new
             {
                 licensePlate = "M-PD 1",
-                type = "Van",
+                type = "SemiTrailer",
                 payloadKg = 3_000,
                 loadMeters = 4.0m,
                 nextInspectionDue = "2027-03-31"
@@ -237,7 +237,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage firstCreated = await admin.PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-PC 1",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -247,7 +247,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage secondCreated = await admin.PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-PC 2",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -257,7 +257,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage response = await admin.PutAsJsonAsync($"/api/vehicles/{first!.Id}", new
         {
             licensePlate = second!.LicensePlate,
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -275,7 +275,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage created = await admin.PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-UP 1",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -304,7 +304,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage created = await admin.PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-DV 1",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -460,7 +460,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage response = await admin.PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-EQ 3",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31",
@@ -472,7 +472,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage put = await admin.PutAsJsonAsync($"/api/vehicles/{created.Id}", new
         {
             licensePlate = "M-EQ 3",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31",
@@ -492,7 +492,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-EQ 2",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31",
@@ -510,7 +510,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-ND 1",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31",
@@ -526,7 +526,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = "M-IV 1",
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31",
@@ -549,7 +549,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         Dictionary<string, object> vehicle = new()
         {
             ["licensePlate"] = "M-UC 1",
-            ["type"] = "Van",
+            ["type"] = "SemiTrailer",
             ["payloadKg"] = 3_000,
             ["loadMeters"] = 4.0m,
             ["nextInspectionDue"] = "2027-03-31",
@@ -651,7 +651,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage response = await admin.PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = plate,
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31",
@@ -695,7 +695,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         object vehicle = new
         {
             licensePlate = plate,
-            type = "Van",
+            type = "SemiTrailer",
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31"
@@ -716,7 +716,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
 
             Vehicle existing = Vehicle.Create(
                 LicensePlate.Create(plate).Value,
-                VehicleType.Van,
+                VehicleType.SemiTrailer,
                 3_000,
                 4.0m,
                 new DateOnly(2027, 3, 31)).Value;

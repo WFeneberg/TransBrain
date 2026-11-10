@@ -20,21 +20,23 @@ internal sealed class VehicleCatalogEntryConfiguration : IEntityTypeConfiguratio
         builder.HasIndex(e => new { e.Kind, e.Code }).IsUnique();
 
         // The common special document types are seeded as a starting point and can be edited like any entry.
-        // The vehicle classes that used to be a fixed list; their codes are the former enum names, so
-        // vehicles saved before the catalog existed keep resolving.
+        // The vehicle classes are those of the legacy vehicle screen; their codes are the former enum
+        // names where one existed, so vehicles saved before the catalog existed keep resolving. The
+        // carrier groups are those of the legacy vehicle screen too.
         builder.HasData(
-            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000001", "Tarpaulin", "Plane"),
-            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000002", "Box", "Koffer"),
-            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000003", "Refrigerated", "Kühlkoffer"),
-            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000004", "Tank", "Tank"),
-            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000005", "Silo", "Silo"),
-            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000006", "Tipper", "Kipper"),
-            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000007", "Flatbed", "Pritsche"),
-            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000008", "Container", "Container"),
-            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000009", "CarTransporter", "Autotransporter"),
-            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-00000000000a", "LowLoader", "Tieflader"),
             Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-00000000000b", "Other", "Sonstige"),
-            Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000101", "ADR", "ADR-Zulassungsbescheinigung"),
+            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000004", "Tank", "Tank"),
+            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000003", "Refrigerated", "Kühler"),
+            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000001", "Tarpaulin", "Plane"),
+            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000006", "Tipper", "Kipper"),
+            Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-00000000000c", "Rental", "Leihfahrzeug"),
+                        Seed(VehicleCatalogKind.CarrierGroup, "0199a6c0-0000-7000-8000-000000000201", "Other", "Sonstige"),
+                        Seed(VehicleCatalogKind.CarrierGroup, "0199a6c0-0000-7000-8000-000000000202", "HuterVils", "Huter Vils"),
+                        Seed(VehicleCatalogKind.CarrierGroup, "0199a6c0-0000-7000-8000-000000000203", "HuterFuessen", "Huter Füssen"),
+                        Seed(VehicleCatalogKind.CarrierGroup, "0199a6c0-0000-7000-8000-000000000204", "Fixed", "Fixe Frächter"),
+                        Seed(VehicleCatalogKind.CarrierGroup, "0199a6c0-0000-7000-8000-000000000205", "Regular", "Regelmäßig beschäftigte Frächter"),
+                        Seed(VehicleCatalogKind.CarrierGroup, "0199a6c0-0000-7000-8000-000000000206", "Rental", "Leihfahrzeuge"),
+                        Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000101", "ADR", "ADR-Zulassungsbescheinigung"),
             Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000102", "ATP", "ATP-Bescheinigung"),
             Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000103", "CEMT", "CEMT-Genehmigung"),
             Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000104", "Tachograph", "Tachographenprüfung"),

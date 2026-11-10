@@ -29,7 +29,7 @@ public class VehicleTests
     [InlineData(-1)]
     public void Create_NonPositivePayload_ReturnsValidationError(int payloadKg)
     {
-        Result<Vehicle> result = Vehicle.Create(Plate, VehicleType.Van, payloadKg, 4.0m, Inspection);
+        Result<Vehicle> result = Vehicle.Create(Plate, VehicleType.SemiTrailer, payloadKg, 4.0m, Inspection);
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be("Vehicle.PayloadKgNotPositive");
@@ -39,7 +39,7 @@ public class VehicleTests
     [Fact]
     public void Create_NonPositiveLoadMeters_ReturnsValidationError()
     {
-        Result<Vehicle> result = Vehicle.Create(Plate, VehicleType.Van, 3_000, 0m, Inspection);
+        Result<Vehicle> result = Vehicle.Create(Plate, VehicleType.SemiTrailer, 3_000, 0m, Inspection);
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be("Vehicle.LoadMetersNotPositive");
@@ -48,8 +48,8 @@ public class VehicleTests
     [Fact]
     public void Create_TwoVehicles_AssignsDistinctIdentities()
     {
-        Vehicle first = Vehicle.Create(Plate, VehicleType.Van, 3_000, 4.0m, Inspection).Value;
-        Vehicle second = Vehicle.Create(Plate, VehicleType.Van, 3_000, 4.0m, Inspection).Value;
+        Vehicle first = Vehicle.Create(Plate, VehicleType.SemiTrailer, 3_000, 4.0m, Inspection).Value;
+        Vehicle second = Vehicle.Create(Plate, VehicleType.SemiTrailer, 3_000, 4.0m, Inspection).Value;
 
         first.Id.Should().NotBe(second.Id);
     }
@@ -57,7 +57,7 @@ public class VehicleTests
     [Fact]
     public void Update_ValidArguments_ReplacesFields()
     {
-        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.Van, 3_000, 4.0m, Inspection).Value;
+        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.SemiTrailer, 3_000, 4.0m, Inspection).Value;
         LicensePlate newPlate = LicensePlate.Create("M-ZZ 9999").Value;
 
         Result<Vehicle> result = vehicle.Update(
@@ -72,9 +72,9 @@ public class VehicleTests
     [Fact]
     public void Update_NonPositivePayload_LeavesVehicleUnchanged()
     {
-        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.Van, 3_000, 4.0m, Inspection).Value;
+        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.SemiTrailer, 3_000, 4.0m, Inspection).Value;
 
-        Result<Vehicle> result = vehicle.Update(Plate, VehicleType.Van, 0, 4.0m, Inspection, VehicleDetails.Empty, null);
+        Result<Vehicle> result = vehicle.Update(Plate, VehicleType.SemiTrailer, 0, 4.0m, Inspection, VehicleDetails.Empty, null);
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be("Vehicle.PayloadKgNotPositive");
@@ -84,7 +84,7 @@ public class VehicleTests
     [Fact]
     public void SendToWorkshop_AvailableVehicle_ChangesStatus()
     {
-        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.Van, 3_000, 4.0m, Inspection).Value;
+        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.SemiTrailer, 3_000, 4.0m, Inspection).Value;
 
         vehicle.SendToWorkshop();
 
@@ -94,7 +94,7 @@ public class VehicleTests
     [Fact]
     public void ReturnToService_DecommissionedVehicle_StaysDecommissioned()
     {
-        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.Van, 3_000, 4.0m, Inspection).Value;
+        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.SemiTrailer, 3_000, 4.0m, Inspection).Value;
         vehicle.Decommission();
 
         vehicle.ReturnToService();
@@ -105,7 +105,7 @@ public class VehicleTests
     [Fact]
     public void Create_WithoutDetails_UsesEmptyDetailsAndNoDriver()
     {
-        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.Van, 3_000, 4.0m, Inspection).Value;
+        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.SemiTrailer, 3_000, 4.0m, Inspection).Value;
 
         vehicle.Details.Should().Be(VehicleDetails.Empty);
         vehicle.DefaultDriverId.Should().BeNull();
@@ -116,9 +116,9 @@ public class VehicleTests
     public void Update_NonPositivePayload_KeepsPreviousDetails()
     {
         VehicleDetails original = VehicleDetails.Create(make: "MAN").Value;
-        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.Van, 3_000, 4.0m, Inspection, original).Value;
+        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.SemiTrailer, 3_000, 4.0m, Inspection, original).Value;
 
-        vehicle.Update(Plate, VehicleType.Van, 0, 4.0m, Inspection, VehicleDetails.Create(make: "DAF").Value, Guid.NewGuid());
+        vehicle.Update(Plate, VehicleType.SemiTrailer, 0, 4.0m, Inspection, VehicleDetails.Create(make: "DAF").Value, Guid.NewGuid());
 
         vehicle.Details.Should().Be(original);
         vehicle.DefaultDriverId.Should().BeNull();
@@ -189,7 +189,7 @@ public class VehicleTests
 
     private static Vehicle VehicleIn(VehicleStatus status)
     {
-        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.Van, 3_000, 4.0m, Inspection).Value;
+        Vehicle vehicle = Vehicle.Create(Plate, VehicleType.SemiTrailer, 3_000, 4.0m, Inspection).Value;
         if (status == VehicleStatus.InWorkshop)
         {
             vehicle.SendToWorkshop();

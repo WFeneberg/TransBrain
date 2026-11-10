@@ -11,7 +11,7 @@ namespace TransBrain.Application.Tests.Features.Vehicles;
 public class UpdateVehicleCommandHandlerTests
 {
     private static Vehicle ExistingVehicle(string plate = "M-AB 1234") =>
-        Vehicle.Create(LicensePlate.Create(plate).Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31)).Value;
+        Vehicle.Create(LicensePlate.Create(plate).Value, VehicleType.SemiTrailer, 3_000, 4.0m, new DateOnly(2027, 3, 31)).Value;
 
     private static UpdateVehicleCommandHandler CreateHandler(
         InMemoryVehicleRepository repository,
@@ -34,14 +34,14 @@ public class UpdateVehicleCommandHandlerTests
         catalog.Seed(VehicleCatalogKind.VehicleClass, "Silo", "Silo", isActive: false);
         catalog.Seed(VehicleCatalogKind.CarrierGroup, "Alt", "Alte Gruppe", isActive: false);
         Vehicle vehicle = Vehicle.Create(
-            LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            LicensePlate.Create("M-AB 1234").Value, VehicleType.SemiTrailer, 3_000, 4.0m, new DateOnly(2027, 3, 31),
             VehicleDetails.Create(vehicleClass: "Silo", carrierGroup: "Alt").Value).Value;
         repository.Seed(vehicle);
         UpdateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService(), catalog: catalog);
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(
-                vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+                vehicle.Id, "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31),
                 VehicleClass: "silo", CarrierGroup: "Alt", Make: "MAN"),
             CancellationToken.None);
 
@@ -62,7 +62,7 @@ public class UpdateVehicleCommandHandlerTests
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(
-                vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31), VehicleClass: "Silo"),
+                vehicle.Id, "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31), VehicleClass: "Silo"),
             CancellationToken.None);
 
         result.Error!.Failures.Should().ContainKey("VehicleClass");
@@ -83,7 +83,7 @@ public class UpdateVehicleCommandHandlerTests
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(
-                vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+                vehicle.Id, "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31),
                 Make: "Mercedes-Benz", VehicleClass: "Tank", DefaultDriverId: driver.Id, Notes: "Neu"),
             CancellationToken.None);
 
@@ -101,13 +101,13 @@ public class UpdateVehicleCommandHandlerTests
     {
         InMemoryVehicleRepository repository = new();
         Vehicle vehicle = Vehicle.Create(
-            LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            LicensePlate.Create("M-AB 1234").Value, VehicleType.SemiTrailer, 3_000, 4.0m, new DateOnly(2027, 3, 31),
             VehicleDetails.Create(make: "MAN").Value).Value;
         repository.Seed(vehicle);
         UpdateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService());
 
         Result<VehicleResponse> result = await handler.Handle(
-            new UpdateVehicleCommand(vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31)),
+            new UpdateVehicleCommand(vehicle.Id, "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31)),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -119,14 +119,14 @@ public class UpdateVehicleCommandHandlerTests
     {
         InMemoryVehicleRepository repository = new();
         Vehicle vehicle = Vehicle.Create(
-            LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            LicensePlate.Create("M-AB 1234").Value, VehicleType.SemiTrailer, 3_000, 4.0m, new DateOnly(2027, 3, 31),
             equipment: VehicleEquipment.Create(hasLiftAxle: true, palletCount: 4).Value).Value;
         repository.Seed(vehicle);
         UpdateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService());
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(
-                vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+                vehicle.Id, "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31),
                 Equipment: new VehicleEquipmentData(HasSmallLadder: true, MarbleRackMaterial: "steel")),
             CancellationToken.None);
 
@@ -142,13 +142,13 @@ public class UpdateVehicleCommandHandlerTests
     {
         InMemoryVehicleRepository repository = new();
         Vehicle vehicle = Vehicle.Create(
-            LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            LicensePlate.Create("M-AB 1234").Value, VehicleType.SemiTrailer, 3_000, 4.0m, new DateOnly(2027, 3, 31),
             equipment: VehicleEquipment.Create(hasLiftAxle: true).Value).Value;
         repository.Seed(vehicle);
         UpdateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService());
 
         Result<VehicleResponse> result = await handler.Handle(
-            new UpdateVehicleCommand(vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31)),
+            new UpdateVehicleCommand(vehicle.Id, "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31)),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -166,7 +166,7 @@ public class UpdateVehicleCommandHandlerTests
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(
-                vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+                vehicle.Id, "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31),
                 Equipment: new VehicleEquipmentData(HasLiftAxle: true, MarbleRackMaterial: "Wood")),
             CancellationToken.None);
 
@@ -185,7 +185,7 @@ public class UpdateVehicleCommandHandlerTests
 
         Result<VehicleResponse> result = await handler.Handle(
             new UpdateVehicleCommand(
-                vehicle.Id, "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+                vehicle.Id, "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31),
                 DefaultDriverId: Guid.CreateVersion7()),
             CancellationToken.None);
 
@@ -239,7 +239,7 @@ public class UpdateVehicleCommandHandlerTests
         UpdateVehicleCommandHandler handler = CreateHandler(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
-            new UpdateVehicleCommand(vehicle.Id, "M-AB 1234", "Van", 0, 4.0m, new DateOnly(2027, 3, 31)),
+            new UpdateVehicleCommand(vehicle.Id, "M-AB 1234", "SemiTrailer", 0, 4.0m, new DateOnly(2027, 3, 31)),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
@@ -259,7 +259,7 @@ public class UpdateVehicleCommandHandlerTests
         UpdateVehicleCommandHandler handler = CreateHandler(repository, cache);
 
         Result<VehicleResponse> result = await handler.Handle(
-            new UpdateVehicleCommand(first.Id, "M-CD 5678", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31)),
+            new UpdateVehicleCommand(first.Id, "M-CD 5678", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31)),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();

@@ -245,7 +245,7 @@ The timeline follows Regulation (EC) No 561/2006: a 45-minute break after 4 h 30
 driving, 9 h daily driving (10 h is flagged as an extension, allowed twice a week), and the 11 h
 daily rest that follows. Countries outside the EU, EEA, Switzerland and Great Britain are reported
 as not modelled, not planned as if EU rules applied. Two national rules are modelled: the Sunday
-truck driving ban in Germany and Austria, for vehicles that are not vans. Holidays and weekly
+truck driving ban in Germany and Austria, which applies to every tour because a tour is always driven by a tractor unit. Holidays and weekly
 driving and rest limits are not modelled because a single tour cannot see them. The values in
 `DrivingRules` need checking against current law before anyone relies on them for compliance.
 

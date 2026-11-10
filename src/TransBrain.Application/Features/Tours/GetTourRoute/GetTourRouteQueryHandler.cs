@@ -5,7 +5,6 @@ using TransBrain.Domain.Common;
 using TransBrain.Domain.Orders;
 using TransBrain.Domain.Routing;
 using TransBrain.Domain.Tours;
-using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Features.Tours.GetTourRoute;
 
@@ -74,7 +73,7 @@ internal sealed class GetTourRouteQueryHandler(
         DrivingSchedule schedule = DrivingTimePlanner.Plan(
             departure,
             legs,
-            appliesNationalTruckBans: tour.Vehicle.Type != VehicleType.Van);
+            appliesNationalTruckBans: true);
 
         RouteStopResponse[] stopResponses = stops.Value
             .Select(stop => new RouteStopResponse(

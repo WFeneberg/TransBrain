@@ -15,14 +15,31 @@ public class VehicleCatalogEndpointsTests(TransBrainApiFactory factory) : IClass
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         VehicleCatalogEntryResponse[] entries = (await response.Content.ReadFromJsonAsync<VehicleCatalogEntryResponse[]>())!;
-        entries.Select(e => e.Code).Should().Contain(
-        [
-            "Tarpaulin", "Box", "Refrigerated", "Tank", "Silo", "Tipper", "Flatbed", "Container",
-            "CarTransporter", "LowLoader", "Other",
-        ]);
-        entries.Single(e => e.Code == "Refrigerated").Name.Should().Be("Kühlkoffer");
+        entries.Select(e => e.Code).Should().Contain(["Other", "Tank", "Refrigerated", "Tarpaulin", "Tipper", "Rental"]);
+        entries.Select(e => e.Code).Should().NotContain(["Box", "Silo", "Flatbed", "Container", "CarTransporter", "LowLoader"]);
+        entries.Single(e => e.Code == "Refrigerated").Name.Should().Be("Kühler");
+        entries.Single(e => e.Code == "Rental").Name.Should().Be("Leihfahrzeug");
         entries.Select(e => e.Name).Should().BeInAscendingOrder(StringComparer.Ordinal);
         entries.Should().AllSatisfy(e => e.Kind.Should().Be("VehicleClass"));
+    }
+
+    [Fact]
+    public async Task GetCarrierGroups_FreshDatabase_ReturnsTheSeededLegacyGroups()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("viewer").GetAsync("/api/vehicle-catalog/CarrierGroup");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        VehicleCatalogEntryResponse[] entries = (await response.Content.ReadFromJsonAsync<VehicleCatalogEntryResponse[]>())!;
+        entries.Select(e => (e.Code, e.Name)).Should().Contain(
+        [
+            ("Other", "Sonstige"),
+            ("HuterVils", "Huter Vils"),
+            ("HuterFuessen", "Huter Füssen"),
+            ("Fixed", "Fixe Frächter"),
+            ("Regular", "Regelmäßig beschäftigte Frächter"),
+            ("Rental", "Leihfahrzeuge")
+        ]);
+        entries.Should().AllSatisfy(e => e.Kind.Should().Be("CarrierGroup"));
     }
 
     [Fact]

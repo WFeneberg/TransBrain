@@ -31,7 +31,7 @@ public class VehicleCatalogHandlerTests
         Result<IReadOnlyList<VehicleCatalogEntryResponse>> result = await new ListVehicleCatalogQueryHandler(catalog)
             .Handle(new ListVehicleCatalogQuery(VehicleCatalogKind.VehicleClass), CancellationToken.None);
 
-        result.Value.Select(e => e.Name).Should().Equal("Kühlkoffer", "Plane", "Tank");
+        result.Value.Select(e => e.Name).Should().Equal("Kühler", "Plane", "Tank");
         result.Value.Select(e => e.UsageCount).Should().Equal(1, 0, 2);
         result.Value.Should().AllSatisfy(e => e.Kind.Should().Be("VehicleClass"));
     }

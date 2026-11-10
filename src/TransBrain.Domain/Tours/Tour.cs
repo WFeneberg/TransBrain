@@ -49,6 +49,13 @@ public sealed class Tour
 
     public static Result<Tour> Create(DateOnly tourDate, Vehicle vehicle, Driver driver)
     {
+        if (vehicle.Type == VehicleType.SemiTrailer)
+        {
+            return Error.Conflict(
+                "Tour.VehicleNotMotorized",
+                $"Vehicle '{vehicle.LicensePlate.Value}' is a semi-trailer and cannot drive a tour on its own.");
+        }
+
         if (vehicle.Status != VehicleStatus.Available)
         {
             return Error.Conflict(

@@ -10,7 +10,7 @@ namespace TransBrain.Application.Tests.Features.Vehicles;
 public class ChangeVehicleStatusCommandHandlerTests
 {
     private static Vehicle ExistingVehicle() =>
-        Vehicle.Create(LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31)).Value;
+        Vehicle.Create(LicensePlate.Create("M-AB 1234").Value, VehicleType.SemiTrailer, 3_000, 4.0m, new DateOnly(2027, 3, 31)).Value;
 
     private static ChangeVehicleStatusCommandHandler CreateHandler(
         InMemoryVehicleRepository repository, InMemoryCacheService cache) =>

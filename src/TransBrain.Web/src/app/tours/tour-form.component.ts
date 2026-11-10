@@ -93,7 +93,7 @@ export class TourFormComponent {
 
     constructor() {
         this.session.ready.pipe(switchMap(() => this.vehicleService.list(PICKER_PAGE_SIZE))).subscribe({
-            next: (page) => this.vehicles.set(page.items),
+            next: (page) => this.vehicles.set(page.items.filter((vehicle) => vehicle.type === 'Tractor')),
             error: (error: HttpErrorResponse) =>
                 this.formError.set(this.describeFailure(error, this.i18n.t('vehicles.error.list'))),
         });

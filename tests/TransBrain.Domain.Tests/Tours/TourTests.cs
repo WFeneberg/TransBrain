@@ -14,11 +14,12 @@ public class TourTests
     private static Vehicle AVehicle(
         int payloadKg = 18_000,
         decimal loadMeters = 13.6m,
-        bool inWorkshop = false)
+        bool inWorkshop = false,
+        VehicleType type = VehicleType.Tractor)
     {
         Vehicle vehicle = Vehicle.Create(
             LicensePlate.Create("M-AB 1234").Value,
-            VehicleType.RigidTruck,
+            type,
             payloadKg,
             loadMeters,
             new DateOnly(2028, 1, 1)).Value;
@@ -87,6 +88,16 @@ public class TourTests
         result.IsSuccess.Should().BeFalse();
         result.Error!.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("Tour.VehicleNotAvailable");
+    }
+
+    [Fact]
+    public void Create_SemiTrailer_ReturnsConflict()
+    {
+        Result<Tour> result = Tour.Create(TourDate, AVehicle(type: VehicleType.SemiTrailer), ADriver());
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Tour.VehicleNotMotorized");
     }
 
     [Fact]

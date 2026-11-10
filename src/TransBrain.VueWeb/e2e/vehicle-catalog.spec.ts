@@ -156,7 +156,7 @@ test('viewerUser_onTheCatalog_seesNoWriteActions', async ({ page }) => {
 
     await expect(page.getByTestId('vehicle-catalog-tab-VehicleClass')).toBeVisible();
     await expect(page.getByTestId('vehicle-catalog-tab-CarrierGroup')).toBeVisible();
-    await expect(page.getByTestId('catalog-row').filter({ hasText: 'Kühlkoffer' })).toBeVisible();
+    await expect(page.getByTestId('catalog-row').filter({ hasText: 'Kühler' })).toBeVisible();
     await expect(page.getByTestId('catalog-add')).toHaveCount(0);
     await expect(page.getByTestId('catalog-edit')).toHaveCount(0);
     await expect(page.getByTestId('catalog-delete')).toHaveCount(0);
