@@ -14,7 +14,7 @@ public sealed class InMemoryVehicleCatalogRepository(InMemoryVehicleRepository? 
 
     public int SaveChangesCallCount { get; private set; }
 
-    /// <summary>A catalog with a few active vehicle classes and carrier groups, as most vehicle tests need.</summary>
+    /// <summary>A catalog with a few active entries of every kind, as most vehicle tests need.</summary>
     public static InMemoryVehicleCatalogRepository WithStandardEntries(InMemoryVehicleRepository? vehicles = null)
     {
         InMemoryVehicleCatalogRepository catalog = new(vehicles);
@@ -23,6 +23,10 @@ public sealed class InMemoryVehicleCatalogRepository(InMemoryVehicleRepository? 
         catalog.Seed(VehicleCatalogKind.VehicleClass, "Tarpaulin", "Plane");
         catalog.Seed(VehicleCatalogKind.CarrierGroup, "Nahverkehr", "Nahverkehr Süd");
         catalog.Seed(VehicleCatalogKind.CarrierGroup, "Fernverkehr", "Fernverkehr");
+        catalog.Seed(VehicleCatalogKind.InsuranceCompany, "ALLIANZ", "Allianz");
+        catalog.Seed(VehicleCatalogKind.InsuranceCompany, "UNIQA", "UNIQA");
+        catalog.Seed(VehicleCatalogKind.DocumentType, "ADR", "ADR-Zulassungsbescheinigung");
+        catalog.Seed(VehicleCatalogKind.DocumentType, "Tachograph", "Tachographenprüfung");
         return catalog;
     }
 
@@ -53,8 +57,16 @@ public sealed class InMemoryVehicleCatalogRepository(InMemoryVehicleRepository? 
     public Task<IReadOnlyDictionary<string, int>> CountUsageAsync(
         VehicleCatalogKind kind, CancellationToken cancellationToken)
     {
-        IEnumerable<string?> codes = (vehicles?.Vehicles ?? []).Select(v =>
-            kind == VehicleCatalogKind.VehicleClass ? v.Details.VehicleClass : v.Details.CarrierGroup);
+        IReadOnlyList<Vehicle> all = vehicles?.Vehicles ?? [];
+        IEnumerable<string?> codes = kind switch
+        {
+            VehicleCatalogKind.VehicleClass => all.Select(v => v.Details.VehicleClass),
+            VehicleCatalogKind.CarrierGroup => all.Select(v => v.Details.CarrierGroup),
+            VehicleCatalogKind.InsuranceCompany => all.SelectMany(v =>
+                new[] { v.Commercial.VehicleInsurer, v.Commercial.TransportInsurer }.Distinct()),
+            VehicleCatalogKind.DocumentType => (vehicles?.Documents ?? []).Select(d => d.DocumentType),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+        };
 
         IReadOnlyDictionary<string, int> usage = codes
             .OfType<string>()

@@ -7,5 +7,11 @@ public enum VehicleCatalogKind
     VehicleClass,
 
     /// <summary>Subcontractor group ("Frächtergruppe") the vehicle is run under.</summary>
-    CarrierGroup
+    CarrierGroup,
+
+    /// <summary>Insurance company ("Versicherungsgesellschaft") insuring the vehicle or its loads.</summary>
+    InsuranceCompany,
+
+    /// <summary>Kind of special document or periodic inspection ("Sonderpapier"), for example the ADR certificate.</summary>
+    DocumentType
 }

@@ -32,6 +32,10 @@ public sealed record VehicleResponse(
 {
     public VehicleEquipmentData Equipment { get; init; } = new();
 
+    public VehicleCommercialData Commercial { get; init; } = new();
+
+    public string? DataSheet { get; init; }
+
     public static VehicleResponse From(Vehicle vehicle)
     {
         VehicleDetails details = vehicle.Details;
@@ -65,6 +69,8 @@ public sealed record VehicleResponse(
             vehicle.ModifiedBy)
         {
             Equipment = VehicleEquipmentData.From(vehicle.Equipment),
+            Commercial = VehicleCommercialData.From(vehicle.Commercial),
+            DataSheet = details.DataSheet,
         };
     }
 }

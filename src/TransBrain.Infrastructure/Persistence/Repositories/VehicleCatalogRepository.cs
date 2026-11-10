@@ -32,18 +32,41 @@ internal sealed class VehicleCatalogRepository(TransBrainDbContext context) : IV
             .FirstOrDefaultAsync(e => e.Kind == kind && e.Code.ToUpper() == normalized, cancellationToken);
     }
 
-    public async Task<IReadOnlyDictionary<string, int>> CountUsageAsync(
-        VehicleCatalogKind kind, CancellationToken cancellationToken)
+    public Task<IReadOnlyDictionary<string, int>> CountUsageAsync(
+        VehicleCatalogKind kind, CancellationToken cancellationToken) => kind switch
     {
-        IQueryable<string?> codes = kind == VehicleCatalogKind.VehicleClass
-            ? context.Vehicles.Select(v => v.Details.VehicleClass)
-            : context.Vehicles.Select(v => v.Details.CarrierGroup);
+        VehicleCatalogKind.VehicleClass =>
+            CountCodesAsync(context.Vehicles.Select(v => v.Details.VehicleClass), cancellationToken),
+        VehicleCatalogKind.CarrierGroup =>
+            CountCodesAsync(context.Vehicles.Select(v => v.Details.CarrierGroup), cancellationToken),
+        // A vehicle holds each document type at most once, so counting documents counts vehicles.
+        VehicleCatalogKind.DocumentType =>
+            CountCodesAsync(context.VehicleDocuments.Select(d => (string?)d.DocumentType), cancellationToken),
+        VehicleCatalogKind.InsuranceCompany => CountInsurerUsageAsync(cancellationToken),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+    };
 
-        return await codes
+    private static async Task<IReadOnlyDictionary<string, int>> CountCodesAsync(
+        IQueryable<string?> codes, CancellationToken cancellationToken)
+        => await codes
             .Where(code => code != null)
             .GroupBy(code => code!)
             .Select(group => new { Code = group.Key, Count = group.Count() })
             .ToDictionaryAsync(g => g.Code, g => g.Count, cancellationToken);
+
+    // A vehicle insured for both vehicle and transport by the same company counts once.
+    private async Task<IReadOnlyDictionary<string, int>> CountInsurerUsageAsync(CancellationToken cancellationToken)
+    {
+        var insurers = await context.Vehicles
+            .Where(v => v.Commercial.VehicleInsurer != null || v.Commercial.TransportInsurer != null)
+            .Select(v => new { v.Commercial.VehicleInsurer, v.Commercial.TransportInsurer })
+            .ToListAsync(cancellationToken);
+
+        return insurers
+            .SelectMany(i => new[] { i.VehicleInsurer, i.TransportInsurer }.Distinct())
+            .OfType<string>()
+            .GroupBy(code => code, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
     }
 
     public async Task<Result<VehicleCatalogEntry>> AddAsync(

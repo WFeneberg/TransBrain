@@ -11,6 +11,7 @@ public sealed class Vehicle
         LicensePlate = null!;
         Details = VehicleDetails.Empty;
         Equipment = VehicleEquipment.Empty;
+        Commercial = VehicleCommercialInfo.Empty;
     }
 
     private Vehicle(
@@ -23,6 +24,7 @@ public sealed class Vehicle
         VehicleStatus status,
         VehicleDetails details,
         VehicleEquipment equipment,
+        VehicleCommercialInfo commercial,
         Guid? defaultDriverId)
     {
         Id = id;
@@ -34,6 +36,7 @@ public sealed class Vehicle
         Status = status;
         Details = details;
         Equipment = equipment;
+        Commercial = commercial;
         DefaultDriverId = defaultDriverId;
     }
 
@@ -55,6 +58,8 @@ public sealed class Vehicle
 
     public VehicleEquipment Equipment { get; private set; }
 
+    public VehicleCommercialInfo Commercial { get; private set; }
+
     /// <summary>The driver who usually drives this vehicle ("Stammfahrer").</summary>
     public Guid? DefaultDriverId { get; private set; }
 
@@ -71,7 +76,8 @@ public sealed class Vehicle
         DateOnly nextInspectionDue,
         VehicleDetails? details = null,
         Guid? defaultDriverId = null,
-        VehicleEquipment? equipment = null)
+        VehicleEquipment? equipment = null,
+        VehicleCommercialInfo? commercial = null)
     {
         Result<Unit> validation = Validate(payloadKg, loadMeters);
         if (!validation.IsSuccess)
@@ -89,10 +95,12 @@ public sealed class Vehicle
             VehicleStatus.Available,
             details ?? VehicleDetails.Empty,
             equipment ?? VehicleEquipment.Empty,
+            commercial ?? VehicleCommercialInfo.Empty,
             defaultDriverId);
     }
 
     /// <param name="equipment">Replaces the whole equipment; null clears it like <see cref="VehicleEquipment.Empty"/>.</param>
+    /// <param name="commercial">Replaces the whole commercial data; null clears it.</param>
     public Result<Vehicle> Update(
         LicensePlate licensePlate,
         VehicleType type,
@@ -101,7 +109,8 @@ public sealed class Vehicle
         DateOnly nextInspectionDue,
         VehicleDetails details,
         Guid? defaultDriverId,
-        VehicleEquipment? equipment = null)
+        VehicleEquipment? equipment = null,
+        VehicleCommercialInfo? commercial = null)
     {
         Result<Unit> validation = Validate(payloadKg, loadMeters);
         if (!validation.IsSuccess)
@@ -116,6 +125,7 @@ public sealed class Vehicle
         NextInspectionDue = nextInspectionDue;
         Details = details;
         Equipment = equipment ?? VehicleEquipment.Empty;
+        Commercial = commercial ?? VehicleCommercialInfo.Empty;
         DefaultDriverId = defaultDriverId;
 
         return this;

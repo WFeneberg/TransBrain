@@ -97,4 +97,56 @@ public class VehicleWriteValidatorTests
         new CreateVehicleCommandValidator().Validate(ValidCommand with { VehicleClass = "Spaceship" })
             .IsValid.Should().BeTrue();
     }
+
+    [Fact]
+    public void Validate_FullValidCommercialDataAndDataSheet_IsValid()
+    {
+        new CreateVehicleCommandValidator().Validate(ValidCommand with
+        {
+            Commercial = new VehicleCommercialData(
+                PurchasePrice: 125_000.50m, PurchasedOn: new DateOnly(2023, 3, 15), PurchaseOdometerKm: 0,
+                FirstRegisteredOn: new DateOnly(2022, 11, 30), UsefulLifeYears: 8, UsefulLifeKm: 900_000,
+                CostCenter: "KST-4711", VehicleInsurer: "ALLIANZ", VehicleInsurancePolicyNumbers: "POL-1\nPOL-2"),
+            DataSheet = new string('d', VehicleDetails.MaxDataSheetLength),
+        }).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_InvalidCommercialData_ReportsEachFieldWithItsDottedPath()
+    {
+        ValidationResult result = new UpdateVehicleCommandValidator().Validate(new UpdateVehicleCommand(
+            Guid.CreateVersion7(), "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            DataSheet: new string('d', VehicleDetails.MaxDataSheetLength + 1),
+            Commercial: new VehicleCommercialData(
+                PurchasePrice: 100.001m,
+                PurchasedOn: new DateOnly(1899, 1, 1),
+                PurchaseOdometerKm: -1,
+                FirstRegisteredOn: new DateOnly(1899, 1, 1),
+                UsefulLifeYears: 0,
+                UsefulLifeKm: VehicleCommercialInfo.MaxOdometerKm + 1,
+                CostCenter: new string('K', VehicleCommercialInfo.MaxCostCenterLength + 1),
+                VehicleInsurer: new string('I', VehicleCatalogEntry.MaxCodeLength + 1),
+                VehicleInsurancePolicyNumbers: new string('P', VehicleCommercialInfo.MaxPolicyNumbersLength + 1),
+                TransportInsurer: new string('I', VehicleCatalogEntry.MaxCodeLength + 1),
+                TransportInsurancePolicyNumbers: new string('P', VehicleCommercialInfo.MaxPolicyNumbersLength + 1))));
+
+        result.Errors.Select(e => e.PropertyName).Should().BeEquivalentTo(
+        [
+            "DataSheet", "Commercial.PurchasePrice", "Commercial.PurchasedOn", "Commercial.PurchaseOdometerKm",
+            "Commercial.FirstRegisteredOn", "Commercial.UsefulLifeYears", "Commercial.UsefulLifeKm",
+            "Commercial.CostCenter", "Commercial.VehicleInsurer", "Commercial.VehicleInsurancePolicyNumbers",
+            "Commercial.TransportInsurer", "Commercial.TransportInsurancePolicyNumbers",
+        ]);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(10_000_001)]
+    public void Validate_PurchasePriceOutOfRange_ReportsPurchasePrice(int price)
+    {
+        new CreateVehicleCommandValidator().Validate(ValidCommand with
+        {
+            Commercial = new VehicleCommercialData(PurchasePrice: price),
+        }).Errors.Should().ContainSingle().Which.PropertyName.Should().Be("Commercial.PurchasePrice");
+    }
 }

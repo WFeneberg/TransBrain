@@ -52,4 +52,10 @@ public interface IVehicleWriteCommand
 
     /// <summary>Null means no equipment at all; an update replaces the whole equipment.</summary>
     VehicleEquipmentData? Equipment { get; }
+
+    /// <summary>Free-form data sheet, stored verbatim.</summary>
+    string? DataSheet { get; }
+
+    /// <summary>Null means no commercial data at all; an update replaces the whole object.</summary>
+    VehicleCommercialData? Commercial { get; }
 }

@@ -31,4 +31,11 @@ public class VehicleResponseContractTests
         Enum.GetValues<MarbleRackMaterial>().Select(m => m.ToString()).Should().BeEquivalentTo(
             ["Steel", "Aluminium"]);
     }
+
+    [Fact]
+    public void VehicleCatalogKind_Members_MatchThePinnedRouteStrings()
+    {
+        Enum.GetValues<VehicleCatalogKind>().Select(k => k.ToString()).Should().BeEquivalentTo(
+            ["VehicleClass", "CarrierGroup", "InsuranceCompany", "DocumentType"]);
+    }
 }

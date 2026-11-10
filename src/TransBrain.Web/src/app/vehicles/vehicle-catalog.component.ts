@@ -40,6 +40,8 @@ const BASE_COLUMNS = ['code', 'name', 'status', 'usage'];
 const KIND_ICONS: Record<VehicleCatalogKind, string> = {
     VehicleClass: 'category',
     CarrierGroup: 'groups',
+    InsuranceCompany: 'shield',
+    DocumentType: 'description',
 };
 
 function toKind(value: string | null): VehicleCatalogKind {

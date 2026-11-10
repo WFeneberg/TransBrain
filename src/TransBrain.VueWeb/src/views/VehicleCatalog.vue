@@ -25,6 +25,13 @@ const CODE_MAX_LENGTH = 20;
 const NAME_MAX_LENGTH = 100;
 const CODE_PATTERN = /^[A-Za-z0-9_-]+$/;
 
+const KIND_ICONS: Record<VehicleCatalogKind, string> = {
+    VehicleClass: 'mdi-truck-outline',
+    CarrierGroup: 'mdi-account-group-outline',
+    InsuranceCompany: 'mdi-shield-car',
+    DocumentType: 'mdi-file-certificate-outline',
+};
+
 const auth = useAuthStore();
 const { t } = useI18n();
 const route = useRoute();
@@ -247,12 +254,12 @@ function describe(error: unknown, fallback: string): string {
 
         <v-card border flat class="table-card">
             <div class="card-toolbar">
-                <v-tabs v-model="kind" color="primary" density="comfortable">
+                <v-tabs v-model="kind" color="primary" density="comfortable" show-arrows>
                     <v-tab
                         v-for="tabKind in VEHICLE_CATALOG_KINDS"
                         :key="tabKind"
                         :value="tabKind"
-                        :prepend-icon="tabKind === 'VehicleClass' ? 'mdi-truck-outline' : 'mdi-account-group-outline'"
+                        :prepend-icon="KIND_ICONS[tabKind]"
                         :data-testid="`vehicle-catalog-tab-${tabKind}`"
                         >{{ t(`vehicleCatalog.kind.${tabKind}`) }}</v-tab
                     >

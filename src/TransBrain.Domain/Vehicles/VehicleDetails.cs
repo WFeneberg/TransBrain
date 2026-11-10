@@ -11,6 +11,7 @@ public sealed record VehicleDetails
     public const int MaxNameLength = 100;
     public const int MaxIdentifierLength = 30;
     public const int MaxNotesLength = 2000;
+    public const int MaxDataSheetLength = 10_000;
     public const int MaxPowerKw = 2_000;
     public const int MaxLengthMm = 30_000;
     public const int MaxWidthMm = 5_000;
@@ -67,6 +68,9 @@ public sealed record VehicleDetails
 
     public string? Notes { get; private init; }
 
+    /// <summary>Free-form technical data sheet ("Datenblatt"), kept verbatim including line breaks and indentation.</summary>
+    public string? DataSheet { get; private init; }
+
     public static Result<VehicleDetails> Create(
         bool isLicensePlateConfidential = false,
         string? make = null,
@@ -83,7 +87,8 @@ public sealed record VehicleDetails
         int? curbWeightKg = null,
         int? grossWeightKg = null,
         int? maxFifthWheelLoadKg = null,
-        string? notes = null)
+        string? notes = null,
+        string? dataSheet = null)
     {
         VehicleDetails details = new()
         {
@@ -103,6 +108,7 @@ public sealed record VehicleDetails
             GrossWeightKg = grossWeightKg,
             MaxFifthWheelLoadKg = maxFifthWheelLoadKg,
             Notes = OptionalText.Normalize(notes),
+            DataSheet = string.IsNullOrWhiteSpace(dataSheet) ? null : dataSheet,
         };
 
         Error? error = details.Validate();
@@ -127,6 +133,12 @@ public sealed record VehicleDetails
         if (TooLong(Notes, MaxNotesLength))
         {
             return Error.Validation("Vehicle.NotesTooLong", $"Notes must not exceed {MaxNotesLength} characters.");
+        }
+
+        if (TooLong(DataSheet, MaxDataSheetLength))
+        {
+            return Error.Validation(
+                "Vehicle.DataSheetTooLong", $"The data sheet must not exceed {MaxDataSheetLength} characters.");
         }
 
         if (ManufacturedOn is { Year: < MinManufactureYear })

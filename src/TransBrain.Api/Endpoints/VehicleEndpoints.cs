@@ -9,6 +9,11 @@ using TransBrain.Application.Features.Vehicles.DeleteVehicle;
 using TransBrain.Application.Features.Vehicles.GetVehicleById;
 using TransBrain.Application.Features.Vehicles.ListVehicles;
 using TransBrain.Application.Features.Vehicles.UpdateVehicle;
+using TransBrain.Application.Features.Vehicles.VehicleDocuments;
+using TransBrain.Application.Features.Vehicles.VehicleDocuments.AddVehicleDocument;
+using TransBrain.Application.Features.Vehicles.VehicleDocuments.DeleteVehicleDocument;
+using TransBrain.Application.Features.Vehicles.VehicleDocuments.ListVehicleDocuments;
+using TransBrain.Application.Features.Vehicles.VehicleDocuments.UpdateVehicleDocument;
 using TransBrain.Domain.Common;
 
 namespace TransBrain.Api.Endpoints;
@@ -98,6 +103,73 @@ public sealed class VehicleEndpoints : IEndpointGroup
             .WithName("DeleteVehicle")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        MapDocuments(group);
+    }
+
+    private static void MapDocuments(RouteGroupBuilder group)
+    {
+        group.MapGet("/{id:guid}/documents", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
+            {
+                Result<VehicleDocumentResponse[]> result =
+                    await sender.Send(new ListVehicleDocumentsQuery(id), cancellationToken);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.Read)
+            .WithName("ListVehicleDocuments")
+            .WithSummary("Lists the vehicle's special documents, soonest expiry first.")
+            .Produces<VehicleDocumentResponse[]>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/documents", async (
+                Guid id, VehicleDocumentRequest request, ISender sender, CancellationToken cancellationToken) =>
+            {
+                Result<VehicleDocumentResponse> result = await sender.Send(
+                    new AddVehicleDocumentCommand(
+                        id, request.DocumentType, request.LastCheckedOn, request.ValidUntil, request.Remark),
+                    cancellationToken);
+                return result.ToHttpResult(document =>
+                    Results.Created($"/api/vehicles/{id}/documents/{document.Id}", document));
+            })
+            .RequireAuthorization(Policies.MasterDataWrite)
+            .WithName("AddVehicleDocument")
+            .WithDescription("A vehicle can hold each document type only once (409).")
+            .Produces<VehicleDocumentResponse>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapPut("/{id:guid}/documents/{documentId:guid}", async (
+                Guid id,
+                Guid documentId,
+                VehicleDocumentRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+            {
+                Result<VehicleDocumentResponse> result = await sender.Send(
+                    new UpdateVehicleDocumentCommand(
+                        id, documentId, request.DocumentType, request.LastCheckedOn, request.ValidUntil, request.Remark),
+                    cancellationToken);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.MasterDataWrite)
+            .WithName("UpdateVehicleDocument")
+            .Produces<VehicleDocumentResponse>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapDelete("/{id:guid}/documents/{documentId:guid}", async (
+                Guid id, Guid documentId, ISender sender, CancellationToken cancellationToken) =>
+            {
+                Result<Unit> result = await sender.Send(
+                    new DeleteVehicleDocumentCommand(id, documentId), cancellationToken);
+                return result.ToHttpResult(_ => Results.NoContent());
+            })
+            .RequireAuthorization(Policies.MasterDataWrite)
+            .WithName("DeleteVehicleDocument")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound);
     }
 }
 
@@ -125,7 +197,9 @@ public sealed record UpdateVehicleRequest(
     int? GrossWeightKg = null,
     int? MaxFifthWheelLoadKg = null,
     string? Notes = null,
-    VehicleEquipmentData? Equipment = null)
+    VehicleEquipmentData? Equipment = null,
+    string? DataSheet = null,
+    VehicleCommercialData? Commercial = null)
 {
     public UpdateVehicleCommand ToCommand(Guid id) => new(
         id,
@@ -151,8 +225,18 @@ public sealed record UpdateVehicleRequest(
         GrossWeightKg,
         MaxFifthWheelLoadKg,
         Notes,
-        Equipment);
+        Equipment,
+        DataSheet,
+        Commercial);
 }
+
+/// <summary>Body of adding or updating a special document. Ids come from the route.</summary>
+/// <param name="DocumentType">Code of an active document type catalog entry (case-insensitive).</param>
+public sealed record VehicleDocumentRequest(
+    string DocumentType,
+    DateOnly? LastCheckedOn = null,
+    DateOnly? ValidUntil = null,
+    string? Remark = null);
 
 /// <summary>Body of a vehicle status change.</summary>
 /// <param name="Status">Available, InWorkshop or Decommissioned (case-insensitive).</param>

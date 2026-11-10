@@ -69,6 +69,29 @@ public class VehicleDetailsTests
     }
 
     [Fact]
+    public void Create_DataSheet_KeepsTextVerbatim()
+    {
+        const string sheet = "  Motor:  D13K\r\n    Leistung: 368 kW  ";
+
+        VehicleDetails.Create(dataSheet: sheet).Value.DataSheet.Should().Be(sheet);
+    }
+
+    [Fact]
+    public void Create_BlankDataSheet_StoresNull()
+    {
+        VehicleDetails.Create(dataSheet: " \n ").Value.DataSheet.Should().BeNull();
+    }
+
+    [Fact]
+    public void Create_TooLongDataSheet_ReturnsValidationError()
+    {
+        Result<VehicleDetails> result = VehicleDetails.Create(
+            dataSheet: new string('d', VehicleDetails.MaxDataSheetLength + 1));
+
+        result.Error!.Code.Should().Be("Vehicle.DataSheetTooLong");
+    }
+
+    [Fact]
     public void Create_TooLongVehicleClassCode_ReturnsValidationError()
     {
         Result<VehicleDetails> result = VehicleDetails.Create(

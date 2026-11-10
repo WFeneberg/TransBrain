@@ -26,4 +26,6 @@ public sealed record UpdateVehicleCommand(
     int? GrossWeightKg = null,
     int? MaxFifthWheelLoadKg = null,
     string? Notes = null,
-    VehicleEquipmentData? Equipment = null) : ICommand<VehicleResponse>, IVehicleWriteCommand;
+    VehicleEquipmentData? Equipment = null,
+    string? DataSheet = null,
+    VehicleCommercialData? Commercial = null) : ICommand<VehicleResponse>, IVehicleWriteCommand;
