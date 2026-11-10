@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TransBrain.Application.Abstractions;
@@ -22,11 +23,9 @@ public static class DependencyInjection
         services.AddScoped<ICacheService, RedisCacheService>();
         services.AddHttpClient<OpenRouteServiceClient>((provider, client) =>
             client.BaseAddress = new Uri(provider.GetRequiredService<IOptions<OpenRouteServiceOptions>>().Value.BaseUrl));
-        services.AddHttpClient<NominatimGeocoder>(client =>
-        {
-            client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("TransBrain/1.0 (dispatch application)");
-        });
+        services.AddHttpClient<NominatimGeocoder>((provider, client) =>
+            client.BaseAddress = new Uri(
+                provider.GetRequiredService<IConfiguration>()["Nominatim:BaseUrl"] ?? "http://localhost:8088/"));
         services.AddTransient<IGeocoder>(provider => provider.GetRequiredService<NominatimGeocoder>());
         services.AddTransient<IRoutePlanner>(provider => provider.GetRequiredService<OpenRouteServiceClient>());
         return services;

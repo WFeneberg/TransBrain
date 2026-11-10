@@ -180,6 +180,33 @@ cases (licence, ADR document, UVV, inspection) stay meaningful. The driver Franz
 after a restart. The script refuses to run when vehicles already exist; to reseed, delete the Postgres
 volume with the AppHost stopped (`docker volume ls | grep postgres`, then `docker volume rm <name>`).
 
+### 4.1 Routing and geocoding (self-hosted)
+
+Route planning and address lookup call no external service. The AppHost starts two containers that read
+one OpenStreetMap extract, which you download once (the folder is gitignored):
+
+```bash
+curl -L -o data/osm/region.osm.pbf https://download.geofabrik.de/europe/germany/bayern-latest.osm.pbf
+```
+
+| Resource | Image | Purpose | First start (Bavaria, rough) | Volume |
+|---|---|---|---|---|
+| `ors` | `openrouteservice/openrouteservice:v10.1.0` | truck routes, profile `driving-hgv` only | builds the graph, 10–30 min | `transbrain-ors` |
+| `nominatim` | `mediagis/nominatim:5.3` | address → position | imports the database, 1–2 h | `transbrain-nominatim` |
+
+The AppHost injects both addresses into the Api (`OpenRouteService__BaseUrl`, `Nominatim__BaseUrl`). The Api
+does not wait for them: until a container is healthy, `GET /api/tours/{id}/route` and the position/location
+endpoints answer `503`. Addresses and routes outside the extract are not found — with the Bavaria extract
+that includes the Austrian addresses of `scripts/seed-testdata.py`.
+
+- **Other region:** stop the AppHost, replace `data/osm/region.osm.pbf`, delete both volumes
+  (`docker volume rm transbrain-ors transbrain-nominatim`), start again. Both containers take exactly one
+  file; merge extracts with `osmium merge` if you need several.
+- **Sizing:** the ORS heap is `XMX` in `AppHost.cs` (4g; rule of thumb 2 × pbf size per profile). Bavaria
+  needs roughly 20–25 GB of disk for Nominatim; all of Germany needs a server (tens of GB of RAM, >100 GB
+  disk, about a day of import).
+- **Still external:** the map background tiles in both frontends load from `tile.openstreetmap.org`.
+
 ## 5. Common tasks
 
 ### 5.1 Add a use case

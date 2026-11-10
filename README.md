@@ -234,16 +234,19 @@ informative `404`.
 
 `GET /api/tours/{id}/route` plans the truck route through the tour's stops in sequence and lays the
 driver's day on a timeline. `GET /api/orders/{id}/locations` places the consignor and consignee on a
-map. Both use OpenRouteService: geocoding, and the `driving-hgv` profile so trucks avoid roads closed
-to them. Set the key in configuration, for example with user secrets or the environment variable
-`OpenRouteService__ApiKey`:
+map. Neither calls an external service: the AppHost starts a self-hosted OpenRouteService container
+(profile `driving-hgv`, so trucks avoid roads closed to them) and a self-hosted Nominatim container for
+geocoding. Both read one OpenStreetMap extract that you download once before the first start:
 
-```json
-"OpenRouteService": { "ApiKey": "<your key>", "BaseUrl": "https://api.openrouteservice.org/" }
+```bash
+curl -L -o data/osm/region.osm.pbf https://download.geofabrik.de/europe/germany/bayern-latest.osm.pbf
 ```
 
-Without a key both endpoints answer `503` with `Routing.NotConfigured`. A route is never estimated
-from straight-line distances, because that would ignore truck restrictions.
+The first start builds the routing graph and imports the geocoding database, which takes from minutes
+(routing) to hours (geocoding); see the developer guide, section 4.1, for sizing and changing the region.
+Until the containers are ready, and for addresses outside the extract, the endpoints answer `503` or
+`404`. A route is never estimated from straight-line distances, because that would ignore truck
+restrictions.
 
 The timeline follows Regulation (EC) No 561/2006: a 45-minute break after 4 h 30 min of continuous
 driving, 9 h daily driving (10 h is flagged as an extension, allowed twice a week), and the 11 h

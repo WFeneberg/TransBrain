@@ -7,10 +7,10 @@ using TransBrain.Domain.Routing;
 namespace TransBrain.Infrastructure.Routing;
 
 /// <remarks>
-/// Geocoding through Nominatim (OpenStreetMap). It is free and needs no API key. Its usage policy
-/// asks for at most one request per second and an identifying User-Agent (set where the client is
-/// registered). Successful lookups are cached by <c>LocationResolver</c>, so each address is
-/// looked up once. Routing stays on OpenRouteService, which has no free equivalent for trucks.
+/// Geocoding through the self-hosted Nominatim container the AppHost starts (address from
+/// <c>Nominatim:BaseUrl</c>); no external service. It only knows addresses inside the imported
+/// map extract. Successful lookups are cached by <c>LocationResolver</c>, so each address is
+/// looked up once.
 /// </remarks>
 internal sealed class NominatimGeocoder(HttpClient httpClient) : IGeocoder
 {

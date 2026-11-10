@@ -56,8 +56,9 @@ public sealed class TransBrainApiFactory : WebApplicationFactory<Program>, IAsyn
             services.AddAuthentication(TestAuthHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
 
-            // Integration tests must not reach the internet: geocoding answers Unavailable here.
+            // Integration tests must not depend on the routing/geocoding containers: both answer Unavailable here.
             services.Replace(ServiceDescriptor.Singleton<IGeocoder, OfflineGeocoder>());
+            services.Replace(ServiceDescriptor.Singleton<IRoutePlanner, OfflineRoutePlanner>());
         });
     }
 }
