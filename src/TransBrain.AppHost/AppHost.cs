@@ -1,20 +1,20 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Deliberately NO data volume, for the same reason Keycloak has none: a persisted volume
-// keeps the password from the run that created it, while Aspire supplies the current one.
-// When the two drift apart Postgres rejects every connection with "password authentication
-// failed", and everything with WaitFor(database) — including the API — hangs in `Waiting`
-// with nothing naming the cause. This cost two separate debugging rounds during execution.
-// Phase 1 has no seed data worth preserving; migrations rebuild the schema on every start,
-// which is what makes a run reproducible.
+// Persistent data volume. The volume keeps the password from the run that created it, so the
+// generated postgres password must stay stable: it lives in the AppHost's user secrets
+// (Parameters:postgres-password, see UserSecretsId in the csproj). If those secrets are ever
+// cleared, Postgres rejects every connection with "password authentication failed" and the
+// API hangs in `Waiting` — fix by restoring the old password or deleting the volume
+// (`docker volume ls | grep postgres`, then `docker volume rm <name>`).
 var postgres = builder.AddPostgres("postgres")
+    .WithDataVolume()
     .WithPgAdmin();
 
 var database = postgres.AddDatabase("transbraindb");
 
 var cache = builder.AddRedis("cache");
 
-// Deliberately no .WithDataVolume() here (unlike postgres above). Keycloak's directory
+// Deliberately no .WithDataVolume() for Keycloak (unlike postgres above). Keycloak's directory
 // import only CREATES a realm that does not already exist; a persisted volume makes the
 // checked-in realm file stop being the source of truth after the first run, and later
 // edits to transbrain-realm.json are silently ignored ("Realm 'transbrain' already
