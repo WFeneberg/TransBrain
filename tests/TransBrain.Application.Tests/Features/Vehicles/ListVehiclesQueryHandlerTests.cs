@@ -12,7 +12,7 @@ public class ListVehiclesQueryHandlerTests
 {
     private static Vehicle VehicleWithPlate(string plate) => Vehicle.Create(
         LicensePlate.Create(plate).Value,
-        VehicleType.Van,
+        VehicleType.SemiTrailer,
         3_000,
         4.0m,
         new DateOnly(2027, 1, 1)).Value;

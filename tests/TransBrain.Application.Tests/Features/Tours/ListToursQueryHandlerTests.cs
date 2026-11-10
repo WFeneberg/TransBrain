@@ -29,7 +29,7 @@ public class ListToursQueryHandlerTests
     private static Vehicle AddVehicle(Scene scene, string plate)
     {
         Vehicle vehicle = Vehicle.Create(
-            LicensePlate.Create(plate).Value, VehicleType.RigidTruck, 18_000, 13.6m,
+            LicensePlate.Create(plate).Value, VehicleType.Tractor, 18_000, 13.6m,
             new DateOnly(2028, 1, 1)).Value;
         scene.Vehicles.Seed(vehicle);
         return vehicle;

@@ -43,7 +43,7 @@ public class VehicleWriteValidatorTests
     public void Validate_GrossWeightNotAboveCurbWeight_ReportsGrossWeight()
     {
         ValidationResult result = new UpdateVehicleCommandValidator().Validate(new UpdateVehicleCommand(
-            Guid.CreateVersion7(), "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            Guid.CreateVersion7(), "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31),
             CurbWeightKg: 5_000, GrossWeightKg: 4_000));
 
         result.Errors.Should().ContainSingle().Which.PropertyName.Should().Be("GrossWeightKg");
@@ -64,7 +64,7 @@ public class VehicleWriteValidatorTests
     public void Validate_InvalidEquipment_ReportsEachFieldWithItsDottedPath()
     {
         ValidationResult result = new UpdateVehicleCommandValidator().Validate(new UpdateVehicleCommand(
-            Guid.CreateVersion7(), "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            Guid.CreateVersion7(), "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31),
             Equipment: new VehicleEquipmentData(
                 TankVolumeLiters: 0,
                 InteriorWidthMm: VehicleDetails.MaxWidthMm + 1,
@@ -115,7 +115,7 @@ public class VehicleWriteValidatorTests
     public void Validate_InvalidCommercialData_ReportsEachFieldWithItsDottedPath()
     {
         ValidationResult result = new UpdateVehicleCommandValidator().Validate(new UpdateVehicleCommand(
-            Guid.CreateVersion7(), "M-AB 1234", "Van", 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            Guid.CreateVersion7(), "M-AB 1234", "SemiTrailer", 3_000, 4.0m, new DateOnly(2027, 3, 31),
             DataSheet: new string('d', VehicleDetails.MaxDataSheetLength + 1),
             Commercial: new VehicleCommercialData(
                 PurchasePrice: 100.001m,

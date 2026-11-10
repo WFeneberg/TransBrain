@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-export const VEHICLE_TYPES = ['Tractor', 'RigidTruck', 'Van'] as const;
+export const VEHICLE_TYPES = ['Tractor', 'SemiTrailer'] as const;
 export type VehicleType = (typeof VEHICLE_TYPES)[number];
 
 export const VEHICLE_STATUSES = ['Available', 'InWorkshop', 'Decommissioned'] as const;

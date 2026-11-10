@@ -56,7 +56,7 @@ public class ListVehiclesCachingTests
         InMemoryCacheService cache = new();
         ListVehiclesQueryHandler handler = new(repository, cache);
 
-        await handler.Handle(new ListVehiclesQuery(Type: "Van"), CancellationToken.None);
+        await handler.Handle(new ListVehiclesQuery(Type: "SemiTrailer"), CancellationToken.None);
         await handler.Handle(new ListVehiclesQuery(Type: "Tractor"), CancellationToken.None);
 
         repository.ListCallCount.Should().Be(2);
@@ -78,7 +78,7 @@ public class ListVehiclesCachingTests
 
         await list.Handle(new ListVehiclesQuery(), CancellationToken.None);
         await create.Handle(
-            new CreateVehicleCommand("M-NEW 1", "Van", 3_000, 4.0m, new DateOnly(2028, 1, 1)),
+            new CreateVehicleCommand("M-NEW 1", "SemiTrailer", 3_000, 4.0m, new DateOnly(2028, 1, 1)),
             CancellationToken.None);
 
         Result<PagedResult<VehicleResponse>> after = await list.Handle(new ListVehiclesQuery(), CancellationToken.None);

@@ -263,6 +263,23 @@ public class CreateVehicleCommandHandlerTests
         result.Error!.Code.Should().Be("Vehicle.UnknownType");
     }
 
+    [Theory]
+    [InlineData("RigidTruck")]
+    [InlineData("Van")]
+    public async Task Handle_RetiredVehicleType_ReturnsValidationError(string type)
+    {
+        InMemoryVehicleRepository repository = new();
+        InMemoryCacheService cache = new();
+        CreateVehicleCommandHandler handler = CreateHandler(repository, cache);
+
+        Result<VehicleResponse> result = await handler.Handle(
+            ValidCommand with { Type = type }, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Vehicle.UnknownType");
+        repository.Vehicles.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task Handle_NumericUndefinedVehicleType_ReturnsValidationError()
     {

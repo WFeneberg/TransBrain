@@ -43,7 +43,7 @@ export interface Vehicle {
 export type VehicleStatus = 'Available' | 'InWorkshop' | 'Decommissioned';
 
 export const VEHICLE_STATUSES: readonly VehicleStatus[] = ['Available', 'InWorkshop', 'Decommissioned'];
-export const VEHICLE_TYPES = ['Tractor', 'RigidTruck', 'Van'] as const;
+export const VEHICLE_TYPES = ['Tractor', 'SemiTrailer'] as const;
 
 export type MarbleRackMaterial = 'Steel' | 'Aluminium';
 

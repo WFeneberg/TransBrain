@@ -43,7 +43,7 @@ const formError = ref<string | null>(null);
 
 onMounted(async () => {
     try {
-        vehicles.value = (await listVehicles(PICKER_PAGE_SIZE)).items;
+        vehicles.value = (await listVehicles(PICKER_PAGE_SIZE)).items.filter((vehicle) => vehicle.type === 'Tractor');
         drivers.value = (await listDrivers(PICKER_PAGE_SIZE)).items;
     } catch (error) {
         // A failed load is not a failed save - give it its own wording.

@@ -12,7 +12,7 @@ namespace TransBrain.Api.IntegrationTests;
 public class TourDoubleBookingTests(TransBrainApiFactory factory) : IClassFixture<TransBrainApiFactory>
 {
     private static Vehicle AVehicle(string plate) => Vehicle.Create(
-        LicensePlate.Create(plate).Value, VehicleType.RigidTruck, 18_000, 13.6m,
+        LicensePlate.Create(plate).Value, VehicleType.Tractor, 18_000, 13.6m,
         new DateOnly(2028, 1, 1)).Value;
 
     private static Driver ADriver(string lastName) => Driver.Create(

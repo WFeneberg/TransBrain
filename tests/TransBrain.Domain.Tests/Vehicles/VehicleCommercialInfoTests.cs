@@ -8,7 +8,7 @@ public class VehicleCommercialInfoTests
 {
     private static Vehicle NewVehicle(VehicleCommercialInfo? commercial = null) =>
         Vehicle.Create(
-            LicensePlate.Create("M-AB 1234").Value, VehicleType.Van, 3_000, 4.0m, new DateOnly(2027, 3, 31),
+            LicensePlate.Create("M-AB 1234").Value, VehicleType.SemiTrailer, 3_000, 4.0m, new DateOnly(2027, 3, 31),
             commercial: commercial).Value;
 
     [Fact]

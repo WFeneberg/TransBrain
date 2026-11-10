@@ -144,7 +144,7 @@ dürfen auch 0 sein, ebenso Anschaffungspreis und Kilometerstand bei Anschaffung
 |---|---|---|:---:|---|
 | General | License plate | Kennzeichen | ja | eindeutig, max. 15 Zeichen |
 | General | License plate confidential | Kennzeichen geheim | – | Häkchen; Schloss-Symbol in der Liste |
-| General | Vehicle type | Fahrzeugart | ja | Tractor (Zugmaschine), Rigid truck (Motorwagen), Van (Transporter) |
+| General | Vehicle type | Fahrzeugart | ja | Tractor (Zugmaschine), Semi-trailer (Hänger (Sattel)) |
 | General | Vehicle class | Aufbau / Fahrzeugklasse | – | Auswahl aus den aktiven Fahrzeugklassen der [Fahrzeug-Stammdaten](#fahrzeug-stammdaten) oder „–“ |
 | General | Make / Model | Marke / Typbezeichnung | – | je max. 100 Zeichen |
 | General | Carrier group | Frächtergruppe | – | Auswahl aus den aktiven Frächtergruppen der [Fahrzeug-Stammdaten](#fahrzeug-stammdaten) oder „–“ |
@@ -517,7 +517,7 @@ Erreichbar über „Add tour“ (`/tours/new`).
 | Feld       | Bedeutung                          | Pflicht |
 |------------|------------------------------------|:-------:|
 | Tour date  | Datum, an dem die Tour gefahren wird | ja     |
-| Vehicle    | Fahrzeug aus dem Fahrzeugstamm      | ja      |
+| Vehicle    | Zugmaschine aus dem Fahrzeugstamm (Hänger werden nicht angeboten) | ja      |
 | Driver     | Fahrer aus dem Fahrerstamm          | ja      |
 
 Nach dem Speichern landen Sie **direkt auf der Detailseite** der neuen Tour, nicht in der Liste —

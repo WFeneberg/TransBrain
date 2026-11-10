@@ -18,12 +18,13 @@ public class TourEndpointsTests(TransBrainApiFactory factory) : IClassFixture<Tr
 
     private static string NextPlate() => $"M-TE {2000 + Interlocked.Increment(ref _plateCounter)}";
 
-    private async Task<VehicleResponse> CreateVehicleAsync(int payloadKg = 18_000, decimal loadMeters = 13.6m)
+    private async Task<VehicleResponse> CreateVehicleAsync(
+        int payloadKg = 18_000, decimal loadMeters = 13.6m, string type = "Tractor")
     {
         HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync("/api/vehicles", new
         {
             licensePlate = NextPlate(),
-            type = "RigidTruck",
+            type,
             payloadKg,
             loadMeters,
             nextInspectionDue = "2028-03-31"
@@ -82,6 +83,23 @@ public class TourEndpointsTests(TransBrainApiFactory factory) : IClassFixture<Tr
 
         response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<TourResponse>())!;
+    }
+
+    [Fact]
+    public async Task PostTour_WithSemiTrailer_ReturnsConflict()
+    {
+        VehicleResponse trailer = await CreateVehicleAsync(type: "SemiTrailer");
+        DriverResponse driver = await CreateDriverAsync("Trailerfahrer");
+
+        HttpResponseMessage response = await factory.CreateClientAs("disponent").PostAsJsonAsync("/api/tours", new
+        {
+            tourDate = "2098-01-03",
+            vehicleId = trailer.Id,
+            driverId = driver.Id
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Tour.VehicleNotMotorized");
     }
 
     [Fact]

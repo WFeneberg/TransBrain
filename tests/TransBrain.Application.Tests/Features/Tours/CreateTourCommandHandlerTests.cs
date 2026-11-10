@@ -14,7 +14,7 @@ public class CreateTourCommandHandlerTests
 
     private static Vehicle AVehicle() => Vehicle.Create(
         LicensePlate.Create("M-AB 1234").Value,
-        VehicleType.RigidTruck,
+        VehicleType.Tractor,
         18_000,
         13.6m,
         new DateOnly(2028, 1, 1)).Value;
