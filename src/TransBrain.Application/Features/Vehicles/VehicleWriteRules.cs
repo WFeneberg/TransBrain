@@ -20,6 +20,7 @@ internal sealed class VehicleWriteRules : AbstractValidator<IVehicleWriteCommand
 
         RuleFor(c => c.Make).MaximumLength(VehicleDetails.MaxNameLength);
         RuleFor(c => c.Model).MaximumLength(VehicleDetails.MaxNameLength);
+        RuleFor(c => c.VehicleClass).MaximumLength(VehicleCatalogEntry.MaxCodeLength);
         RuleFor(c => c.CarrierGroup).MaximumLength(VehicleDetails.MaxNameLength);
         RuleFor(c => c.ChassisNumber).MaximumLength(VehicleDetails.MaxIdentifierLength);
         RuleFor(c => c.EngineNumber).MaximumLength(VehicleDetails.MaxIdentifierLength);
@@ -28,10 +29,6 @@ internal sealed class VehicleWriteRules : AbstractValidator<IVehicleWriteCommand
         RuleFor(c => c.ManufacturedOn)
             .Must(date => date is null || date.Value.Year >= VehicleDetails.MinManufactureYear)
             .WithMessage($"The year of manufacture must not be before {VehicleDetails.MinManufactureYear}.");
-
-        RuleFor(c => c.VehicleClass)
-            .Must(value => string.IsNullOrWhiteSpace(value) || VehicleWriteMapping.TryParseClass(value, out _))
-            .WithMessage(c => $"'{c.VehicleClass}' is not a known vehicle class.");
 
         RuleFor(c => c.PowerKw).InclusiveBetween(1, VehicleDetails.MaxPowerKw);
         RuleFor(c => c.LengthMm).InclusiveBetween(1, VehicleDetails.MaxLengthMm);

@@ -16,8 +16,15 @@ public class CreateVehicleCommandHandlerTests
         InMemoryVehicleRepository repository,
         InMemoryCacheService cache,
         InMemoryDriverRepository? drivers = null,
-        string? user = "dispo") =>
-        new(repository, drivers ?? new InMemoryDriverRepository(), cache, new StubCurrentUser(user), new FixedTimeProvider());
+        string? user = "dispo",
+        InMemoryVehicleCatalogRepository? catalog = null) =>
+        new(
+            repository,
+            drivers ?? new InMemoryDriverRepository(),
+            catalog ?? InMemoryVehicleCatalogRepository.WithStandardEntries(repository),
+            cache,
+            new StubCurrentUser(user),
+            new FixedTimeProvider());
 
     [Fact]
     public async Task Handle_MasterDataFields_RoundTripsThemIntoTheResponse()
@@ -99,8 +106,51 @@ public class CreateVehicleCommandHandlerTests
         Result<VehicleResponse> result = await handler.Handle(
             ValidCommand with { VehicleClass = vehicleClass }, CancellationToken.None);
 
-        result.Error!.Code.Should().Be("Vehicle.UnknownClass");
+        result.Error!.Type.Should().Be(ErrorType.Validation);
+        result.Error.Failures.Should().ContainKey("VehicleClass");
         repository.Vehicles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_UnknownCarrierGroup_ReturnsValidationErrorKeyedCarrierGroup()
+    {
+        InMemoryVehicleRepository repository = new();
+        CreateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService());
+
+        Result<VehicleResponse> result = await handler.Handle(
+            ValidCommand with { CarrierGroup = "Unbekannt" }, CancellationToken.None);
+
+        result.Error!.Failures.Should().ContainKey("CarrierGroup");
+        result.Error.Failures!["CarrierGroup"].Should().ContainSingle().Which.Should().Contain("carrier group");
+        repository.Vehicles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_InactiveVehicleClass_ReturnsValidationError()
+    {
+        InMemoryVehicleRepository repository = new();
+        InMemoryVehicleCatalogRepository catalog = new(repository);
+        catalog.Seed(VehicleCatalogKind.VehicleClass, "Silo", "Silo", isActive: false);
+        CreateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService(), catalog: catalog);
+
+        Result<VehicleResponse> result = await handler.Handle(
+            ValidCommand with { VehicleClass = "Silo" }, CancellationToken.None);
+
+        result.Error!.Failures.Should().ContainKey("VehicleClass");
+        repository.Vehicles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_BlankCatalogCodes_StoresNoClassAndNoCarrierGroup()
+    {
+        InMemoryVehicleRepository repository = new();
+        CreateVehicleCommandHandler handler = CreateHandler(repository, new InMemoryCacheService());
+
+        Result<VehicleResponse> result = await handler.Handle(
+            ValidCommand with { VehicleClass = " ", CarrierGroup = "" }, CancellationToken.None);
+
+        result.Value.VehicleClass.Should().BeNull();
+        result.Value.CarrierGroup.Should().BeNull();
     }
 
     [Fact]

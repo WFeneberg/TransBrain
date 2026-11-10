@@ -333,6 +333,9 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
     {
         HttpClient admin = factory.CreateClientAs("admin");
         DriverResponse driver = await CreateDriverAsync(admin, "Stammfahrer");
+        HttpResponseMessage group = await admin.PostAsJsonAsync(
+            "/api/vehicle-catalog/CarrierGroup", new { code = "Nahverkehr", name = "Nahverkehr Süd", isActive = true });
+        group.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.Conflict);
 
         HttpResponseMessage response = await admin.PostAsJsonAsync("/api/vehicles", new
         {
@@ -346,8 +349,8 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
             model = "TGX 18.510",
             manufacturedOn = "2021-05-17",
             powerKw = 375,
-            vehicleClass = "Refrigerated",
-            carrierGroup = "Nahverkehr",
+            vehicleClass = "refrigerated",
+            carrierGroup = "NAHVERKEHR",
             defaultDriverId = driver.Id,
             chassisNumber = "wma06xzz1lm123456",
             engineNumber = "D2676LF",
@@ -412,7 +415,7 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
             payloadKg = 3_000,
             loadMeters = 4.0m,
             nextInspectionDue = "2027-03-31",
-            vehicleClass = "Spaceship",
+            vehicleClass = new string('V', VehicleCatalogEntry.MaxCodeLength + 1),
             curbWeightKg = 5_000,
             grossWeightKg = 4_000
         });
@@ -421,6 +424,31 @@ public class VehicleEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         string body = await response.Content.ReadAsStringAsync();
         body.Should().Contain("VehicleClass").And.Contain("GrossWeightKg");
     }
+
+    [Theory]
+    [InlineData("vehicleClass", "Spaceship", "VehicleClass")]
+    [InlineData("carrierGroup", "NoSuchGroup", "CarrierGroup")]
+    public async Task PostVehicle_CodeMissingFromTheCatalog_ReturnsBadRequestKeyedByField(
+        string field, string value, string expectedKey)
+    {
+        Dictionary<string, object> vehicle = new()
+        {
+            ["licensePlate"] = "M-UC 1",
+            ["type"] = "Van",
+            ["payloadKg"] = 3_000,
+            ["loadMeters"] = 4.0m,
+            ["nextInspectionDue"] = "2027-03-31",
+            [field] = value
+        };
+
+        HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync("/api/vehicles", vehicle);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        ValidationProblem? problem = await response.Content.ReadFromJsonAsync<ValidationProblem>();
+        problem!.Errors.Should().ContainKey(expectedKey);
+    }
+
+    private sealed record ValidationProblem(Dictionary<string, string[]> Errors);
 
     [Fact]
     public async Task DeleteDriver_AssignedAsDefaultDriver_ClearsTheVehicleAssignment()

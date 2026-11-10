@@ -47,7 +47,7 @@ public sealed record VehicleResponse(
             details.Model,
             details.ManufacturedOn,
             details.PowerKw,
-            details.VehicleClass?.ToString(),
+            details.VehicleClass,
             details.CarrierGroup,
             vehicle.DefaultDriverId,
             details.ChassisNumber,

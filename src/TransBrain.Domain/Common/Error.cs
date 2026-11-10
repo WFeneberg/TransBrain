@@ -12,8 +12,9 @@ public enum ErrorType
 public sealed record Error(string Code, string Message, ErrorType Type)
 {
     /// <summary>
-    /// Per-field validation messages, keyed by field name. Populated only by
-    /// <c>ValidationBehavior</c> from validator failures. A domain invariant produces a
+    /// Per-field validation messages, keyed by field name. Populated by <c>ValidationBehavior</c>
+    /// from validator failures and by lookups that reject one specific write field (for example an
+    /// unknown vehicle catalog code). A domain invariant produces a
     /// coded error with no field to attach to, so this stays null there — and the API
     /// must not pretend otherwise by inventing a field key from the code.
     /// </summary>

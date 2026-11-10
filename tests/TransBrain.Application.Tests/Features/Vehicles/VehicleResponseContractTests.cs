@@ -25,13 +25,4 @@ public class VehicleResponseContractTests
             ["Available", "InWorkshop", "Decommissioned"]);
     }
 
-    [Fact]
-    public void VehicleClass_Members_MatchThePinnedContractStrings()
-    {
-        Enum.GetValues<VehicleClass>().Select(c => c.ToString()).Should().BeEquivalentTo(
-        [
-            "Tarpaulin", "Box", "Refrigerated", "Tank", "Silo", "Tipper", "Flatbed", "Container",
-            "CarTransporter", "LowLoader", "Other",
-        ]);
-    }
 }

@@ -30,7 +30,7 @@ test('adminUser_createEditAndDeleteVehicle_throughTheUi', async ({ page }) => {
     await page.getByTestId('vehicle-type').click();
     await page.getByRole('option', { name: 'Tractor' }).click();
     await page.getByTestId('vehicle-vehicleClass').click();
-    await page.getByRole('option', { name: 'Tank' }).click();
+    await page.getByRole('option', { name: 'Tank', exact: true }).click();
     await page.getByTestId('vehicle-make').fill('Volvo');
     await page.getByTestId('vehicle-model').fill('FH 16');
     await page.getByTestId('vehicle-manufacturedOn').fill('2021-04');

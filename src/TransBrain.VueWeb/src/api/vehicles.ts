@@ -15,7 +15,9 @@ export interface Vehicle {
     /** "YYYY-MM-01" - the API stores the construction date with month precision. */
     manufacturedOn: string | null;
     powerKw: number | null;
+    /** Code of a VehicleClass catalog entry, see api/vehicleCatalog.ts. */
     vehicleClass: string | null;
+    /** Code of a CarrierGroup catalog entry, see api/vehicleCatalog.ts. */
     carrierGroup: string | null;
     defaultDriverId: string | null;
     chassisNumber: string | null;
@@ -36,19 +38,6 @@ export type VehicleStatus = 'Available' | 'InWorkshop' | 'Decommissioned';
 
 export const VEHICLE_STATUSES: readonly VehicleStatus[] = ['Available', 'InWorkshop', 'Decommissioned'];
 export const VEHICLE_TYPES = ['Tractor', 'RigidTruck', 'Van'] as const;
-export const VEHICLE_CLASSES = [
-    'Tarpaulin',
-    'Box',
-    'Refrigerated',
-    'Tank',
-    'Silo',
-    'Tipper',
-    'Flatbed',
-    'Container',
-    'CarTransporter',
-    'LowLoader',
-    'Other',
-] as const;
 
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
 export interface VehicleWriteRequest {

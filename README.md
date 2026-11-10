@@ -120,6 +120,10 @@ The two master-data aggregates expose the same shape of CRUD endpoint group:
 | GET    | `/api/vehicles/{id}` | `Read`             | `404` if not found                                   |
 | PUT    | `/api/vehicles/{id}` | `MasterDataWrite` | `404` if not found, `409` on a duplicate plate       |
 | DELETE | `/api/vehicles/{id}` | `MasterDataWrite` | `404` if not found                                   |
+| GET    | `/api/vehicle-catalog/{kind}` | `Read`    | `kind` = `VehicleClass` or `CarrierGroup`; all entries incl. inactive, with usage count |
+| POST   | `/api/vehicle-catalog/{kind}` | `MasterDataWrite` | `{code, name, isActive}`; `409` on a duplicate code |
+| PUT    | `/api/vehicle-catalog/{kind}/{id}` | `MasterDataWrite` | `{name, isActive}` (code is fixed); `404` if not found |
+| DELETE | `/api/vehicle-catalog/{kind}/{id}` | `MasterDataWrite` | `404` if not found, `409` while vehicles use the entry |
 | POST   | `/api/drivers`       | `MasterDataWrite` | Per-field validation errors                          |
 | GET    | `/api/drivers`       | `Read`             | Paged; filters: `page`, `pageSize`, `status`         |
 | GET    | `/api/drivers/{id}`  | `Read`             | `404` if not found                                   |

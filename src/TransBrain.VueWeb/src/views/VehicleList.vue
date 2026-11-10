@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { deleteVehicle, listVehicles, VEHICLE_STATUSES, VEHICLE_TYPES, type Vehicle } from '../api/vehicles';
 import { listDrivers } from '../api/drivers';
+import { catalogName, listVehicleCatalog, type VehicleCatalogEntry } from '../api/vehicleCatalog';
 import { useVehicleLabels } from '../composables/useVehicleLabels';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useAuthStore } from '../stores/auth';
@@ -21,10 +22,12 @@ const DAY_MS = 86_400_000;
 
 const auth = useAuthStore();
 const { t } = useI18n();
-const { typeLabel, classLabel, statusLabel, statusColor, formatDate } = useVehicleLabels();
+const { typeLabel, statusLabel, statusColor, formatDate } = useVehicleLabels();
 const router = useRouter();
 const vehicles = ref<Vehicle[]>([]);
 const driverNames = ref(new Map<string, string>());
+const vehicleClasses = ref<VehicleCatalogEntry[]>([]);
+const carrierGroups = ref<VehicleCatalogEntry[]>([]);
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 // Separate from errorMessage: a failed delete must not hide the table the way a failed list
@@ -55,7 +58,7 @@ const headers = computed(() => [
     {
         title: t('vehicles.vehicleClass'),
         key: 'vehicleClass',
-        value: (vehicle: Vehicle) => (vehicle.vehicleClass ? classLabel(vehicle.vehicleClass) : ''),
+        value: (vehicle: Vehicle) => catalogName(vehicleClasses.value, vehicle.vehicleClass),
     },
     { title: t('vehicles.payload'), key: 'payloadKg', align: 'end' as const },
     { title: t('vehicles.defaultDriver'), key: 'defaultDriver', value: (vehicle: Vehicle) => driverName(vehicle) },
@@ -76,15 +79,20 @@ const filteredVehicles = computed(() => {
         if (!term) {
             return true;
         }
-        return [vehicle.licensePlate, vehicle.make, vehicle.model, vehicle.chassisNumber, vehicle.carrierGroup].some(
-            (value) => value?.toLowerCase().includes(term),
-        );
+        return [
+            vehicle.licensePlate,
+            vehicle.make,
+            vehicle.model,
+            vehicle.chassisNumber,
+            vehicle.carrierGroup,
+            vehicle.carrierGroup ? catalogName(carrierGroups.value, vehicle.carrierGroup) : null,
+        ].some((value) => value?.toLowerCase().includes(term));
     });
 });
 
 onMounted(async () => {
     if (auth.isAuthenticated) {
-        await Promise.all([refresh(), loadDriverNames()]);
+        await Promise.all([refresh(), loadDriverNames(), loadCatalogs()]);
     }
 });
 
@@ -108,6 +116,16 @@ async function loadDriverNames(): Promise<void> {
     } catch {
         driverNames.value = new Map();
     }
+}
+
+// Decoration as well: without the catalogs the class column falls back to the stored code.
+async function loadCatalogs(): Promise<void> {
+    const [classes, groups] = await Promise.allSettled([
+        listVehicleCatalog('VehicleClass'),
+        listVehicleCatalog('CarrierGroup'),
+    ]);
+    vehicleClasses.value = classes.status === 'fulfilled' ? classes.value : [];
+    carrierGroups.value = groups.status === 'fulfilled' ? groups.value : [];
 }
 
 function makeModel(vehicle: Vehicle): string {
@@ -176,14 +194,23 @@ function describe(error: unknown, fallback: string): string {
                     <h1 class="text-h4">{{ t('nav.vehicles') }}</h1>
                     <p class="text-medium-emphasis page-subtitle">{{ t('vehicles.count', { count: vehicles.length }) }}</p>
                 </div>
-                <v-btn
-                    v-if="auth.can('masterData.write')"
-                    color="primary"
-                    prepend-icon="mdi-plus"
-                    data-testid="vehicle-add"
-                    @click="router.push('/vehicles/new')"
-                    >{{ t('vehicles.add') }}</v-btn
-                >
+                <div class="header-actions">
+                    <v-btn
+                        variant="tonal"
+                        prepend-icon="mdi-tune-variant"
+                        data-testid="vehicle-catalog-link"
+                        @click="router.push('/vehicle-catalog')"
+                        >{{ t('vehicles.catalogLink') }}</v-btn
+                    >
+                    <v-btn
+                        v-if="auth.can('masterData.write')"
+                        color="primary"
+                        prepend-icon="mdi-plus"
+                        data-testid="vehicle-add"
+                        @click="router.push('/vehicles/new')"
+                        >{{ t('vehicles.add') }}</v-btn
+                    >
+                </div>
             </div>
 
             <v-card border flat class="filter-bar">
@@ -351,6 +378,12 @@ function describe(error: unknown, fallback: string): string {
 
 .page-subtitle {
     margin: 4px 0 0;
+}
+
+.header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .filter-bar {

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, WritableSignal, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
@@ -18,6 +18,13 @@ import { DriverService } from '../drivers/driver.service';
 import { I18nService } from '../i18n/i18n.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from './confirm-dialog.component';
 import { InspectionUrgency, formatDate, inspectionUrgency, makeAndModel } from './vehicle-format';
+import {
+    VehicleCatalogEntry,
+    VehicleCatalogKind,
+    VehicleCatalogService,
+    catalogIndex,
+    catalogName,
+} from './vehicle-catalog.service';
 import {
     VEHICLE_STATUSES,
     VEHICLE_TYPES,
@@ -78,12 +85,22 @@ interface VehicleFilter {
                             {{ i18n.t('vehicles.count', { count: filteredCount() }) }}
                         </p>
                     </div>
-                    @if (session.can('masterData.write')) {
-                        <a mat-flat-button routerLink="/vehicles/new" data-testid="vehicle-add">
-                            <mat-icon>add</mat-icon>
-                            {{ i18n.t('vehicles.add') }}
+                    <div class="header-actions">
+                        <a
+                            mat-stroked-button
+                            routerLink="/vehicle-catalog"
+                            data-testid="vehicle-catalog-link"
+                        >
+                            <mat-icon>tune</mat-icon>
+                            {{ i18n.t('vehicles.catalogLink') }}
                         </a>
-                    }
+                        @if (session.can('masterData.write')) {
+                            <a mat-flat-button routerLink="/vehicles/new" data-testid="vehicle-add">
+                                <mat-icon>add</mat-icon>
+                                {{ i18n.t('vehicles.add') }}
+                            </a>
+                        }
+                    </div>
                 </header>
 
                 @if (actionError(); as message) {
@@ -346,6 +363,13 @@ interface VehicleFilter {
                 margin: 0;
             }
 
+            .header-actions {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
             .subtitle {
                 margin: 4px 0 0;
                 color: var(--mat-sys-on-surface-variant);
@@ -487,6 +511,7 @@ interface VehicleFilter {
 export class VehicleListComponent {
     private readonly service = inject(VehicleService);
     private readonly driverService = inject(DriverService);
+    private readonly catalogService = inject(VehicleCatalogService);
     private readonly dialog = inject(MatDialog);
     protected readonly session = inject(SessionService);
     protected readonly i18n = inject(I18nService);
@@ -512,6 +537,9 @@ export class VehicleListComponent {
     // Only used to resolve default-driver names. A failed driver load leaves it empty, which
     // shows "–" in that column instead of taking the whole vehicle list down with it.
     private readonly driverNames = signal(new Map<string, string>());
+    // Same reasoning for the catalogs: a failed load falls back to showing the stored code.
+    private readonly vehicleClasses = signal(new Map<string, VehicleCatalogEntry>());
+    private readonly carrierGroups = signal(new Map<string, VehicleCatalogEntry>());
 
     private readonly criteria = computed<VehicleFilter>(() => ({
         search: this.search().trim().toLowerCase(),
@@ -536,6 +564,8 @@ export class VehicleListComponent {
             this.dataSource.data = this.vehicles();
         });
         effect(() => {
+            // Reading the catalog too re-runs the filter once carrier-group names arrive.
+            this.carrierGroups();
             this.dataSource.filter = JSON.stringify(this.criteria());
         });
         effect(() => {
@@ -546,6 +576,8 @@ export class VehicleListComponent {
             if (isAuthenticated) {
                 this.refresh();
                 this.loadDrivers();
+                this.loadCatalog('VehicleClass', this.vehicleClasses);
+                this.loadCatalog('CarrierGroup', this.carrierGroups);
             }
         });
     }
@@ -574,7 +606,7 @@ export class VehicleListComponent {
     }
 
     protected classLabel(vehicle: Vehicle): string {
-        return vehicle.vehicleClass ? this.i18n.t(`vehicles.class.${vehicle.vehicleClass}`) : '–';
+        return catalogName(this.vehicleClasses(), vehicle.vehicleClass) ?? '–';
     }
 
     protected driverName(vehicle: Vehicle): string {
@@ -651,6 +683,16 @@ export class VehicleListComponent {
         });
     }
 
+    private loadCatalog(
+        kind: VehicleCatalogKind,
+        target: WritableSignal<Map<string, VehicleCatalogEntry>>,
+    ): void {
+        this.catalogService.list(kind).subscribe({
+            next: (entries) => target.set(catalogIndex(entries)),
+            error: () => target.set(new Map()),
+        });
+    }
+
     private matches(vehicle: Vehicle, criteria: VehicleFilter): boolean {
         if (criteria.status && vehicle.status !== criteria.status) {
             return false;
@@ -667,6 +709,7 @@ export class VehicleListComponent {
             vehicle.model,
             vehicle.chassisNumber,
             vehicle.carrierGroup,
+            catalogName(this.carrierGroups(), vehicle.carrierGroup),
         ].some((value) => !!value && value.toLowerCase().includes(criteria.search));
     }
 

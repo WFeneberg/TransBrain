@@ -25,6 +25,7 @@ public class CreateVehicleThroughSenderTests
         services.AddSingleton<IVehicleRepository>(createdRepository);
         services.AddSingleton<ICacheService>(new InMemoryCacheService());
         services.AddSingleton<IDriverRepository>(new InMemoryDriverRepository());
+        services.AddSingleton<IVehicleCatalogRepository>(InMemoryVehicleCatalogRepository.WithStandardEntries());
         services.AddSingleton<ICurrentUser>(new StubCurrentUser("admin"));
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
 

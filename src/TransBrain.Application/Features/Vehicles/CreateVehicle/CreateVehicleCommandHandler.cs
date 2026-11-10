@@ -8,6 +8,7 @@ namespace TransBrain.Application.Features.Vehicles.CreateVehicle;
 internal sealed class CreateVehicleCommandHandler(
     IVehicleRepository repository,
     IDriverRepository drivers,
+    IVehicleCatalogRepository catalog,
     ICacheService cache,
     ICurrentUser currentUser,
     TimeProvider timeProvider)
@@ -29,7 +30,8 @@ internal sealed class CreateVehicleCommandHandler(
             return type.Error!;
         }
 
-        Result<VehicleDetails> details = VehicleWriteMapping.ToDetails(command);
+        Result<VehicleDetails> details = await VehicleWriteMapping.ToDetailsAsync(
+            command, catalog, current: null, cancellationToken);
         if (!details.IsSuccess)
         {
             return details.Error!;

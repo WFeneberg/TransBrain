@@ -25,7 +25,7 @@ public class VehicleWriteValidatorTests
             ChassisNumber = new string('C', VehicleDetails.MaxIdentifierLength + 1),
             Notes = new string('n', VehicleDetails.MaxNotesLength + 1),
             ManufacturedOn = new DateOnly(1899, 1, 1),
-            VehicleClass = "Spaceship",
+            VehicleClass = new string('V', VehicleCatalogEntry.MaxCodeLength + 1),
             PowerKw = 0,
             LengthMm = VehicleDetails.MaxLengthMm + 1,
             MaxFifthWheelLoadKg = VehicleDetails.MaxWeightKg + 1,
@@ -49,9 +49,9 @@ public class VehicleWriteValidatorTests
     }
 
     [Fact]
-    public void Validate_CaseInsensitiveVehicleClass_IsValid()
+    public void Validate_UnknownButShortVehicleClass_IsLeftToTheCatalogLookup()
     {
-        new CreateVehicleCommandValidator().Validate(ValidCommand with { VehicleClass = "carTRANSPORTER" })
+        new CreateVehicleCommandValidator().Validate(ValidCommand with { VehicleClass = "Spaceship" })
             .IsValid.Should().BeTrue();
     }
 }

@@ -40,9 +40,10 @@ public sealed record VehicleDetails
 
     public int? PowerKw { get; private init; }
 
-    public VehicleClass? VehicleClass { get; private init; }
+    /// <summary>Code of an entry in the vehicle class catalog (<see cref="VehicleCatalogKind.VehicleClass"/>).</summary>
+    public string? VehicleClass { get; private init; }
 
-    /// <summary>The subcontractor group ("Frächtergruppe") the vehicle is run under.</summary>
+    /// <summary>Code of the subcontractor group ("Frächtergruppe") from the carrier group catalog.</summary>
     public string? CarrierGroup { get; private init; }
 
     /// <summary>Vehicle identification number (VIN, "Fahrgestellnummer").</summary>
@@ -72,7 +73,7 @@ public sealed record VehicleDetails
         string? model = null,
         DateOnly? manufacturedOn = null,
         int? powerKw = null,
-        VehicleClass? vehicleClass = null,
+        string? vehicleClass = null,
         string? carrierGroup = null,
         string? chassisNumber = null,
         string? engineNumber = null,
@@ -91,7 +92,7 @@ public sealed record VehicleDetails
             Model = OptionalText.Normalize(model),
             ManufacturedOn = manufacturedOn is { } date ? new DateOnly(date.Year, date.Month, 1) : null,
             PowerKw = powerKw,
-            VehicleClass = vehicleClass,
+            VehicleClass = OptionalText.Normalize(vehicleClass),
             CarrierGroup = OptionalText.Normalize(carrierGroup),
             ChassisNumber = OptionalText.Normalize(chassisNumber)?.ToUpperInvariant(),
             EngineNumber = OptionalText.Normalize(engineNumber),
@@ -134,9 +135,11 @@ public sealed record VehicleDetails
                 "Vehicle.ManufacturedOnTooEarly", $"The year of manufacture must not be before {MinManufactureYear}.");
         }
 
-        if (VehicleClass is { } vehicleClass && !Enum.IsDefined(vehicleClass))
+        if (TooLong(VehicleClass, VehicleCatalogEntry.MaxCodeLength))
         {
-            return Error.Validation("Vehicle.UnknownClass", $"'{vehicleClass}' is not a known vehicle class.");
+            return Error.Validation(
+                "Vehicle.VehicleClassTooLong",
+                $"The vehicle class code must not exceed {VehicleCatalogEntry.MaxCodeLength} characters.");
         }
 
         if (OutOfRange(PowerKw, MaxPowerKw))
