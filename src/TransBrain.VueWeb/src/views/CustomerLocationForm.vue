@@ -7,6 +7,8 @@ import {
     getCustomerLocation,
     getCustomerLocationPosition,
     updateCustomerLocation,
+    MAX_LOCATION_CONTACTS,
+    type CustomerLocationContact,
     type CustomerLocationPosition,
     type CustomerLocationWriteRequest,
 } from '../api/customerLocations';
@@ -34,9 +36,6 @@ const form = reactive({
     postalCode: '',
     city: '',
     country: '',
-    contactPerson: '',
-    email: '',
-    phone: '',
 });
 
 const fieldErrors = reactive<Record<keyof typeof form, string | null>>({
@@ -45,10 +44,40 @@ const fieldErrors = reactive<Record<keyof typeof form, string | null>>({
     postalCode: null,
     city: null,
     country: null,
-    contactPerson: null,
-    email: null,
-    phone: null,
 });
+
+type ContactField = 'name' | 'phone' | 'email';
+
+interface ContactRow {
+    key: number;
+    name: string;
+    phone: string;
+    email: string;
+    errors: Record<ContactField, string | null>;
+}
+
+const contactFields: { name: ContactField; label: MessageKey; sm: number }[] = [
+    { name: 'name', label: 'customers.location.contactName', sm: 12 },
+    { name: 'phone', label: 'customers.location.contactPhone', sm: 6 },
+    { name: 'email', label: 'customers.location.contactEmail', sm: 6 },
+];
+
+const contacts = ref<ContactRow[]>([]);
+let nextContactKey = 0;
+
+function addContact(contact?: CustomerLocationContact): void {
+    contacts.value.push({
+        key: nextContactKey++,
+        name: contact?.name ?? '',
+        phone: contact?.phone ?? '',
+        email: contact?.email ?? '',
+        errors: { name: null, phone: null, email: null },
+    });
+}
+
+function removeContact(index: number): void {
+    contacts.value.splice(index, 1);
+}
 
 const requiredFields = ['name', 'street', 'postalCode', 'city', 'country'] as const;
 
@@ -71,16 +100,6 @@ const sections: { key: string; icon: string; title: MessageKey; fields: SectionF
             { name: 'postalCode', label: 'common.postalCode', sm: 4 },
             { name: 'city', label: 'common.city', sm: 8 },
             { name: 'country', label: 'common.country', sm: 12 },
-        ],
-    },
-    {
-        key: 'contact',
-        icon: 'mdi-phone-outline',
-        title: 'customers.location.section.contact',
-        fields: [
-            { name: 'contactPerson', label: 'customers.contactPerson', sm: 12 },
-            { name: 'email', label: 'customers.location.contactEmail', sm: 12 },
-            { name: 'phone', label: 'customers.location.contactPhone', sm: 12 },
         ],
     },
 ];
@@ -125,9 +144,8 @@ onMounted(async () => {
             form.postalCode = location.postalCode;
             form.city = location.city;
             form.country = location.country;
-            form.contactPerson = location.contactPerson ?? '';
-            form.email = location.email ?? '';
-            form.phone = location.phone ?? '';
+            contacts.value = [];
+            location.contacts.forEach((contact) => addContact(contact));
         } catch (error) {
             formError.value = describeFailure(error, t('customers.location.error.load'));
         }
@@ -139,12 +157,16 @@ function validate(): boolean {
     for (const field of requiredFields) {
         fieldErrors[field] = form[field] ? null : t('common.required');
     }
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-        fieldErrors.email = t('common.invalid');
-    } else {
-        fieldErrors.email = null;
+    for (const contact of contacts.value) {
+        contact.errors.name = contact.name.trim() ? null : t('common.required');
+        contact.errors.phone = null;
+        contact.errors.email =
+            contact.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim()) ? t('common.invalid') : null;
     }
-    return Object.values(fieldErrors).every((message) => message === null);
+    return (
+        Object.values(fieldErrors).every((message) => message === null) &&
+        contacts.value.every((c) => Object.values(c.errors).every((message) => message === null))
+    );
 }
 
 async function save(): Promise<void> {
@@ -154,7 +176,14 @@ async function save(): Promise<void> {
         return;
     }
 
-    const request: CustomerLocationWriteRequest = { ...form };
+    const request: CustomerLocationWriteRequest = {
+        ...form,
+        contacts: contacts.value.map((c) => ({
+            name: c.name.trim(),
+            phone: c.phone.trim() || null,
+            email: c.email.trim() || null,
+        })),
+    };
 
     try {
         if (isEditMode.value) {
@@ -181,6 +210,22 @@ function errorsFor(field: FieldName): string[] {
     return attemptedSubmit.value && message ? [message] : [];
 }
 
+function contactErrorsFor(contact: ContactRow, field: ContactField): string[] {
+    const message = contact.errors[field];
+    return attemptedSubmit.value && message ? [message] : [];
+}
+
+// "Contacts[1].Name" from the server marks the field of that contact row.
+function applyContactError(field: string, message: string): boolean {
+    const match = /^Contacts\[(\d+)\]\.(Name|Phone|Email)$/.exec(field);
+    const contact = match ? contacts.value[Number(match[1])] : undefined;
+    if (!match || !contact) {
+        return false;
+    }
+    contact.errors[match[2].toLowerCase() as ContactField] = message;
+    return true;
+}
+
 function applyServerErrors(error: unknown): void {
     if (axios.isAxiosError(error)) {
         const problem = error.response?.data as ProblemDetailsBody | undefined;
@@ -191,7 +236,7 @@ function applyServerErrors(error: unknown): void {
                 const message = messages.join(' ');
                 if (fieldName in fieldErrors) {
                     fieldErrors[fieldName as keyof typeof fieldErrors] = message;
-                } else {
+                } else if (!applyContactError(field, message)) {
                     formError.value = formError.value ? `${formError.value} ${message}` : message;
                 }
             }
@@ -252,6 +297,55 @@ function describeFailure(error: unknown, fallback: string): string {
                     </v-card>
                 </v-col>
 
+                <v-col cols="12" md="6">
+                    <v-card border flat class="section-card" data-testid="location-contacts-section">
+                        <v-card-item prepend-icon="mdi-card-account-phone-outline" :title="t('customers.location.contacts')" />
+                        <v-card-text>
+                            <p v-if="contacts.length === 0" class="text-medium-emphasis mb-3" data-testid="location-contacts-empty">
+                                {{ t('customers.location.noContacts') }}
+                            </p>
+                            <div v-for="(contact, index) in contacts" :key="contact.key" class="contact-row" data-testid="location-contact-row">
+                                <v-row dense>
+                                    <v-col v-for="field in contactFields" :key="field.name" cols="12" :sm="field.sm">
+                                        <v-text-field
+                                            v-model="contact[field.name]"
+                                            v-native-testid="'location-contact-' + field.name"
+                                            :label="field.name === 'name' ? `${t(field.label)} *` : t(field.label)"
+                                            :error-messages="contactErrorsFor(contact, field.name)"
+                                            variant="outlined"
+                                            density="comfortable"
+                                            hide-details="auto"
+                                        >
+                                            <template #message="{ message }">
+                                                <span :data-testid="'location-contact-' + field.name + '-error'">{{ message }}</span>
+                                            </template>
+                                            <template v-if="field.name === 'name'" #append>
+                                                <v-btn
+                                                    icon="mdi-delete-outline"
+                                                    variant="text"
+                                                    color="error"
+                                                    density="comfortable"
+                                                    data-testid="location-contact-remove"
+                                                    :aria-label="t('customers.location.removeContact')"
+                                                    @click="removeContact(index)"
+                                                />
+                                            </template>
+                                        </v-text-field>
+                                    </v-col>
+                                </v-row>
+                            </div>
+                            <v-btn
+                                variant="tonal"
+                                prepend-icon="mdi-account-plus-outline"
+                                data-testid="location-contact-add"
+                                :disabled="contacts.length >= MAX_LOCATION_CONTACTS"
+                                @click="addContact()"
+                                >{{ t('customers.location.addContact') }}</v-btn
+                            >
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+
                 <v-col v-if="isEditMode" cols="12">
                     <v-card border flat class="section-card">
                         <v-card-item prepend-icon="mdi-map-outline" :title="t('customers.location.map')" />
@@ -274,3 +368,11 @@ function describeFailure(error: unknown, fallback: string): string {
         </form>
     </v-container>
 </template>
+
+<style scoped>
+.contact-row {
+    margin-bottom: 12px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+</style>

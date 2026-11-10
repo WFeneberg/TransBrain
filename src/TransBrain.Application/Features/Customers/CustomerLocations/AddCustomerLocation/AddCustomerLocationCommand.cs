@@ -9,6 +9,4 @@ public sealed record AddCustomerLocationCommand(
     string PostalCode,
     string City,
     string Country,
-    string? ContactPerson,
-    string? Email,
-    string? Phone) : ICommand<CustomerLocationResponse>;
+    IReadOnlyList<CustomerLocationContactData>? Contacts = null) : ICommand<CustomerLocationResponse>;

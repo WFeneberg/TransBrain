@@ -1,4 +1,5 @@
 using TransBrain.Application.Abstractions;
+using TransBrain.Application.Features.Customers.CustomerLocations;
 using TransBrain.Application.Features.Customers.CustomerLocations.ListAllCustomerLocations;
 using TransBrain.Domain.Customers;
 
@@ -74,7 +75,7 @@ public sealed class InMemoryCustomerRepository : ICustomerRepository
 
     private static CustomerLocationListItem ToItem(CustomerLocation l, Customer c) => new(
         l.Id, c.Id, c.Name, l.Name, l.Address.Street, l.Address.PostalCode, l.Address.City,
-        l.Address.Country, l.ContactPerson, l.Email, l.Phone);
+        l.Address.Country, l.Contacts.Select(CustomerLocationContactData.From).ToList());
 
     public Task AddLocationAsync(CustomerLocation location, CancellationToken cancellationToken)
     {

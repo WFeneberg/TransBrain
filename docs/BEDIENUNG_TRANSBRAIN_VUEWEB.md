@@ -415,16 +415,26 @@ ganze Karte übernommen: ein geleertes Feld ist danach auch gespeichert leer.
 
 ### Anlieferorte
 
-Ein Kunde kann mehrere Anlieferorte haben, jeweils mit eigener Adresse und eigenem
-Ansprechpartner. Die Anlieferorte stehen unter dem Abschnitt „Anlieferorte“ im Kundenformular.
+Ein Kunde kann mehrere Anlieferorte (Abladeadressen) haben, jeweils mit eigener Adresse und
+beliebig vielen eigenen Ansprechpersonen. Die Anlieferorte stehen unter dem Abschnitt „Anlieferorte“ im Kundenformular.
 Dieser Abschnitt erscheint erst im Bearbeitungsmodus, also nachdem der Kunde gespeichert wurde.
 
 - Schaltfläche **„Add delivery location“** öffnet ein Formular für einen neuen Anlieferort
   (`/customers/{id}/locations/new`).
 - Pro Zeile: **Stift-Symbol** und **Papierkorb-Symbol** (nur `admin`); das Löschen fragt
   vorher nach („Really delete delivery location …?“).
+- Die Spalte **„Contact persons“** der Tabelle zeigt je Anlieferort alle Ansprechpersonen,
+  eine pro Zeile mit Name · Telefon · E-Mail.
 - Felder: Bezeichnung des Anlieferorts (Pflicht), Straße, PLZ, Ort und Land (Pflicht, wie beim
-  Kunden), Ansprechperson, deren Telefon und E-Mail (optional).
+  Kunden).
+- Karte **„Contact persons“**: **„Add contact person“** fügt eine leere Zeile mit Name
+  (Pflicht), Telefon und E-Mail (beide optional, die E-Mail muss gültig sein) hinzu; das
+  **Papierkorb-Symbol** einer Zeile entfernt diese Ansprechperson. Bis zu 20 Ansprechpersonen
+  je Anlieferort, die Reihenfolge bleibt wie eingegeben. Gespeichert wird die Liste erst mit
+  **„Save“**; ein fehlender Name oder eine ungültige E-Mail wird direkt an der betroffenen Zeile
+  angezeigt.
+
+  ![Anlieferort mit mehreren Ansprechpersonen](img/vueweb/anlieferort-kontakte.png)
 - Die Adresse eines Anlieferorts ist unabhängig von der Firmenadresse des Kunden. Im Bearbeitungsmodus zeigt eine Karte die Lage des Anlieferorts. Die Position wird aus der Adresse über Nominatim (OpenStreetMap) bestimmt. Der Dienst ist frei und braucht keinen Schlüssel. Ist die Adresse unbekannt, sagt ein Hinweis das ausdrücklich. Wird ein Kunde
   gelöscht, werden seine Anlieferorte mit gelöscht.
 

@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using TransBrain.Application.Common.Pagination;
+using TransBrain.Application.Features.Customers.CustomerLocations;
 using TransBrain.Application.Features.Customers.CustomerLocations.ListAllCustomerLocations;
 using TransBrain.Application.Tests.Fakes;
 using TransBrain.Domain.Common;
@@ -19,8 +20,9 @@ public class ListAllCustomerLocationsQueryHandlerTests
         Customer beta = Customer.Create("Beta AG", Sample("Beta AG"), null, null, null, null, 30).Value;
         repository.Seed(alpha, beta);
         repository.SeedLocations(
-            CustomerLocation.Create(beta.Id, "Werk", Sample("Werk"), null, null, null).Value,
-            CustomerLocation.Create(alpha.Id, "Lager", Sample("Lager"), null, null, null).Value);
+            CustomerLocation.Create(beta.Id, "Werk", Sample("Werk"), []).Value,
+            CustomerLocation.Create(alpha.Id, "Lager", Sample("Lager"),
+                [CustomerLocationContact.Create("Hans Huber", "+43 1 111", null).Value, CustomerLocationContact.Create("Eva Berger", null, "e@x.at").Value]).Value);
 
         ListAllCustomerLocationsQueryHandler handler = new(repository);
 
@@ -31,5 +33,8 @@ public class ListAllCustomerLocationsQueryHandlerTests
         result.Value.TotalCount.Should().Be(2);
         result.Value.Items.Select(i => (i.CustomerName, i.Name)).Should()
             .Equal(("Alpha GmbH", "Lager"), ("Beta AG", "Werk"));
+        result.Value.Items[0].Contacts.Should().Equal(
+            new CustomerLocationContactData("Hans Huber", "+43 1 111"), new CustomerLocationContactData("Eva Berger", Email: "e@x.at"));
+        result.Value.Items[1].Contacts.Should().BeEmpty();
     }
 }

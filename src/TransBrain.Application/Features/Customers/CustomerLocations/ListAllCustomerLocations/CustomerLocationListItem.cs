@@ -10,6 +10,4 @@ public sealed record CustomerLocationListItem(
     string PostalCode,
     string City,
     string Country,
-    string? ContactPerson,
-    string? Email,
-    string? Phone);
+    IReadOnlyList<CustomerLocationContactData> Contacts);

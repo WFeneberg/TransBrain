@@ -10,9 +10,7 @@ public sealed record CustomerLocationResponse(
     string PostalCode,
     string City,
     string Country,
-    string? ContactPerson,
-    string? Email,
-    string? Phone)
+    IReadOnlyList<CustomerLocationContactData> Contacts)
 {
     public static CustomerLocationResponse From(CustomerLocation location) => new(
         location.Id,
@@ -22,7 +20,5 @@ public sealed record CustomerLocationResponse(
         location.Address.PostalCode,
         location.Address.City,
         location.Address.Country,
-        location.ContactPerson,
-        location.Email,
-        location.Phone);
+        location.Contacts.Select(CustomerLocationContactData.From).ToList());
 }

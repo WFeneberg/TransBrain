@@ -29,7 +29,7 @@ public class OrderConsigneeLocationTests
             Guid.CreateVersion7(),
             "Lager Wien",
             Address.Create("Lager Wien", "Südbahnstraße 5", "1100", "Wien", "AT").Value,
-            null, null, null).Value;
+            []).Value;
         customers.SeedLocations(location);
         InMemoryTransportOrderRepository orders = new();
         CreateOrderCommandHandler handler = new(orders, new StubOrderNumberGenerator(1), customers, TimeProvider.System);

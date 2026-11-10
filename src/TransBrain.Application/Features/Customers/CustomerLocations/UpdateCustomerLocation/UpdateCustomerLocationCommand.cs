@@ -2,6 +2,7 @@ using TransBrain.Application.Common.Messaging;
 
 namespace TransBrain.Application.Features.Customers.CustomerLocations.UpdateCustomerLocation;
 
+/// <remarks><see cref="Contacts"/> replaces the location's contact persons as a whole; omitted means none.</remarks>
 public sealed record UpdateCustomerLocationCommand(
     Guid CustomerId,
     Guid LocationId,
@@ -10,6 +11,4 @@ public sealed record UpdateCustomerLocationCommand(
     string PostalCode,
     string City,
     string Country,
-    string? ContactPerson,
-    string? Email,
-    string? Phone) : ICommand<CustomerLocationResponse>;
+    IReadOnlyList<CustomerLocationContactData>? Contacts = null) : ICommand<CustomerLocationResponse>;

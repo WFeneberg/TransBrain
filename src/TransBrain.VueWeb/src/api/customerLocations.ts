@@ -1,6 +1,16 @@
 import axios from 'axios';
 import { userManager } from '../auth/userManager';
 
+/** Mirrors CustomerLocation.MaxContacts on the server. */
+export const MAX_LOCATION_CONTACTS = 20;
+
+/** A contact person at a delivery location; only the name is required. */
+export interface CustomerLocationContact {
+    name: string;
+    phone: string | null;
+    email: string | null;
+}
+
 export interface CustomerLocation {
     id: string;
     customerId: string;
@@ -9,21 +19,17 @@ export interface CustomerLocation {
     postalCode: string;
     city: string;
     country: string;
-    contactPerson: string | null;
-    email: string | null;
-    phone: string | null;
+    contacts: CustomerLocationContact[];
 }
 
-/** Body shared by create and update - the ids come from the route, not the payload. */
+/** Body shared by create and update - the ids come from the route, not the payload. contacts replaces the whole list. */
 export interface CustomerLocationWriteRequest {
     name: string;
     street: string;
     postalCode: string;
     city: string;
     country: string;
-    contactPerson: string | null;
-    email: string | null;
-    phone: string | null;
+    contacts: CustomerLocationContact[];
 }
 
 /** A delivery location with its customer's name, for pickers across all customers. */

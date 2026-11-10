@@ -1,6 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import {
+    FormArray,
+    FormBuilder,
+    FormControl,
+    FormGroup,
+    ReactiveFormsModule,
+    ValidationErrors,
+    Validators,
+} from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -11,11 +19,21 @@ import { switchMap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { I18nService } from '../i18n/i18n.service';
 import {
+    CustomerLocationContact,
     CustomerLocationPosition,
     CustomerLocationService,
     CustomerLocationWriteRequest,
 } from './customer-location.service';
 import { LocationMapComponent, MapMarker } from '../shared/location-map.component';
+
+interface ContactControls {
+    name: FormControl<string>;
+    phone: FormControl<string>;
+    email: FormControl<string>;
+}
+
+/** Mirrors CustomerLocation.MaxContacts on the server. */
+const MAX_CONTACTS = 20;
 
 interface ProblemDetailsBody {
     errors?: Record<string, string[]>;
@@ -36,6 +54,26 @@ interface ProblemDetailsBody {
         LocationMapComponent,
     ],
     styleUrl: '../shared/page-layout.scss',
+    styles: [
+        `
+            .contact-row {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+                gap: 0 16px;
+                align-items: start;
+            }
+
+            .contact-row button {
+                margin-top: 8px;
+            }
+
+            @media (max-width: 720px) {
+                .contact-row {
+                    grid-template-columns: minmax(0, 1fr) auto;
+                }
+            }
+        `,
+    ],
     template: `
         <div class="page">
             <header class="page-header align-start">
@@ -88,6 +126,72 @@ interface ProblemDetailsBody {
                             </mat-card-content>
                         </mat-card>
                     }
+
+                    <mat-card
+                        appearance="outlined"
+                        class="full-width"
+                        data-testid="location-contacts-section"
+                    >
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">contact_phone</mat-icon>
+                            <mat-card-title>{{
+                                i18n.t('customers.location.contacts')
+                            }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content formArrayName="contacts">
+                            @for (contact of contacts.controls; track contact; let i = $index) {
+                                <div
+                                    class="contact-row"
+                                    [formGroupName]="i"
+                                    data-testid="location-contact-row"
+                                >
+                                    @for (field of contactFields; track field.name) {
+                                        <mat-form-field>
+                                            <mat-label>{{ i18n.t(field.label) }}</mat-label>
+                                            <input
+                                                matInput
+                                                [formControlName]="field.name"
+                                                [attr.data-testid]="'location-contact-' + field.name"
+                                            />
+                                            @if (contact.controls[field.name].errors; as errors) {
+                                                <mat-error
+                                                    [attr.data-testid]="
+                                                        'location-contact-' + field.name + '-error'
+                                                    "
+                                                    >{{ fieldErrorText(errors) }}</mat-error
+                                                >
+                                            }
+                                        </mat-form-field>
+                                    }
+                                    <button
+                                        mat-icon-button
+                                        type="button"
+                                        class="delete"
+                                        data-testid="location-contact-remove"
+                                        [attr.aria-label]="i18n.t('customers.location.removeContact')"
+                                        (click)="removeContact(i)"
+                                    >
+                                        <mat-icon>delete</mat-icon>
+                                    </button>
+                                </div>
+                            } @empty {
+                                <p class="hint" data-testid="location-contacts-empty">
+                                    <mat-icon aria-hidden="true">info</mat-icon
+                                    >{{ i18n.t('customers.location.noContacts') }}
+                                </p>
+                            }
+                            <button
+                                mat-stroked-button
+                                type="button"
+                                data-testid="location-contact-add"
+                                [disabled]="contacts.length >= maxContacts"
+                                (click)="addContact()"
+                            >
+                                <mat-icon>person_add</mat-icon>
+                                {{ i18n.t('customers.location.addContact') }}
+                            </button>
+                        </mat-card-content>
+                    </mat-card>
 
                     @if (isEditMode) {
                         <mat-card
@@ -154,15 +258,6 @@ export class CustomerLocationFormComponent {
                 { name: 'country', label: 'common.country' },
             ],
         },
-        {
-            title: 'customers.section.contact',
-            icon: 'contact_phone',
-            fields: [
-                { name: 'contactPerson', label: 'customers.contactPerson' },
-                { name: 'email', label: 'customers.location.contactEmail' },
-                { name: 'phone', label: 'customers.location.contactPhone' },
-            ],
-        },
     ] as const;
 
     protected readonly customerId = this.route.snapshot.paramMap.get('id')!;
@@ -191,10 +286,34 @@ export class CustomerLocationFormComponent {
         postalCode: ['', Validators.required],
         city: ['', Validators.required],
         country: ['', [Validators.required, Validators.pattern(/^[A-Za-z]{2}$/)]],
-        contactPerson: [''],
-        email: ['', Validators.email],
-        phone: [''],
+        contacts: this.fb.nonNullable.array<FormGroup<ContactControls>>([]),
     });
+
+    protected readonly contactFields = [
+        { name: 'name', label: 'customers.location.contactName' },
+        { name: 'phone', label: 'customers.location.contactPhone' },
+        { name: 'email', label: 'customers.location.contactEmail' },
+    ] as const;
+
+    protected readonly maxContacts = MAX_CONTACTS;
+
+    protected get contacts(): FormArray<FormGroup<ContactControls>> {
+        return this.form.controls.contacts;
+    }
+
+    protected addContact(contact?: CustomerLocationContact): void {
+        this.contacts.push(
+            this.fb.nonNullable.group({
+                name: [contact?.name ?? '', Validators.required],
+                phone: [contact?.phone ?? ''],
+                email: [contact?.email ?? '', Validators.email],
+            }),
+        );
+    }
+
+    protected removeContact(index: number): void {
+        this.contacts.removeAt(index);
+    }
 
     constructor() {
         if (this.isEditMode) {
@@ -217,10 +336,9 @@ export class CustomerLocationFormComponent {
                             postalCode: location.postalCode,
                             city: location.city,
                             country: location.country,
-                            contactPerson: location.contactPerson ?? '',
-                            email: location.email ?? '',
-                            phone: location.phone ?? '',
                         });
+                        this.contacts.clear();
+                        location.contacts.forEach((contact) => this.addContact(contact));
                     },
                     error: (error: HttpErrorResponse) =>
                         this.formError.set(
@@ -267,7 +385,15 @@ export class CustomerLocationFormComponent {
             return;
         }
 
-        const request: CustomerLocationWriteRequest = this.form.getRawValue();
+        const value = this.form.getRawValue();
+        const request: CustomerLocationWriteRequest = {
+            ...value,
+            contacts: value.contacts.map((c) => ({
+                name: c.name.trim(),
+                phone: c.phone.trim() || null,
+                email: c.email.trim() || null,
+            })),
+        };
         const save$ = this.session.ready.pipe(
             switchMap(() =>
                 this.isEditMode
@@ -291,8 +417,13 @@ export class CustomerLocationFormComponent {
 
         if (problem?.errors) {
             for (const [field, messages] of Object.entries(problem.errors)) {
-                const controlName = field.charAt(0).toLowerCase() + field.slice(1);
-                const control = this.form.get(controlName);
+                // "Contacts[1].Name" -> "contacts.1.name"
+                const controlPath = field
+                    .replace(/\[(\d+)\]/g, '.$1')
+                    .split('.')
+                    .map((part) => part.charAt(0).toLowerCase() + part.slice(1))
+                    .join('.');
+                const control = this.form.get(controlPath);
                 const message = messages.join(' ');
                 if (control) {
                     control.setErrors({ server: message });
