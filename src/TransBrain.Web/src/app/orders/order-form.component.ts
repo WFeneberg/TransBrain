@@ -2,15 +2,26 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SessionService } from '../auth/session.service';
 import { I18nService } from '../i18n/i18n.service';
 import { LocationMapComponent, MapMarker } from '../shared/location-map.component';
-import {Observable, switchMap} from 'rxjs';
-import { LocatedParty, Order, OrderLocations, OrderService, OrderWriteRequest } from './order.service';
-import { CustomerLocationOption, CustomerLocationService } from '../customers/customer-location.service';
+import { Observable, switchMap } from 'rxjs';
+import {
+    LocatedParty,
+    Order,
+    OrderLocations,
+    OrderService,
+    OrderWriteRequest,
+} from './order.service';
+import {
+    CustomerLocationOption,
+    CustomerLocationService,
+} from '../customers/customer-location.service';
 
 interface ProblemDetailsBody {
     errors?: Record<string, string[]>;
@@ -22,222 +33,306 @@ interface ProblemDetailsBody {
 @Component({
     selector: 'app-order-form',
     standalone: true,
-    imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, LocationMapComponent],
+    imports: [
+        ReactiveFormsModule,
+        MatButtonModule,
+        MatCardModule,
+        MatFormFieldModule,
+        MatIconModule,
+        MatInputModule,
+        LocationMapComponent,
+    ],
+    styleUrl: '../shared/page-layout.scss',
     template: `
-        <h1>{{ isEditMode ? i18n.t('orders.edit') : i18n.t('orders.new') }}</h1>
-        @if (formError(); as message) {
-            <p data-testid="order-form-error">{{ message }}</p>
-        }
-        <form [formGroup]="form" (ngSubmit)="save()">
-            <fieldset formGroupName="consignor">
-                <legend>{{ i18n.t('orders.consignor') }}</legend>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.name') }}</mat-label>
-                    <input matInput formControlName="name" data-testid="order-consignor-name" />
-                    @if (form.controls.consignor.controls.name.errors; as errors) {
-                        <mat-error data-testid="order-consignor-name-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.street') }}</mat-label>
-                    <input matInput formControlName="street" data-testid="order-consignor-street" />
-                    @if (form.controls.consignor.controls.street.errors; as errors) {
-                        <mat-error data-testid="order-consignor-street-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.postalCode') }}</mat-label>
-                    <input matInput formControlName="postalCode" data-testid="order-consignor-postalCode" />
-                    @if (form.controls.consignor.controls.postalCode.errors; as errors) {
-                        <mat-error data-testid="order-consignor-postalCode-error">
-                            {{ fieldErrorText(errors) }}
-                        </mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.city') }}</mat-label>
-                    <input matInput formControlName="city" data-testid="order-consignor-city" />
-                    @if (form.controls.consignor.controls.city.errors; as errors) {
-                        <mat-error data-testid="order-consignor-city-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.country') }}</mat-label>
-                    <input matInput formControlName="country" data-testid="order-consignor-country" />
-                    @if (form.controls.consignor.controls.country.errors; as errors) {
-                        <mat-error data-testid="order-consignor-country-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-            </fieldset>
-            <fieldset>
-                <legend>{{ i18n.t('orders.consigneeLocation') }}</legend>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('orders.consigneeLocation') }}</mat-label>
-                    <select
-                        matNativeControl
-                        formControlName="consigneeLocationId"
-                        (change)="onLocationChange($event)"
-                        data-testid="order-consigneeLocation"
-                    >
-                        <option value="">{{ i18n.t('orders.consigneeLocation.none') }}</option>
-                        @for (option of locationOptions(); track option.id) {
-                            <option [value]="option.id">{{ option.customerName }}: {{ option.name }}, {{ option.city }}</option>
-                        }
-                    </select>
-                </mat-form-field>
-                @if (locationPickerError(); as message) {
-                    <p data-testid="order-consigneeLocation-error">{{ message }}</p>
-                }
-            </fieldset>
-            <fieldset formGroupName="consignee">
-                <legend>{{ i18n.t('orders.consignee') }}</legend>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.name') }}</mat-label>
-                    <input matInput formControlName="name" data-testid="order-consignee-name" />
-                    @if (form.controls.consignee.controls.name.errors; as errors) {
-                        <mat-error data-testid="order-consignee-name-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.street') }}</mat-label>
-                    <input matInput formControlName="street" data-testid="order-consignee-street" />
-                    @if (form.controls.consignee.controls.street.errors; as errors) {
-                        <mat-error data-testid="order-consignee-street-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.postalCode') }}</mat-label>
-                    <input matInput formControlName="postalCode" data-testid="order-consignee-postalCode" />
-                    @if (form.controls.consignee.controls.postalCode.errors; as errors) {
-                        <mat-error data-testid="order-consignee-postalCode-error">
-                            {{ fieldErrorText(errors) }}
-                        </mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.city') }}</mat-label>
-                    <input matInput formControlName="city" data-testid="order-consignee-city" />
-                    @if (form.controls.consignee.controls.city.errors; as errors) {
-                        <mat-error data-testid="order-consignee-city-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.country') }}</mat-label>
-                    <input matInput formControlName="country" data-testid="order-consignee-country" />
-                    @if (form.controls.consignee.controls.country.errors; as errors) {
-                        <mat-error data-testid="order-consignee-country-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-            </fieldset>
-            <fieldset>
-                <legend>{{ i18n.t('orders.cargo') }}</legend>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('orders.cargoDescription') }}</mat-label>
-                    <input matInput formControlName="cargoDescription" data-testid="order-cargoDescription" />
-                    @if (form.controls.cargoDescription.errors; as errors) {
-                        <mat-error data-testid="order-cargoDescription-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('orders.weightKg') }}</mat-label>
-                    <input
-                        matInput
-                        type="number"
-                        formControlName="cargoWeightKg"
-                        data-testid="order-cargoWeightKg"
-                    />
-                    @if (form.controls.cargoWeightKg.errors; as errors) {
-                        <mat-error data-testid="order-cargoWeightKg-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.loadMeters') }}</mat-label>
-                    <!-- step="any" because the default step=1 makes a native number input
-                         reject a decimal like 8.4 - the same trap Phase 2 hit in the Vue form. -->
-                    <input
-                        matInput
-                        type="number"
-                        step="any"
-                        formControlName="cargoLoadMeters"
-                        data-testid="order-cargoLoadMeters"
-                    />
-                    @if (form.controls.cargoLoadMeters.errors; as errors) {
-                        <mat-error data-testid="order-cargoLoadMeters-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-            </fieldset>
-            <fieldset>
-                <legend>{{ i18n.t('orders.pickupWindow') }}</legend>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.from') }}</mat-label>
-                    <input
-                        matInput
-                        type="datetime-local"
-                        formControlName="pickupFrom"
-                        data-testid="order-pickupFrom"
-                    />
-                    @if (form.controls.pickupFrom.errors; as errors) {
-                        <mat-error data-testid="order-pickupFrom-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.to') }}</mat-label>
-                    <input matInput type="datetime-local" formControlName="pickupTo" data-testid="order-pickupTo" />
-                    @if (form.controls.pickupTo.errors; as errors) {
-                        <mat-error data-testid="order-pickupTo-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-            </fieldset>
-            <fieldset>
-                <legend>{{ i18n.t('orders.deliveryWindow') }}</legend>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.from') }}</mat-label>
-                    <input
-                        matInput
-                        type="datetime-local"
-                        formControlName="deliveryFrom"
-                        data-testid="order-deliveryFrom"
-                    />
-                    @if (form.controls.deliveryFrom.errors; as errors) {
-                        <mat-error data-testid="order-deliveryFrom-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-                <mat-form-field>
-                    <mat-label>{{ i18n.t('common.to') }}</mat-label>
-                    <input
-                        matInput
-                        type="datetime-local"
-                        formControlName="deliveryTo"
-                        data-testid="order-deliveryTo"
-                    />
-                    @if (form.controls.deliveryTo.errors; as errors) {
-                        <mat-error data-testid="order-deliveryTo-error">{{ fieldErrorText(errors) }}</mat-error>
-                    }
-                </mat-form-field>
-            </fieldset>
-            @if (isEditMode) {
-                <fieldset data-testid="order-map">
-                    <legend>{{ i18n.t('orders.map') }}</legend>
-                    @if (locationError(); as message) {
-                        <p data-testid="order-map-error">{{ message }}</p>
-                    }
-                    @if (locations(); as located) {
-                        @if (mapMarkers().length) {
-                            <app-location-map [markers]="mapMarkers()" />
-                        }
-                        @if (!located.consignor) {
-                            <p data-testid="order-map-consignor-missing">{{ i18n.t('orders.map.consignorMissing') }}</p>
-                        }
-                        @if (!located.consignee) {
-                            <p data-testid="order-map-consignee-missing">{{ i18n.t('orders.map.consigneeMissing') }}</p>
-                        }
-                    }
-                </fieldset>
+        <div class="page">
+            <header class="page-header align-start">
+                <div class="title-row">
+                    <h1>{{ isEditMode ? i18n.t('orders.edit') : i18n.t('orders.new') }}</h1>
+                </div>
+            </header>
+
+            @if (formError(); as message) {
+                <p class="error-banner" data-testid="order-form-error">
+                    <mat-icon aria-hidden="true">error_outline</mat-icon>{{ message }}
+                </p>
             }
-            <button mat-raised-button type="submit" data-testid="order-save">{{ i18n.t('common.save') }}</button>
-            <button mat-button type="button" data-testid="order-cancel-edit" (click)="cancel()">{{ i18n.t('common.cancel') }}</button>
-        </form>
+
+            <form [formGroup]="form" (ngSubmit)="save()">
+                <div class="cards">
+                    <mat-card appearance="outlined">
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">outbox</mat-icon>
+                            <mat-card-title>{{ i18n.t('orders.consignor') }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content class="fields" formGroupName="consignor">
+                            @for (field of addressFields; track field.name) {
+                                <mat-form-field [class.span-2]="field.name === 'name'">
+                                    <mat-label>{{ i18n.t(field.label) }}</mat-label>
+                                    <input
+                                        matInput
+                                        [formControlName]="field.name"
+                                        [attr.data-testid]="'order-consignor-' + field.name"
+                                    />
+                                    @if (
+                                        form.controls.consignor.controls[field.name].errors;
+                                        as errors
+                                    ) {
+                                        <mat-error
+                                            [attr.data-testid]="
+                                                'order-consignor-' + field.name + '-error'
+                                            "
+                                            >{{ fieldErrorText(errors) }}</mat-error
+                                        >
+                                    }
+                                </mat-form-field>
+                            }
+                        </mat-card-content>
+                    </mat-card>
+
+                    <mat-card appearance="outlined">
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">move_to_inbox</mat-icon>
+                            <mat-card-title>{{ i18n.t('orders.consignee') }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content class="fields">
+                            <mat-form-field class="span-2">
+                                <mat-label>{{ i18n.t('orders.consigneeLocation') }}</mat-label>
+                                <select
+                                    matNativeControl
+                                    formControlName="consigneeLocationId"
+                                    (change)="onLocationChange($event)"
+                                    data-testid="order-consigneeLocation"
+                                >
+                                    <option value="">
+                                        {{ i18n.t('orders.consigneeLocation.none') }}
+                                    </option>
+                                    @for (option of locationOptions(); track option.id) {
+                                        <option [value]="option.id">
+                                            {{ option.customerName }}: {{ option.name }},
+                                            {{ option.city }}
+                                        </option>
+                                    }
+                                </select>
+                            </mat-form-field>
+                            @if (locationPickerError(); as message) {
+                                <p class="hint span-2" data-testid="order-consigneeLocation-error">
+                                    <mat-icon aria-hidden="true">info</mat-icon>{{ message }}
+                                </p>
+                            }
+                        </mat-card-content>
+                        <mat-card-content class="fields" formGroupName="consignee">
+                            @for (field of addressFields; track field.name) {
+                                <mat-form-field [class.span-2]="field.name === 'name'">
+                                    <mat-label>{{ i18n.t(field.label) }}</mat-label>
+                                    <input
+                                        matInput
+                                        [formControlName]="field.name"
+                                        [attr.data-testid]="'order-consignee-' + field.name"
+                                    />
+                                    @if (
+                                        form.controls.consignee.controls[field.name].errors;
+                                        as errors
+                                    ) {
+                                        <mat-error
+                                            [attr.data-testid]="
+                                                'order-consignee-' + field.name + '-error'
+                                            "
+                                            >{{ fieldErrorText(errors) }}</mat-error
+                                        >
+                                    }
+                                </mat-form-field>
+                            }
+                        </mat-card-content>
+                    </mat-card>
+
+                    <mat-card appearance="outlined">
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">inventory_2</mat-icon>
+                            <mat-card-title>{{ i18n.t('orders.cargo') }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content class="fields">
+                            <mat-form-field class="span-2">
+                                <mat-label>{{ i18n.t('orders.cargoDescription') }}</mat-label>
+                                <input
+                                    matInput
+                                    formControlName="cargoDescription"
+                                    data-testid="order-cargoDescription"
+                                />
+                                @if (form.controls.cargoDescription.errors; as errors) {
+                                    <mat-error data-testid="order-cargoDescription-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                            <mat-form-field>
+                                <mat-label>{{ i18n.t('orders.weightKg') }}</mat-label>
+                                <input
+                                    matInput
+                                    type="number"
+                                    formControlName="cargoWeightKg"
+                                    data-testid="order-cargoWeightKg"
+                                />
+                                @if (form.controls.cargoWeightKg.errors; as errors) {
+                                    <mat-error data-testid="order-cargoWeightKg-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                            <mat-form-field>
+                                <mat-label>{{ i18n.t('common.loadMeters') }}</mat-label>
+                                <!-- step="any" because the default step=1 makes a native number input
+                                     reject a decimal like 8.4 - the same trap Phase 2 hit in the Vue form. -->
+                                <input
+                                    matInput
+                                    type="number"
+                                    step="any"
+                                    formControlName="cargoLoadMeters"
+                                    data-testid="order-cargoLoadMeters"
+                                />
+                                @if (form.controls.cargoLoadMeters.errors; as errors) {
+                                    <mat-error data-testid="order-cargoLoadMeters-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                        </mat-card-content>
+                    </mat-card>
+
+                    <mat-card appearance="outlined">
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">schedule</mat-icon>
+                            <mat-card-title>{{ i18n.t('orders.section.windows') }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content>
+                            <p class="window-label">{{ i18n.t('orders.pickupWindow') }}</p>
+                            <div class="fields">
+                                <mat-form-field>
+                                    <mat-label>{{ i18n.t('common.from') }}</mat-label>
+                                    <input
+                                        matInput
+                                        type="datetime-local"
+                                        formControlName="pickupFrom"
+                                        data-testid="order-pickupFrom"
+                                    />
+                                    @if (form.controls.pickupFrom.errors; as errors) {
+                                        <mat-error data-testid="order-pickupFrom-error">{{
+                                            fieldErrorText(errors)
+                                        }}</mat-error>
+                                    }
+                                </mat-form-field>
+                                <mat-form-field>
+                                    <mat-label>{{ i18n.t('common.to') }}</mat-label>
+                                    <input
+                                        matInput
+                                        type="datetime-local"
+                                        formControlName="pickupTo"
+                                        data-testid="order-pickupTo"
+                                    />
+                                    @if (form.controls.pickupTo.errors; as errors) {
+                                        <mat-error data-testid="order-pickupTo-error">{{
+                                            fieldErrorText(errors)
+                                        }}</mat-error>
+                                    }
+                                </mat-form-field>
+                            </div>
+                            <p class="window-label">{{ i18n.t('orders.deliveryWindow') }}</p>
+                            <div class="fields">
+                                <mat-form-field>
+                                    <mat-label>{{ i18n.t('common.from') }}</mat-label>
+                                    <input
+                                        matInput
+                                        type="datetime-local"
+                                        formControlName="deliveryFrom"
+                                        data-testid="order-deliveryFrom"
+                                    />
+                                    @if (form.controls.deliveryFrom.errors; as errors) {
+                                        <mat-error data-testid="order-deliveryFrom-error">{{
+                                            fieldErrorText(errors)
+                                        }}</mat-error>
+                                    }
+                                </mat-form-field>
+                                <mat-form-field>
+                                    <mat-label>{{ i18n.t('common.to') }}</mat-label>
+                                    <input
+                                        matInput
+                                        type="datetime-local"
+                                        formControlName="deliveryTo"
+                                        data-testid="order-deliveryTo"
+                                    />
+                                    @if (form.controls.deliveryTo.errors; as errors) {
+                                        <mat-error data-testid="order-deliveryTo-error">{{
+                                            fieldErrorText(errors)
+                                        }}</mat-error>
+                                    }
+                                </mat-form-field>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+
+                    @if (isEditMode) {
+                        <mat-card appearance="outlined" class="full-width" data-testid="order-map">
+                            <mat-card-header>
+                                <mat-icon mat-card-avatar class="avatar">map</mat-icon>
+                                <mat-card-title>{{ i18n.t('orders.map') }}</mat-card-title>
+                            </mat-card-header>
+                            <mat-card-content>
+                                @if (locationError(); as message) {
+                                    <p class="hint" data-testid="order-map-error">
+                                        <mat-icon aria-hidden="true">info</mat-icon>{{ message }}
+                                    </p>
+                                }
+                                @if (locations(); as located) {
+                                    @if (mapMarkers().length) {
+                                        <app-location-map [markers]="mapMarkers()" />
+                                    }
+                                    @if (!located.consignor) {
+                                        <p class="hint" data-testid="order-map-consignor-missing">
+                                            <mat-icon aria-hidden="true">info</mat-icon
+                                            >{{ i18n.t('orders.map.consignorMissing') }}
+                                        </p>
+                                    }
+                                    @if (!located.consignee) {
+                                        <p class="hint" data-testid="order-map-consignee-missing">
+                                            <mat-icon aria-hidden="true">info</mat-icon
+                                            >{{ i18n.t('orders.map.consigneeMissing') }}
+                                        </p>
+                                    }
+                                }
+                            </mat-card-content>
+                        </mat-card>
+                    }
+                </div>
+
+                <div class="action-bar">
+                    <button
+                        mat-button
+                        type="button"
+                        data-testid="order-cancel-edit"
+                        (click)="cancel()"
+                    >
+                        {{ i18n.t('common.cancel') }}
+                    </button>
+                    <button mat-flat-button type="submit" data-testid="order-save">
+                        <mat-icon>save</mat-icon>
+                        {{ i18n.t('common.save') }}
+                    </button>
+                </div>
+            </form>
+        </div>
     `,
+    styles: [
+        `
+            .span-2 {
+                grid-column: 1 / -1;
+            }
+
+            .window-label {
+                margin: 0 0 8px;
+                color: var(--mat-sys-on-surface-variant);
+                font: var(--mat-sys-title-small);
+            }
+        `,
+    ],
 })
 export class OrderFormComponent {
     private readonly service = inject(OrderService);
@@ -252,6 +347,14 @@ export class OrderFormComponent {
     // The one checkAuth() behind it runs in the App component.
     protected readonly session = inject(SessionService);
     protected readonly i18n = inject(I18nService);
+
+    protected readonly addressFields = [
+        { name: 'name', label: 'common.name' },
+        { name: 'street', label: 'common.street' },
+        { name: 'postalCode', label: 'common.postalCode' },
+        { name: 'city', label: 'common.city' },
+        { name: 'country', label: 'common.country' },
+    ] as const;
 
     protected readonly orderId = this.route.snapshot.paramMap.get('id');
     protected readonly isEditMode = this.orderId !== null;
@@ -287,13 +390,17 @@ export class OrderFormComponent {
     constructor() {
         this.loadLocationOptions();
         if (this.isEditMode) {
-            this.session.ready.pipe(switchMap(() => this.service.getById(this.orderId!))).subscribe({
-                next: (order: Order) => this.patchFrom(order),
-                // The load path gets its own message: "could not be saved" on a failed
-                // getById would be plainly wrong.
-                error: (error: HttpErrorResponse) =>
-                    this.formError.set(this.describeFailure(error, this.i18n.t('orders.error.load'))),
-            });
+            this.session.ready
+                .pipe(switchMap(() => this.service.getById(this.orderId!)))
+                .subscribe({
+                    next: (order: Order) => this.patchFrom(order),
+                    // The load path gets its own message: "could not be saved" on a failed
+                    // getById would be plainly wrong.
+                    error: (error: HttpErrorResponse) =>
+                        this.formError.set(
+                            this.describeFailure(error, this.i18n.t('orders.error.load')),
+                        ),
+                });
             this.loadLocations();
         }
     }
@@ -319,22 +426,26 @@ export class OrderFormComponent {
         this.session.ready.pipe(switchMap(() => this.locationService.listAll())).subscribe({
             next: (page) => this.locationOptions.set(page.items),
             error: (error: HttpErrorResponse) =>
-                this.locationPickerError.set(this.describeFailure(error, this.i18n.t('orders.consigneeLocation.error'))),
+                this.locationPickerError.set(
+                    this.describeFailure(error, this.i18n.t('orders.consigneeLocation.error')),
+                ),
         });
     }
 
     // The map is advisory: a failure here must never block the form, so it has its own error.
     // 503 means routing/geocoding is not configured or unreachable, which deserves its own wording.
     private loadLocations(): void {
-        this.session.ready.pipe(switchMap(() => this.service.getLocations(this.orderId!))).subscribe({
-            next: (located) => this.locations.set(located),
-            error: (error: HttpErrorResponse) =>
-                this.locationError.set(
-                    error.status === 503
-                        ? this.i18n.t('map.unavailable')
-                        : this.describeFailure(error, this.i18n.t('map.error.load')),
-                ),
-        });
+        this.session.ready
+            .pipe(switchMap(() => this.service.getLocations(this.orderId!)))
+            .subscribe({
+                next: (located) => this.locations.set(located),
+                error: (error: HttpErrorResponse) =>
+                    this.locationError.set(
+                        error.status === 503
+                            ? this.i18n.t('map.unavailable')
+                            : this.describeFailure(error, this.i18n.t('map.error.load')),
+                    ),
+            });
     }
 
     private marker(party: LocatedParty | null, label: string, role: string): MapMarker | null {
@@ -385,9 +496,11 @@ export class OrderFormComponent {
         };
 
         const save$: Observable<Order> = this.session.ready.pipe(
-            switchMap(() => (this.isEditMode
-                ? this.service.update(this.orderId!, request)
-                : this.service.create(request))),
+            switchMap(() =>
+                this.isEditMode
+                    ? this.service.update(this.orderId!, request)
+                    : this.service.create(request),
+            ),
         );
 
         save$.subscribe({
@@ -462,7 +575,9 @@ export class OrderFormComponent {
                     control.setErrors({ server: message });
                     control.markAsTouched();
                 } else {
-                    this.formError.update((existing) => (existing ? `${existing} ${message}` : message));
+                    this.formError.update((existing) =>
+                        existing ? `${existing} ${message}` : message,
+                    );
                 }
             }
             return;

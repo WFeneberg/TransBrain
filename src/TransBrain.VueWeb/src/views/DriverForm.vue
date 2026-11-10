@@ -3,6 +3,8 @@ import axios from 'axios';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createDriver, getDriver, updateDriver, type DriverWriteRequest } from '../api/drivers';
+import { statusColor } from '../composables/statusColor';
+import { vNativeTestid } from '../directives/nativeTestId';
 import { useI18n } from '../i18n';
 
 interface ProblemDetailsBody {
@@ -29,6 +31,7 @@ const form = reactive({
 });
 
 let externalUserId: string | null = null;
+const status = ref<string | null>(null);
 
 const fieldErrors = reactive<Record<string, string | null>>({
     firstName: null,
@@ -48,6 +51,7 @@ onMounted(async () => {
         try {
             const driver = await getDriver(driverId!);
             externalUserId = driver.externalUserId;
+            status.value = driver.status;
             form.firstName = driver.firstName;
             form.lastName = driver.lastName;
             form.licenseClasses = [...driver.licenseClasses];
@@ -109,6 +113,11 @@ function cancel(): void {
     router.push('/drivers');
 }
 
+function errorsFor(field: string): string[] {
+    const message = fieldErrors[field];
+    return attemptedSubmit.value && message ? [message] : [];
+}
+
 // Phase 1 forbade binding ProblemDetails' `errors` dictionary here, because it was keyed by
 // error code rather than by field name. Task 1 of the 2026-08-29 master-data-completion phase
 // fixed the API to group every failure under its real field name instead, so binding it is now
@@ -159,67 +168,124 @@ function describeFailure(error: unknown, fallback: string): string {
 </script>
 
 <template>
-    <v-container>
-        <h1>{{ isEditMode ? t('drivers.edit') : t('drivers.new') }}</h1>
-        <p v-if="formError" data-testid="driver-form-error">{{ formError }}</p>
+    <v-container class="page-container">
+        <div class="page-header form-header">
+            <div class="title-row">
+                <h1 class="text-h4">{{ isEditMode ? t('drivers.edit') : t('drivers.new') }}</h1>
+                <v-chip v-if="isEditMode && status" :color="statusColor(status)" variant="tonal" data-testid="driver-status">{{
+                    status
+                }}</v-chip>
+            </div>
+        </div>
+        <p v-if="formError" class="text-error form-error" data-testid="driver-form-error">{{ formError }}</p>
         <!-- novalidate: see VehicleForm.vue for why - Angular's [formGroup] directive sets this
              automatically, and without the Vue equivalent a native input constraint (e.g. a
              number field's default step=1) can silently block the "submit" event before this
              component's handler ever runs. -->
         <form novalidate @submit.prevent="save">
-            <!-- Plain <input> elements, not <v-text-field>: Vuetify's control wraps the real
-                 <input> in a root <div>, and a data-testid on the component lands on that div
-                 (verified during execution - Playwright's fill() then fails because the
-                 resolved element is a div, not an editable control). Attaching the testid to
-                 the native input directly keeps fill()/toHaveValue() working the same way they
-                 do against Angular's matInput-decorated <input>. -->
-            <div>
-                <label for="driver-firstName">{{ t('drivers.firstName') }}</label>
-                <input id="driver-firstName" v-model="form.firstName" data-testid="driver-firstName" />
+            <!-- v-native-testid, not data-testid: see VehicleForm.vue - Playwright's fill() and
+                 click() need the testid on the native <input>, not on Vuetify's root <div>. -->
+            <v-row>
+                <v-col cols="12" md="6">
+                    <v-card border flat class="section-card">
+                        <v-card-item prepend-icon="mdi-account-outline" :title="t('drivers.section.personal')" />
+                        <v-card-text>
+                            <v-row dense>
+                                <v-col cols="12" sm="6">
+                                    <v-text-field
+                                        v-model="form.firstName"
+                                        v-native-testid="'driver-firstName'"
+                                        :label="`${t('drivers.firstName')} *`"
+                                        :error-messages="errorsFor('firstName')"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span data-testid="driver-firstName-error">{{ message }}</span>
+                                        </template>
+                                    </v-text-field>
+                                </v-col>
+                                <v-col cols="12" sm="6">
+                                    <v-text-field
+                                        v-model="form.lastName"
+                                        v-native-testid="'driver-lastName'"
+                                        :label="`${t('drivers.lastName')} *`"
+                                        :error-messages="errorsFor('lastName')"
+                                        variant="outlined"
+                                        density="comfortable"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span data-testid="driver-lastName-error">{{ message }}</span>
+                                        </template>
+                                    </v-text-field>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+                <v-col cols="12" md="6">
+                    <v-card border flat class="section-card">
+                        <v-card-item prepend-icon="mdi-card-account-details-outline" :title="t('drivers.section.license')" />
+                        <v-card-text>
+                            <div class="section-group-title">{{ t('drivers.licenseClasses') }} *</div>
+                            <v-input :error-messages="errorsFor('licenseClasses')" hide-details="auto">
+                                <div class="license-classes">
+                                    <v-checkbox
+                                        v-for="licenseClass in licenseClassOptions"
+                                        :key="licenseClass"
+                                        v-native-testid="'driver-licenseClass-' + licenseClass"
+                                        :model-value="isLicenseClassSelected(licenseClass)"
+                                        :label="licenseClass"
+                                        :error="errorsFor('licenseClasses').length > 0"
+                                        density="comfortable"
+                                        hide-details
+                                        @update:model-value="toggleLicenseClass(licenseClass)"
+                                    />
+                                </div>
+                                <template #message="{ message }">
+                                    <span data-testid="driver-licenseClasses-error">{{ message }}</span>
+                                </template>
+                            </v-input>
+                            <v-text-field
+                                v-model="form.licenseValidUntil"
+                                v-native-testid="'driver-licenseValidUntil'"
+                                class="license-valid-until"
+                                :label="`${t('drivers.licenseValidUntil')} *`"
+                                type="date"
+                                :error-messages="errorsFor('licenseValidUntil')"
+                                variant="outlined"
+                                density="comfortable"
+                                hide-details="auto"
+                            >
+                                <template #message="{ message }">
+                                    <span data-testid="driver-licenseValidUntil-error">{{ message }}</span>
+                                </template>
+                            </v-text-field>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+            </v-row>
+
+            <div class="form-actions">
+                <v-btn type="button" variant="text" data-testid="driver-cancel" @click="cancel">{{ t('common.cancel') }}</v-btn>
+                <v-btn type="submit" color="primary" prepend-icon="mdi-content-save-outline" data-testid="driver-save">{{
+                    t('common.save')
+                }}</v-btn>
             </div>
-            <p v-if="attemptedSubmit && fieldErrors.firstName" data-testid="driver-firstName-error">
-                {{ fieldErrors.firstName }}
-            </p>
-
-            <div>
-                <label for="driver-lastName">{{ t('drivers.lastName') }}</label>
-                <input id="driver-lastName" v-model="form.lastName" data-testid="driver-lastName" />
-            </div>
-            <p v-if="attemptedSubmit && fieldErrors.lastName" data-testid="driver-lastName-error">
-                {{ fieldErrors.lastName }}
-            </p>
-
-            <fieldset>
-                <legend>{{ t('drivers.licenseClasses') }}</legend>
-                <label v-for="licenseClass in licenseClassOptions" :key="licenseClass">
-                    <input
-                        type="checkbox"
-                        :checked="isLicenseClassSelected(licenseClass)"
-                        :data-testid="'driver-licenseClass-' + licenseClass"
-                        @change="toggleLicenseClass(licenseClass)"
-                    />
-                    {{ licenseClass }}
-                </label>
-                <p v-if="attemptedSubmit && fieldErrors.licenseClasses" data-testid="driver-licenseClasses-error">
-                    {{ fieldErrors.licenseClasses }}
-                </p>
-            </fieldset>
-
-            <div>
-                <label for="driver-licenseValidUntil">{{ t('drivers.licenseValidUntil') }}</label>
-                <input
-                    id="driver-licenseValidUntil"
-                    v-model="form.licenseValidUntil"
-                    type="date"
-                    data-testid="driver-licenseValidUntil"
-                />
-            </div>
-            <p v-if="attemptedSubmit && fieldErrors.licenseValidUntil" data-testid="driver-licenseValidUntil-error">
-                {{ fieldErrors.licenseValidUntil }}
-            </p>
-
-            <v-btn type="submit" data-testid="driver-save">{{ t('common.save') }}</v-btn>
-            <v-btn type="button" data-testid="driver-cancel" @click="cancel">{{ t('common.cancel') }}</v-btn>
         </form>
     </v-container>
 </template>
+
+<style scoped>
+.license-classes {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 16px;
+}
+
+.license-valid-until {
+    margin-top: 16px;
+}
+</style>

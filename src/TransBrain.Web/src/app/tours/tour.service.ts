@@ -86,6 +86,20 @@ export interface PagedResult<T> {
     totalCount: number;
 }
 
+export const TOUR_STATUSES = ['Planned', 'InProgress', 'Completed'] as const;
+
+/** The status chip colour, shared by the tour list, the tour detail and the home page. */
+export function tourStatusTone(status: string): string {
+    switch (status) {
+        case 'Completed':
+            return 'success';
+        case 'InProgress':
+            return 'warning';
+        default:
+            return 'neutral';
+    }
+}
+
 @Injectable({ providedIn: 'root' })
 export class TourService {
     private readonly http = inject(HttpClient);

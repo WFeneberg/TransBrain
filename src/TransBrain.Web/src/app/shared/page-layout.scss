@@ -1,0 +1,268 @@
+// Shared page layout of the vehicle screens (vehicle-list / vehicle-form), reused by every other
+// list, form and detail page so all screens look alike. Referenced via `styleUrl`.
+
+.page {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.page-header.align-start {
+    align-items: flex-start;
+}
+
+.title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+h1 {
+    font: var(--mat-sys-headline-medium);
+    margin: 0;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-medium);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.error-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 12px 16px;
+    border-radius: var(--mat-sys-corner-medium);
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+}
+
+.audit,
+.hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 0;
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-small);
+}
+
+.audit mat-icon,
+.hint mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface-container-low);
+}
+
+.filter-bar mat-form-field {
+    flex: 1 1 200px;
+}
+
+.filter-bar .search {
+    flex: 3 1 320px;
+}
+
+.table-card {
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface);
+    overflow: hidden;
+}
+
+.table-scroll {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    --mat-table-background-color: transparent;
+}
+
+th.mat-mdc-header-cell {
+    background: var(--mat-sys-surface-container);
+    font: var(--mat-sys-title-small);
+    white-space: nowrap;
+}
+
+tr.mat-mdc-row:hover {
+    background: var(--mat-sys-surface-container-lowest);
+}
+
+.strong {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.actions-cell {
+    text-align: right;
+    white-space: nowrap;
+    width: 1%;
+}
+
+.delete {
+    color: var(--mat-sys-error);
+}
+
+.danger {
+    --mat-button-outlined-label-text-color: var(--mat-sys-error);
+    --mat-button-outlined-outline-color: var(--mat-sys-error);
+}
+
+.chip {
+    --mat-chip-container-height: 26px;
+    --mat-chip-outline-width: 0;
+    --mat-chip-label-text-weight: 500;
+}
+
+.title-row .chip {
+    --mat-chip-container-height: 28px;
+}
+
+.chip[data-tone='success'] {
+    --mat-chip-elevated-container-color: #d7f3dc;
+    --mat-chip-label-text-color: #0f5223;
+}
+
+.chip[data-tone='warning'] {
+    --mat-chip-elevated-container-color: #ffe4bc;
+    --mat-chip-label-text-color: #6d3d00;
+}
+
+.chip[data-tone='error'] {
+    --mat-chip-elevated-container-color: var(--mat-sys-error-container);
+    --mat-chip-label-text-color: var(--mat-sys-on-error-container);
+}
+
+.chip[data-tone='neutral'] {
+    --mat-chip-elevated-container-color: var(--mat-sys-surface-container-highest);
+    --mat-chip-label-text-color: var(--mat-sys-on-surface-variant);
+}
+
+.empty {
+    padding: 48px 16px;
+    text-align: center;
+    color: var(--mat-sys-on-surface-variant);
+}
+
+.empty mat-icon {
+    display: block;
+    margin: 0 auto 8px;
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    opacity: 0.6;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+mat-card-header {
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    border-radius: 50%;
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+}
+
+mat-card-title {
+    font: var(--mat-sys-title-medium);
+}
+
+.fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 16px;
+    row-gap: 4px;
+}
+
+.fields.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fields.one {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.fields mat-form-field {
+    width: 100%;
+}
+
+.checkbox-cell {
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    padding-bottom: 20px;
+}
+
+.action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: var(--mat-sys-corner-large);
+    background: var(--mat-sys-surface-container-low);
+}
+
+@media (max-width: 599px) {
+    .fields,
+    .fields.three {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

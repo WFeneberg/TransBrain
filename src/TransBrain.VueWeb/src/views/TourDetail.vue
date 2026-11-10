@@ -15,6 +15,7 @@ import {
     type TourRoute,
 } from '../api/tours';
 import LocationMap from '../components/LocationMap.vue';
+import { formatCalendarDate, statusColor } from '../composables/statusColor';
 import { useAuthStore } from '../stores/auth';
 import { useI18n, type MessageKey } from '../i18n';
 
@@ -105,6 +106,15 @@ async function loadRoute(): Promise<void> {
     }
 }
 
+function percentOf(value: number, max: number): number {
+    return max > 0 ? Math.min(100, (value / max) * 100) : 0;
+}
+
+function capacityColor(value: number, max: number): string {
+    const ratio = max > 0 ? value / max : 0;
+    return ratio > 1 ? 'error' : ratio >= 0.9 ? 'warning' : 'primary';
+}
+
 function formatKm(meters: number): string {
     return (meters / 1000).toLocaleString(locale.value, { maximumFractionDigits: 1 });
 }
@@ -180,147 +190,337 @@ function describe(error: unknown, fallback: string): string {
 </script>
 
 <template>
-    <v-container>
-        <h1>{{ t('tours.detail') }}</h1>
-        <p v-if="loadError" data-testid="tour-detail-error">{{ loadError }}</p>
+    <v-container class="page-container">
+        <v-btn
+            variant="text"
+            prepend-icon="mdi-arrow-left"
+            class="back-button"
+            data-testid="tour-back"
+            @click="router.push('/tours')"
+            >{{ t('tours.back') }}</v-btn
+        >
+
+        <div class="page-header form-header">
+            <div class="title-row">
+                <h1 class="text-h4">{{ t('tours.detail') }}</h1>
+                <v-chip
+                    v-if="tour"
+                    :color="statusColor(tour.status)"
+                    size="small"
+                    variant="tonal"
+                    data-testid="tour-detail-status"
+                    >{{ tour.status }}</v-chip
+                >
+            </div>
+            <!-- tourStatus.write, not dispatch.write: a fahrer may run their own tour without
+                 being allowed to change what is on it. Hidden rather than shown-and-refused: a
+                 button that can only ever answer 409 is noise. Assign and Remove stay visible,
+                 matching how the order screens treat Cancel - there the refusal message teaches
+                 the rule. -->
+            <div v-if="tour && auth.can('tourStatus.write')" class="header-actions">
+                <v-btn
+                    v-if="tour.status === 'Planned'"
+                    color="primary"
+                    prepend-icon="mdi-play"
+                    data-testid="tour-start"
+                    @click="start"
+                    >{{ t('tours.start') }}</v-btn
+                >
+                <v-btn
+                    v-if="tour.status === 'InProgress'"
+                    color="success"
+                    prepend-icon="mdi-flag-checkered"
+                    data-testid="tour-complete"
+                    @click="complete"
+                    >{{ t('tours.complete') }}</v-btn
+                >
+            </div>
+        </div>
+
+        <p v-if="loadError" class="text-error error-line" data-testid="tour-detail-error">{{ loadError }}</p>
 
         <template v-if="tour">
-            <!-- tour-detail-* rather than tour-*: the list uses tour-status/tour-date on its
-                 cells, and a page-wide locator matching both screens would be ambiguous the
-                 moment a test navigated between them. Mirrors the Angular detail page. -->
-            <dl>
-                <dt>{{ t('common.date') }}</dt>
-                <dd data-testid="tour-detail-date">{{ tour.tourDate }}</dd>
-                <dt>{{ t('common.vehicle') }}</dt>
-                <dd data-testid="tour-detail-vehicle">{{ tour.vehicleLicensePlate }}</dd>
-                <dt>{{ t('common.driver') }}</dt>
-                <dd data-testid="tour-detail-driver">{{ tour.driverName }}</dd>
-                <dt>{{ t('common.status') }}</dt>
-                <dd data-testid="tour-detail-status">{{ tour.status }}</dd>
-            </dl>
+            <p v-if="actionError" class="text-error error-line" data-testid="tour-action-error">{{ actionError }}</p>
 
-            <!-- The headroom a dispatcher needs before choosing the next order. The API already
-                 sends both numbers, so showing them costs nothing extra. -->
-            <section>
-                <h2>{{ t('tours.capacity') }}</h2>
-                <p data-testid="tour-capacity-weight">
-                    {{ tour.totalWeightKg }} / {{ tour.vehiclePayloadKg }} kg
-                </p>
-                <progress :value="tour.totalWeightKg" :max="tour.vehiclePayloadKg"></progress>
-                <p data-testid="tour-capacity-meters">
-                    {{ tour.totalLoadMeters }} / {{ tour.vehicleLoadMeters }} {{ t('tours.loadMetersUnit') }}
-                </p>
-                <progress :value="tour.totalLoadMeters" :max="tour.vehicleLoadMeters"></progress>
-            </section>
+            <v-row>
+                <v-col cols="12" md="6">
+                    <!-- tour-detail-* rather than tour-*: the list uses tour-status/tour-date on
+                         its cells, and a page-wide locator matching both screens would be
+                         ambiguous the moment a test navigated between them. Mirrors the Angular
+                         detail page. -->
+                    <v-card border flat class="section-card">
+                        <v-card-item prepend-icon="mdi-information-outline" :title="t('tours.section.data')" />
+                        <v-card-text>
+                            <dl class="detail-list">
+                                <dt class="text-medium-emphasis">{{ t('common.date') }}</dt>
+                                <dd data-testid="tour-detail-date">{{ formatCalendarDate(tour.tourDate, locale) }}</dd>
+                                <dt class="text-medium-emphasis">{{ t('common.vehicle') }}</dt>
+                                <dd data-testid="tour-detail-vehicle">{{ tour.vehicleLicensePlate }}</dd>
+                                <dt class="text-medium-emphasis">{{ t('common.driver') }}</dt>
+                                <dd data-testid="tour-detail-driver">{{ tour.driverName }}</dd>
+                            </dl>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+                <v-col cols="12" md="6">
+                    <!-- The headroom a dispatcher needs before choosing the next order. The API
+                         already sends both numbers, so showing them costs nothing extra. -->
+                    <v-card border flat class="section-card">
+                        <v-card-item prepend-icon="mdi-gauge" :title="t('tours.capacity')" />
+                        <v-card-text>
+                            <div class="capacity-line">
+                                <span class="text-medium-emphasis">{{ t('tours.capacityWeight') }}</span>
+                                <span data-testid="tour-capacity-weight">{{ tour.totalWeightKg }} / {{ tour.vehiclePayloadKg }} kg</span>
+                            </div>
+                            <v-progress-linear
+                                :model-value="percentOf(tour.totalWeightKg, tour.vehiclePayloadKg)"
+                                :color="capacityColor(tour.totalWeightKg, tour.vehiclePayloadKg)"
+                                height="8"
+                                rounded
+                                class="capacity-bar"
+                            />
+                            <div class="capacity-line">
+                                <span class="text-medium-emphasis">{{ t('common.loadMeters') }}</span>
+                                <span data-testid="tour-capacity-meters"
+                                    >{{ tour.totalLoadMeters }} / {{ tour.vehicleLoadMeters }} {{ t('tours.loadMetersUnit') }}</span
+                                >
+                            </div>
+                            <v-progress-linear
+                                :model-value="percentOf(tour.totalLoadMeters, tour.vehicleLoadMeters)"
+                                :color="capacityColor(tour.totalLoadMeters, tour.vehicleLoadMeters)"
+                                height="8"
+                                rounded
+                                class="capacity-bar"
+                            />
+                        </v-card-text>
+                    </v-card>
+                </v-col>
 
-            <p v-if="actionError" data-testid="tour-action-error">{{ actionError }}</p>
-
-            <section>
-                <h2>{{ t('tours.stops') }}</h2>
-                <v-data-table
-                    :headers="stopHeaders"
-                    :items="tour.stops"
-                    :items-per-page="-1"
-                    item-value="sequence"
-                    data-testid="tour-stop-table"
-                >
-                    <template #item.sequence="{ item }">
-                        <span data-testid="tour-stop-sequence">{{ item.sequence }}</span>
-                    </template>
-                    <template #item.orderNumber="{ item }">
-                        <span data-testid="tour-stop-order">{{ item.orderNumber }}</span>
-                    </template>
-                    <template #item.stopType="{ item }">
-                        <span data-testid="tour-stop-type">{{ item.stopType }}</span>
-                    </template>
-                    <template #item.actions="{ item }">
-                        <v-btn
-                            v-if="item.stopType === 'Pickup' && auth.can('dispatch.write')"
-                            data-testid="tour-remove"
-                            @click="remove(item.transportOrderId)"
+                <v-col cols="12">
+                    <v-card border flat class="table-card">
+                        <v-card-item prepend-icon="mdi-map-marker-path" :title="t('tours.stops')" />
+                        <v-data-table
+                            :headers="stopHeaders"
+                            :items="tour.stops"
+                            :items-per-page="-1"
+                            :no-data-text="t('tours.stopsEmpty')"
+                            item-value="sequence"
+                            hide-default-footer
+                            hover
+                            data-testid="tour-stop-table"
                         >
-                            {{ t('tours.remove') }}
-                        </v-btn>
-                    </template>
-                </v-data-table>
-            </section>
+                            <template #item.sequence="{ item }">
+                                <span class="font-weight-bold" data-testid="tour-stop-sequence">{{ item.sequence }}</span>
+                            </template>
+                            <template #item.orderNumber="{ item }">
+                                <span data-testid="tour-stop-order">{{ item.orderNumber }}</span>
+                            </template>
+                            <template #item.stopType="{ item }">
+                                <v-chip
+                                    :color="item.stopType === 'Pickup' ? 'info' : 'success'"
+                                    :prepend-icon="item.stopType === 'Pickup' ? 'mdi-arrow-up-bold-box-outline' : 'mdi-arrow-down-bold-box-outline'"
+                                    size="small"
+                                    variant="tonal"
+                                    data-testid="tour-stop-type"
+                                    >{{ item.stopType }}</v-chip
+                                >
+                            </template>
+                            <template #item.actions="{ item }">
+                                <div class="row-actions">
+                                    <v-tooltip
+                                        v-if="item.stopType === 'Pickup' && auth.can('dispatch.write')"
+                                        :text="t('tours.remove')"
+                                        location="top"
+                                    >
+                                        <template #activator="{ props: tooltip }">
+                                            <v-btn
+                                                v-bind="tooltip"
+                                                icon="mdi-link-variant-off"
+                                                variant="text"
+                                                size="small"
+                                                color="error"
+                                                :aria-label="t('tours.remove')"
+                                                data-testid="tour-remove"
+                                                @click="remove(item.transportOrderId)"
+                                            />
+                                        </template>
+                                    </v-tooltip>
+                                </div>
+                            </template>
+                        </v-data-table>
+                    </v-card>
+                </v-col>
 
-            <section data-testid="tour-route-section">
-                <h2>{{ t('common.route') }}</h2>
-                <p v-if="routeError" data-testid="tour-route-error">{{ routeError }}</p>
-                <template v-if="tourRoute">
-                    <dl>
-                        <dt>{{ t('route.distance') }}</dt>
-                        <dd data-testid="tour-route-distance">{{ formatKm(tourRoute.distanceMeters) }}</dd>
-                        <dt>{{ t('route.drivingTime') }}</dt>
-                        <dd data-testid="tour-route-driving">{{ formatDuration(tourRoute.drivingSeconds) }}</dd>
-                        <dt>{{ t('route.earliestNextStart') }}</dt>
-                        <dd data-testid="tour-route-earliest">{{ formatDateTime(tourRoute.earliestNextStart) }}</dd>
-                    </dl>
+                <v-col v-if="auth.can('dispatch.write')" cols="12">
+                    <v-card border flat class="section-card">
+                        <v-card-item prepend-icon="mdi-clipboard-plus-outline" :title="t('tours.assignOrder')" />
+                        <v-card-text>
+                            <!-- Only Draft orders are offered: any other status is refused by the
+                                 domain, and offering a choice the server will reject is worse than
+                                 not offering it. Deliberately a native <select>: the e2e picks the
+                                 option by its consignor text via #tour-assign-select. -->
+                            <div class="assign-row">
+                                <div class="assign-field">
+                                    <label for="tour-assign-select" class="text-caption text-medium-emphasis">{{
+                                        t('common.order')
+                                    }}</label>
+                                    <select
+                                        id="tour-assign-select"
+                                        v-model="selectedOrderId"
+                                        class="native-select"
+                                        data-testid="tour-assign-select"
+                                    >
+                                        <option value="">-</option>
+                                        <option v-for="order in assignableOrders" :key="order.id" :value="order.id">
+                                            {{ order.orderNumber }} — {{ order.consignor.name }} ({{ order.cargoWeightKg }} kg)
+                                        </option>
+                                    </select>
+                                </div>
+                                <v-btn color="primary" prepend-icon="mdi-plus" data-testid="tour-assign" @click="assign">{{
+                                    t('tours.assign')
+                                }}</v-btn>
+                            </div>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
 
-                    <LocationMap :markers="routeMarkers" :polyline="tourRoute.geometry" data-testid="tour-route-map" />
+                <v-col cols="12">
+                    <v-card border flat class="section-card" data-testid="tour-route-section">
+                        <v-card-item prepend-icon="mdi-routes" :title="t('common.route')" />
+                        <v-card-text>
+                            <p v-if="routeError" class="text-error error-line" data-testid="tour-route-error">{{ routeError }}</p>
+                            <template v-if="tourRoute">
+                                <dl class="route-figures">
+                                    <div>
+                                        <dt class="text-medium-emphasis">{{ t('route.distance') }}</dt>
+                                        <dd class="text-h6" data-testid="tour-route-distance">{{ formatKm(tourRoute.distanceMeters) }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="text-medium-emphasis">{{ t('route.drivingTime') }}</dt>
+                                        <dd class="text-h6" data-testid="tour-route-driving">{{ formatDuration(tourRoute.drivingSeconds) }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="text-medium-emphasis">{{ t('route.earliestNextStart') }}</dt>
+                                        <dd class="text-h6" data-testid="tour-route-earliest">{{ formatDateTime(tourRoute.earliestNextStart) }}</dd>
+                                    </div>
+                                </dl>
 
-                    <h3>{{ t('route.schedule') }}</h3>
-                    <v-data-table
-                        :headers="scheduleHeaders"
-                        :items="tourRoute.schedule"
-                        :items-per-page="-1"
-                        item-value="start"
-                        data-testid="tour-route-schedule"
-                    >
-                        <template #item.kind="{ item }">{{ t(kindLabels[item.kind]) }}</template>
-                        <template #item.start="{ item }">{{ formatDateTime(item.start) }}</template>
-                        <template #item.end="{ item }">{{ formatDateTime(item.end) }}</template>
-                        <template #item.countryCode="{ item }">{{ item.countryCode ?? '' }}</template>
-                    </v-data-table>
+                                <div class="map-frame">
+                                    <LocationMap :markers="routeMarkers" :polyline="tourRoute.geometry" data-testid="tour-route-map" />
+                                </div>
 
-                    <h3>{{ t('route.violations') }}</h3>
-                    <p v-if="tourRoute.violations.length === 0" data-testid="tour-route-no-violations">
-                        {{ t('route.noViolations') }}
-                    </p>
-                    <v-alert
-                        v-for="(violation, index) in tourRoute.violations"
-                        :key="index"
-                        :type="violation.severity === 'Violation' ? 'error' : 'warning'"
-                        variant="tonal"
-                        data-testid="tour-route-violation"
-                    >
-                        {{ violation.message }}
-                    </v-alert>
-                </template>
-            </section>
+                                <div class="section-group-title route-subtitle">{{ t('route.schedule') }}</div>
+                                <v-card border flat class="table-card">
+                                    <v-data-table
+                                        :headers="scheduleHeaders"
+                                        :items="tourRoute.schedule"
+                                        :items-per-page="-1"
+                                        item-value="start"
+                                        hide-default-footer
+                                        density="compact"
+                                        data-testid="tour-route-schedule"
+                                    >
+                                        <template #item.kind="{ item }">{{ t(kindLabels[item.kind]) }}</template>
+                                        <template #item.start="{ item }">{{ formatDateTime(item.start) }}</template>
+                                        <template #item.end="{ item }">{{ formatDateTime(item.end) }}</template>
+                                        <template #item.countryCode="{ item }">{{ item.countryCode ?? '' }}</template>
+                                    </v-data-table>
+                                </v-card>
 
-            <section v-if="auth.can('dispatch.write')">
-                <h2>{{ t('tours.assignOrder') }}</h2>
-                <!-- Only Draft orders are offered: any other status is refused by the domain,
-                     and offering a choice the server will reject is worse than not offering it. -->
-                <div>
-                    <label for="tour-assign-select">{{ t('common.order') }}</label>
-                    <select id="tour-assign-select" v-model="selectedOrderId" data-testid="tour-assign-select">
-                        <option value="">-</option>
-                        <option v-for="order in assignableOrders" :key="order.id" :value="order.id">
-                            {{ order.orderNumber }} — {{ order.consignor.name }} ({{ order.cargoWeightKg }} kg)
-                        </option>
-                    </select>
-                </div>
-                <v-btn data-testid="tour-assign" @click="assign">{{ t('tours.assign') }}</v-btn>
-            </section>
-
-            <!-- tourStatus.write, not dispatch.write: a fahrer may run their own tour without
-                 being allowed to change what is on it. -->
-            <section v-if="auth.can('tourStatus.write')">
-                <!-- Hidden rather than shown-and-refused: a button that can only ever answer 409
-                     is noise. Assign and Remove stay visible, matching how the order screens
-                     treat Cancel - there the refusal message teaches the rule. -->
-                <v-btn v-if="tour.status === 'Planned'" data-testid="tour-start" @click="start">
-                    {{ t('tours.start') }}
-                </v-btn>
-                <v-btn v-if="tour.status === 'InProgress'" data-testid="tour-complete" @click="complete">
-                    {{ t('tours.complete') }}
-                </v-btn>
-            </section>
-
-            <v-btn data-testid="tour-back" @click="router.push('/tours')">{{ t('tours.back') }}</v-btn>
+                                <div class="section-group-title route-subtitle">{{ t('route.violations') }}</div>
+                                <p v-if="tourRoute.violations.length === 0" class="section-hint" data-testid="tour-route-no-violations">
+                                    <v-icon icon="mdi-check-circle-outline" color="success" size="small" />
+                                    {{ t('route.noViolations') }}
+                                </p>
+                                <v-alert
+                                    v-for="(violation, index) in tourRoute.violations"
+                                    :key="index"
+                                    :type="violation.severity === 'Violation' ? 'error' : 'warning'"
+                                    variant="tonal"
+                                    density="compact"
+                                    class="violation"
+                                    data-testid="tour-route-violation"
+                                >
+                                    {{ violation.message }}
+                                </v-alert>
+                            </template>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+            </v-row>
         </template>
     </v-container>
 </template>
+
+<style scoped>
+.detail-list {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 8px 24px;
+    margin: 0;
+}
+
+.detail-list dd {
+    margin: 0;
+    font-weight: 500;
+}
+
+.capacity-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 6px;
+}
+
+.capacity-bar {
+    margin-bottom: 16px;
+}
+
+.assign-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.assign-field {
+    display: flex;
+    flex: 1 1 320px;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.native-select {
+    min-height: 48px;
+    padding: 0 12px;
+    border: thin solid rgba(var(--v-theme-on-surface), 0.38);
+    border-radius: 4px;
+    background: rgb(var(--v-theme-surface));
+    color: rgb(var(--v-theme-on-surface));
+    font: inherit;
+}
+
+.native-select:focus {
+    outline: 2px solid rgb(var(--v-theme-primary));
+    outline-offset: -1px;
+}
+
+.route-figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 0 0 16px;
+}
+
+.route-figures dd {
+    margin: 0;
+}
+
+.route-subtitle {
+    margin-top: 16px;
+}
+
+.violation + .violation {
+    margin-top: 8px;
+}
+</style>

@@ -1,20 +1,23 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { Area, Capability } from '../auth/capabilities';
 import { SessionService } from '../auth/session.service';
 import { I18nService, TranslationKey } from '../i18n/i18n.service';
 import { DriverService } from '../drivers/driver.service';
 import { Order, OrderService } from '../orders/order.service';
-import { Tour, TourService } from '../tours/tour.service';
+import { Tour, TourService, tourStatusTone } from '../tours/tour.service';
 import { VehicleService } from '../vehicles/vehicle.service';
 
 interface AreaTile {
     area: Area;
+    icon: string;
     title: TranslationKey;
     description: TranslationKey;
     route: string;
@@ -26,6 +29,7 @@ interface AreaTile {
 const TILES: readonly AreaTile[] = [
     {
         area: 'vehicles',
+        icon: 'local_shipping',
         title: 'nav.vehicles',
         description: 'home.tile.vehicles',
         route: '/vehicles',
@@ -35,6 +39,7 @@ const TILES: readonly AreaTile[] = [
     },
     {
         area: 'drivers',
+        icon: 'person',
         title: 'nav.drivers',
         description: 'home.tile.drivers',
         route: '/drivers',
@@ -44,6 +49,7 @@ const TILES: readonly AreaTile[] = [
     },
     {
         area: 'orders',
+        icon: 'assignment',
         title: 'nav.orders',
         description: 'home.tile.orders',
         route: '/orders',
@@ -53,6 +59,7 @@ const TILES: readonly AreaTile[] = [
     },
     {
         area: 'tours',
+        icon: 'route',
         title: 'nav.tours',
         description: 'home.tile.tours',
         route: '/tours',
@@ -80,188 +87,457 @@ function today(): string {
 @Component({
     selector: 'app-home',
     standalone: true,
-    imports: [MatButtonModule, MatCardModule, MatChipsModule, MatTableModule, RouterLink],
+    imports: [
+        MatButtonModule,
+        MatCardModule,
+        MatChipsModule,
+        MatIconModule,
+        MatTableModule,
+        MatTooltipModule,
+        RouterLink,
+    ],
+    styleUrl: '../shared/page-layout.scss',
     template: `
-        @if (session.isAuthenticated()) {
-            <h1 data-testid="home-greeting">{{ i18n.t('home.welcome', { name: session.displayName() }) }}</h1>
-            <mat-chip-set>
-                @for (role of session.roles(); track role) {
-                    <mat-chip data-testid="home-role-chip">{{ role }}</mat-chip>
-                }
-            </mat-chip-set>
+        <div class="page">
+            @if (session.isAuthenticated()) {
+                <header class="page-header">
+                    <div>
+                        <div class="title-row">
+                            <h1 data-testid="home-greeting">
+                                {{ i18n.t('home.welcome', { name: session.displayName() }) }}
+                            </h1>
+                            <mat-chip-set>
+                                @for (role of session.roles(); track role) {
+                                    <mat-chip
+                                        class="chip"
+                                        data-tone="neutral"
+                                        data-testid="home-role-chip"
+                                        >{{ role }}</mat-chip
+                                    >
+                                }
+                            </mat-chip-set>
+                        </div>
+                        <p class="subtitle">{{ i18n.t('home.subtitle') }}</p>
+                    </div>
+                </header>
 
-            <section class="kpis">
-                @if (session.areas().has('vehicles')) {
-                    <mat-card>
-                        <mat-card-title>{{ i18n.t('nav.vehicles') }}</mat-card-title>
+                <section class="kpis">
+                    @if (session.areas().has('vehicles')) {
+                        <mat-card appearance="outlined">
+                            <mat-card-header>
+                                <mat-icon mat-card-avatar class="avatar">local_shipping</mat-icon>
+                                <mat-card-title>{{ i18n.t('nav.vehicles') }}</mat-card-title>
+                            </mat-card-header>
+                            <mat-card-content>
+                                @if (vehicleError(); as message) {
+                                    <p class="error-banner" data-testid="home-kpi-vehicles-error">
+                                        <mat-icon aria-hidden="true">error_outline</mat-icon
+                                        >{{ message }}
+                                    </p>
+                                } @else {
+                                    <p class="kpi">
+                                        <span>{{ i18n.t('home.available') }}</span>
+                                        <strong data-testid="home-kpi-vehicles-available">{{
+                                            vehiclesAvailable()
+                                        }}</strong>
+                                    </p>
+                                    <p class="kpi">
+                                        <span>{{ i18n.t('home.inWorkshop') }}</span>
+                                        <strong data-testid="home-kpi-vehicles-workshop">{{
+                                            vehiclesInWorkshop()
+                                        }}</strong>
+                                    </p>
+                                }
+                            </mat-card-content>
+                        </mat-card>
+                    }
+                    @if (session.areas().has('drivers')) {
+                        <mat-card appearance="outlined">
+                            <mat-card-header>
+                                <mat-icon mat-card-avatar class="avatar">person</mat-icon>
+                                <mat-card-title>{{ i18n.t('nav.drivers') }}</mat-card-title>
+                            </mat-card-header>
+                            <mat-card-content>
+                                @if (driverError(); as message) {
+                                    <p class="error-banner" data-testid="home-kpi-drivers-error">
+                                        <mat-icon aria-hidden="true">error_outline</mat-icon
+                                        >{{ message }}
+                                    </p>
+                                } @else {
+                                    <p class="kpi">
+                                        <span>{{ i18n.t('home.available') }}</span>
+                                        <strong data-testid="home-kpi-drivers-available">{{
+                                            driversAvailable()
+                                        }}</strong>
+                                    </p>
+                                }
+                            </mat-card-content>
+                        </mat-card>
+                    }
+                    @if (session.areas().has('orders')) {
+                        <mat-card appearance="outlined">
+                            <mat-card-header>
+                                <mat-icon mat-card-avatar class="avatar">assignment</mat-icon>
+                                <mat-card-title>{{ i18n.t('nav.orders') }}</mat-card-title>
+                            </mat-card-header>
+                            <mat-card-content>
+                                @if (orderError(); as message) {
+                                    <p class="error-banner" data-testid="home-kpi-orders-error">
+                                        <mat-icon aria-hidden="true">error_outline</mat-icon
+                                        >{{ message }}
+                                    </p>
+                                } @else {
+                                    <p class="kpi">
+                                        <span>{{ i18n.t('home.inDraft') }}</span>
+                                        <strong data-testid="home-kpi-orders-draft">{{
+                                            ordersInDraft()
+                                        }}</strong>
+                                    </p>
+                                }
+                            </mat-card-content>
+                        </mat-card>
+                    }
+                    <mat-card appearance="outlined">
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">route</mat-icon>
+                            <mat-card-title>{{ i18n.t('home.toursToday') }}</mat-card-title>
+                        </mat-card-header>
                         <mat-card-content>
-                            @if (vehicleError(); as message) {
-                                <p data-testid="home-kpi-vehicles-error">{{ message }}</p>
-                            } @else {
-                                <p>
-                                    {{ i18n.t('home.available') }}
-                                    <strong data-testid="home-kpi-vehicles-available">{{ vehiclesAvailable() }}</strong>
+                            @if (tourError(); as message) {
+                                <p class="error-banner" data-testid="home-kpi-tours-error">
+                                    <mat-icon aria-hidden="true">error_outline</mat-icon
+                                    >{{ message }}
                                 </p>
-                                <p>
-                                    {{ i18n.t('home.inWorkshop') }}
-                                    <strong data-testid="home-kpi-vehicles-workshop">{{ vehiclesInWorkshop() }}</strong>
+                            } @else {
+                                <p class="kpi">
+                                    <span>{{ todayLabel() }}</span>
+                                    <strong data-testid="home-kpi-tours-today">{{
+                                        toursToday()
+                                    }}</strong>
                                 </p>
                             }
                         </mat-card-content>
                     </mat-card>
-                }
-                @if (session.areas().has('drivers')) {
-                    <mat-card>
-                        <mat-card-title>{{ i18n.t('nav.drivers') }}</mat-card-title>
-                        <mat-card-content>
-                            @if (driverError(); as message) {
-                                <p data-testid="home-kpi-drivers-error">{{ message }}</p>
-                            } @else {
-                                <p>
-                                    {{ i18n.t('home.available') }}
-                                    <strong data-testid="home-kpi-drivers-available">{{ driversAvailable() }}</strong>
-                                </p>
-                            }
-                        </mat-card-content>
-                    </mat-card>
-                }
-                @if (session.areas().has('orders')) {
-                    <mat-card>
-                        <mat-card-title>{{ i18n.t('nav.orders') }}</mat-card-title>
-                        <mat-card-content>
-                            @if (orderError(); as message) {
-                                <p data-testid="home-kpi-orders-error">{{ message }}</p>
-                            } @else {
-                                <p>
-                                    {{ i18n.t('home.inDraft') }}
-                                    <strong data-testid="home-kpi-orders-draft">{{ ordersInDraft() }}</strong>
-                                </p>
-                            }
-                        </mat-card-content>
-                    </mat-card>
-                }
-                <mat-card>
-                    <mat-card-title>{{ i18n.t('home.toursToday') }}</mat-card-title>
-                    <mat-card-content>
-                        @if (tourError(); as message) {
-                            <p data-testid="home-kpi-tours-error">{{ message }}</p>
-                        } @else {
-                            <p><strong data-testid="home-kpi-tours-today">{{ toursToday() }}</strong></p>
-                        }
-                    </mat-card-content>
-                </mat-card>
-            </section>
+                </section>
 
-            @if (session.can('dispatch.write')) {
-                <section data-testid="home-draft-orders">
-                    <h2>{{ i18n.t('home.draftOrders') }}</h2>
-                    @if (draftOrdersError(); as message) {
-                        <p data-testid="home-draft-orders-error">{{ message }}</p>
-                    } @else {
-                        <table mat-table [dataSource]="draftOrders()">
-                            <ng-container matColumnDef="orderNumber">
-                                <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.order') }}</th>
-                                <td mat-cell *matCellDef="let o" data-testid="home-draft-order-row">
-                                    {{ o.orderNumber }}
-                                </td>
-                            </ng-container>
-                            <ng-container matColumnDef="route">
-                                <th mat-header-cell *matHeaderCellDef>{{ i18n.t('home.route') }}</th>
-                                <td mat-cell *matCellDef="let o">{{ o.consignor.city }} → {{ o.consignee.city }}</td>
-                            </ng-container>
-                            <ng-container matColumnDef="actions">
-                                <th mat-header-cell *matHeaderCellDef>{{ i18n.t('common.actions') }}</th>
-                                <td mat-cell *matCellDef="let o">
-                                    <a mat-button [routerLink]="['/orders', o.id]" data-testid="home-draft-order-open">
+                @if (session.can('dispatch.write')) {
+                    <mat-card appearance="outlined" data-testid="home-draft-orders">
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">pending_actions</mat-icon>
+                            <mat-card-title>{{ i18n.t('home.draftOrders') }}</mat-card-title>
+                            <span class="spacer"></span>
+                            @if (!draftOrdersError()) {
+                                <!-- No per-row "Plan" button: an order is put onto a tour by the
+                                     picker on /tours/:id, and no endpoint creates a tour from an
+                                     order. The honest action here is to start a tour and assign
+                                     from there. -->
+                                <a
+                                    mat-flat-button
+                                    routerLink="/tours/new"
+                                    data-testid="home-plan-tour"
+                                >
+                                    <mat-icon>add</mat-icon>
+                                    {{ i18n.t('home.planTour') }}
+                                </a>
+                            }
+                        </mat-card-header>
+                        <mat-card-content>
+                            @if (draftOrdersError(); as message) {
+                                <p class="error-banner" data-testid="home-draft-orders-error">
+                                    <mat-icon aria-hidden="true">error_outline</mat-icon
+                                    >{{ message }}
+                                </p>
+                            } @else {
+                                <div class="table-card">
+                                    <div class="table-scroll">
+                                        <table mat-table [dataSource]="draftOrders()">
+                                            <ng-container matColumnDef="orderNumber">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('common.order') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let o"
+                                                    class="strong"
+                                                    data-testid="home-draft-order-row"
+                                                >
+                                                    {{ o.orderNumber }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="route">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('home.route') }}
+                                                </th>
+                                                <td mat-cell *matCellDef="let o">
+                                                    {{ o.consignor.city }} → {{ o.consignee.city }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="actions">
+                                                <th
+                                                    mat-header-cell
+                                                    *matHeaderCellDef
+                                                    class="actions-cell"
+                                                >
+                                                    <span class="cdk-visually-hidden">{{
+                                                        i18n.t('common.actions')
+                                                    }}</span>
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let o"
+                                                    class="actions-cell"
+                                                >
+                                                    <a
+                                                        mat-icon-button
+                                                        [routerLink]="['/orders', o.id]"
+                                                        data-testid="home-draft-order-open"
+                                                        [matTooltip]="i18n.t('common.open')"
+                                                        [attr.aria-label]="
+                                                            i18n.t('common.open') +
+                                                            ' ' +
+                                                            o.orderNumber
+                                                        "
+                                                    >
+                                                        <mat-icon>open_in_new</mat-icon>
+                                                    </a>
+                                                </td>
+                                            </ng-container>
+                                            <tr mat-header-row *matHeaderRowDef="draftColumns"></tr>
+                                            <tr
+                                                mat-row
+                                                *matRowDef="let row; columns: draftColumns"
+                                            ></tr>
+                                            <tr class="mat-mdc-row" *matNoDataRow>
+                                                <td
+                                                    class="empty"
+                                                    [attr.colspan]="draftColumns.length"
+                                                >
+                                                    <mat-icon aria-hidden="true">task_alt</mat-icon>
+                                                    <span>{{
+                                                        i18n.t('home.draftOrdersEmpty')
+                                                    }}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            }
+                        </mat-card-content>
+                    </mat-card>
+                }
+
+                @if (session.hasRole('fahrer')) {
+                    <mat-card appearance="outlined" data-testid="home-my-tours">
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">route</mat-icon>
+                            <mat-card-title>{{ i18n.t('home.myTours') }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content>
+                            @if (myToursError(); as message) {
+                                <p class="error-banner" data-testid="home-my-tours-error">
+                                    <mat-icon aria-hidden="true">error_outline</mat-icon
+                                    >{{ message }}
+                                </p>
+                            }
+                            <div class="table-card">
+                                <div class="table-scroll">
+                                    <table mat-table [dataSource]="myTours()">
+                                        <ng-container matColumnDef="vehicle">
+                                            <th mat-header-cell *matHeaderCellDef>
+                                                {{ i18n.t('common.vehicle') }}
+                                            </th>
+                                            <td mat-cell *matCellDef="let tour" class="strong">
+                                                {{ tour.vehicleLicensePlate }}
+                                            </td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="status">
+                                            <th mat-header-cell *matHeaderCellDef>
+                                                {{ i18n.t('common.status') }}
+                                            </th>
+                                            <td mat-cell *matCellDef="let tour">
+                                                <mat-chip-set>
+                                                    <mat-chip
+                                                        class="chip"
+                                                        [attr.data-tone]="statusTone(tour.status)"
+                                                        >{{ tour.status }}</mat-chip
+                                                    >
+                                                </mat-chip-set>
+                                            </td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="actions">
+                                            <th
+                                                mat-header-cell
+                                                *matHeaderCellDef
+                                                class="actions-cell"
+                                            >
+                                                <span class="cdk-visually-hidden">{{
+                                                    i18n.t('common.actions')
+                                                }}</span>
+                                            </th>
+                                            <td
+                                                mat-cell
+                                                *matCellDef="let tour"
+                                                class="actions-cell"
+                                            >
+                                                @if (tour.status === 'Planned') {
+                                                    <button
+                                                        mat-flat-button
+                                                        data-testid="home-my-tour-start"
+                                                        (click)="startTour(tour)"
+                                                    >
+                                                        <mat-icon>play_arrow</mat-icon>
+                                                        {{ i18n.t('tours.start') }}
+                                                    </button>
+                                                }
+                                                @if (tour.status === 'InProgress') {
+                                                    <button
+                                                        mat-flat-button
+                                                        data-testid="home-my-tour-complete"
+                                                        (click)="completeTour(tour)"
+                                                    >
+                                                        <mat-icon>flag</mat-icon>
+                                                        {{ i18n.t('tours.complete') }}
+                                                    </button>
+                                                }
+                                                <a
+                                                    mat-icon-button
+                                                    [routerLink]="['/tours', tour.id]"
+                                                    [matTooltip]="i18n.t('common.open')"
+                                                    [attr.aria-label]="
+                                                        i18n.t('common.open') +
+                                                        ' ' +
+                                                        tour.vehicleLicensePlate
+                                                    "
+                                                >
+                                                    <mat-icon>open_in_new</mat-icon>
+                                                </a>
+                                            </td>
+                                        </ng-container>
+                                        <tr mat-header-row *matHeaderRowDef="myTourColumns"></tr>
+                                        <tr
+                                            mat-row
+                                            *matRowDef="let row; columns: myTourColumns"
+                                            data-testid="home-my-tour-row"
+                                        ></tr>
+                                        <tr class="mat-mdc-row" *matNoDataRow>
+                                            <td class="empty" [attr.colspan]="myTourColumns.length">
+                                                <mat-icon aria-hidden="true"
+                                                    >event_available</mat-icon
+                                                >
+                                                <span>{{ i18n.t('home.myToursEmpty') }}</span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                }
+
+                <section class="tiles">
+                    @for (tile of tiles; track tile.area) {
+                        @if (session.areas().has(tile.area)) {
+                            <mat-card
+                                appearance="outlined"
+                                [attr.data-testid]="'home-tile-' + tile.area"
+                            >
+                                <mat-card-header>
+                                    <mat-icon mat-card-avatar class="avatar">{{
+                                        tile.icon
+                                    }}</mat-icon>
+                                    <mat-card-title>{{ i18n.t(tile.title) }}</mat-card-title>
+                                </mat-card-header>
+                                <mat-card-content class="tile-text">{{
+                                    i18n.t(tile.description)
+                                }}</mat-card-content>
+                                <mat-card-actions align="end">
+                                    <a mat-button [routerLink]="tile.route">
+                                        <mat-icon>arrow_forward</mat-icon>
                                         {{ i18n.t('common.open') }}
                                     </a>
-                                </td>
-                            </ng-container>
-                            <tr mat-header-row *matHeaderRowDef="draftColumns"></tr>
-                            <tr mat-row *matRowDef="let row; columns: draftColumns"></tr>
-                        </table>
-                        <!-- No per-row "Plan" button: an order is put onto a tour by the picker on
-                             /tours/:id, and no endpoint creates a tour from an order. The honest
-                             action here is to start a tour and assign from there. -->
-                        <a mat-raised-button routerLink="/tours/new" data-testid="home-plan-tour">{{ i18n.t('home.planTour') }}</a>
+                                    @if (session.can(tile.addCapability)) {
+                                        <a
+                                            mat-flat-button
+                                            [routerLink]="tile.addRoute"
+                                            [attr.data-testid]="'home-tile-' + tile.area + '-add'"
+                                        >
+                                            <mat-icon>add</mat-icon>
+                                            {{ i18n.t(tile.addLabel) }}
+                                        </a>
+                                    }
+                                </mat-card-actions>
+                            </mat-card>
+                        }
                     }
                 </section>
+            } @else {
+                <mat-card appearance="outlined" class="signed-out">
+                    <mat-card-header>
+                        <mat-icon mat-card-avatar class="avatar">lock</mat-icon>
+                        <mat-card-title>TransBrain</mat-card-title>
+                    </mat-card-header>
+                    <mat-card-content>
+                        @if (session.error(); as message) {
+                            <p class="error-banner" data-testid="home-error">
+                                <mat-icon aria-hidden="true">error_outline</mat-icon>{{ message }}
+                            </p>
+                        }
+                    </mat-card-content>
+                    <mat-card-actions align="end">
+                        <button mat-flat-button data-testid="login" (click)="session.login()">
+                            <mat-icon>login</mat-icon>
+                            {{ i18n.t('auth.signIn') }}
+                        </button>
+                    </mat-card-actions>
+                </mat-card>
             }
-
-            @if (session.hasRole('fahrer')) {
-                <section data-testid="home-my-tours">
-                    <h2>{{ i18n.t('home.myTours') }}</h2>
-                    @if (myToursError(); as message) {
-                        <p data-testid="home-my-tours-error">{{ message }}</p>
-                    }
-                    @for (tour of myTours(); track tour.id) {
-                        <mat-card data-testid="home-my-tour-row">
-                            <mat-card-title>{{ tour.vehicleLicensePlate }} — {{ tour.status }}</mat-card-title>
-                            <mat-card-actions>
-                                <a mat-button [routerLink]="['/tours', tour.id]">{{ i18n.t('common.open') }}</a>
-                                @if (tour.status === 'Planned') {
-                                    <button mat-raised-button data-testid="home-my-tour-start" (click)="startTour(tour)">
-                                        {{ i18n.t('tours.start') }}
-                                    </button>
-                                }
-                                @if (tour.status === 'InProgress') {
-                                    <button
-                                        mat-raised-button
-                                        data-testid="home-my-tour-complete"
-                                        (click)="completeTour(tour)"
-                                    >
-                                        {{ i18n.t('tours.complete') }}
-                                    </button>
-                                }
-                            </mat-card-actions>
-                        </mat-card>
-                    }
-                </section>
-            }
-
-            <section class="tiles">
-                @for (tile of tiles; track tile.area) {
-                    @if (session.areas().has(tile.area)) {
-                        <mat-card [attr.data-testid]="'home-tile-' + tile.area">
-                            <mat-card-title>{{ i18n.t(tile.title) }}</mat-card-title>
-                            <mat-card-content>{{ i18n.t(tile.description) }}</mat-card-content>
-                            <mat-card-actions>
-                                <a mat-button [routerLink]="tile.route">{{ i18n.t('common.open') }}</a>
-                                @if (session.can(tile.addCapability)) {
-                                    <a
-                                        mat-raised-button
-                                        [routerLink]="tile.addRoute"
-                                        [attr.data-testid]="'home-tile-' + tile.area + '-add'"
-                                        >{{ i18n.t(tile.addLabel) }}</a
-                                    >
-                                }
-                            </mat-card-actions>
-                        </mat-card>
-                    }
-                }
-            </section>
-        } @else {
-            @if (session.error(); as message) {
-                <p data-testid="home-error">{{ message }}</p>
-            }
-            <button mat-raised-button data-testid="login" (click)="session.login()">{{ i18n.t('auth.signIn') }}</button>
-        }
+        </div>
     `,
     styles: `
         .kpis,
         .tiles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .kpi {
             display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 4px 0;
+            color: var(--mat-sys-on-surface-variant);
         }
 
-        .kpis {
-            margin-bottom: 1.5rem;
+        .kpi strong {
+            color: var(--mat-sys-on-surface);
+            font: var(--mat-sys-display-small);
+            font-variant-numeric: tabular-nums;
         }
 
-        .kpis mat-card,
+        .spacer {
+            flex: 1;
+        }
+
+        mat-card-header a {
+            align-self: center;
+        }
+
+        .tile-text {
+            flex: 1;
+            color: var(--mat-sys-on-surface-variant);
+        }
+
         .tiles mat-card {
-            flex: 1 1 16rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .signed-out {
+            max-width: 440px;
+            margin: 48px auto 0;
+            width: 100%;
         }
     `,
 })
@@ -275,6 +551,11 @@ export class HomeComponent {
 
     protected readonly tiles = TILES;
     protected readonly draftColumns = ['orderNumber', 'route', 'actions'];
+    protected readonly myTourColumns = ['vehicle', 'status', 'actions'];
+    protected readonly statusTone = tourStatusTone;
+    protected readonly todayLabel = computed(() =>
+        new Date().toLocaleDateString(this.i18n.locale(), { dateStyle: 'full' }),
+    );
 
     protected readonly vehiclesAvailable = signal(0);
     protected readonly vehiclesInWorkshop = signal(0);
@@ -327,12 +608,16 @@ export class HomeComponent {
             this.vehicles.list(COUNT_ONLY, 'Available').subscribe({
                 next: (page) => this.vehiclesAvailable.set(page.totalCount),
                 error: (error: HttpErrorResponse) =>
-                    this.vehicleError.set(this.describe(error, this.i18n.t('home.error.vehicleCounts'))),
+                    this.vehicleError.set(
+                        this.describe(error, this.i18n.t('home.error.vehicleCounts')),
+                    ),
             });
             this.vehicles.list(COUNT_ONLY, 'InWorkshop').subscribe({
                 next: (page) => this.vehiclesInWorkshop.set(page.totalCount),
                 error: (error: HttpErrorResponse) =>
-                    this.vehicleError.set(this.describe(error, this.i18n.t('home.error.vehicleCounts'))),
+                    this.vehicleError.set(
+                        this.describe(error, this.i18n.t('home.error.vehicleCounts')),
+                    ),
             });
         }
 
@@ -340,7 +625,9 @@ export class HomeComponent {
             this.drivers.list(COUNT_ONLY, 'Available').subscribe({
                 next: (page) => this.driversAvailable.set(page.totalCount),
                 error: (error: HttpErrorResponse) =>
-                    this.driverError.set(this.describe(error, this.i18n.t('home.error.driverCounts'))),
+                    this.driverError.set(
+                        this.describe(error, this.i18n.t('home.error.driverCounts')),
+                    ),
             });
         }
 
@@ -348,7 +635,9 @@ export class HomeComponent {
             this.orders.list('Draft', COUNT_ONLY).subscribe({
                 next: (page) => this.ordersInDraft.set(page.totalCount),
                 error: (error: HttpErrorResponse) =>
-                    this.orderError.set(this.describe(error, this.i18n.t('home.error.orderCounts'))),
+                    this.orderError.set(
+                        this.describe(error, this.i18n.t('home.error.orderCounts')),
+                    ),
             });
         }
 
@@ -370,7 +659,9 @@ export class HomeComponent {
             this.orders.list('Draft', DRAFT_PREVIEW_SIZE).subscribe({
                 next: (page) => this.draftOrders.set(page.items),
                 error: (error: HttpErrorResponse) =>
-                    this.draftOrdersError.set(this.describe(error, this.i18n.t('home.error.draftOrders'))),
+                    this.draftOrdersError.set(
+                        this.describe(error, this.i18n.t('home.error.draftOrders')),
+                    ),
             });
         }
     }

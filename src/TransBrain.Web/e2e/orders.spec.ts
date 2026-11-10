@@ -12,7 +12,11 @@ async function signInAsDispatcher(page: Page): Promise<void> {
     await signIn(page, 'dispo');
 }
 
-async function fillAddress(page: Page, party: 'consignor' | 'consignee', name: string): Promise<void> {
+async function fillAddress(
+    page: Page,
+    party: 'consignor' | 'consignee',
+    name: string,
+): Promise<void> {
     await page.getByTestId(`order-${party}-name`).fill(name);
     await page.getByTestId(`order-${party}-street`).fill('Hauptstr. 1');
     await page.getByTestId(`order-${party}-postalCode`).fill('80331');
@@ -64,7 +68,7 @@ test('dispatcher_createEditAndCancelOrder_throughTheUi', async ({ page }) => {
     // Cancel through the UI. Cancelling is not deleting: the row must stay in the list with
     // its status changed to Cancelled, not disappear from it.
     await editedRow.getByTestId('order-cancel').click();
-    await editedRow.getByTestId('order-cancel-confirm').click();
+    await page.getByTestId('order-cancel-confirm').click();
 
     const cancelledRow = page.locator('tr').filter({ hasText: consignor });
     await expect(cancelledRow).toBeVisible();
@@ -74,6 +78,8 @@ test('dispatcher_createEditAndCancelOrder_throughTheUi', async ({ page }) => {
     // message must reach the user rather than failing silently.
     await cancelledRow.getByTestId('order-edit').click();
     await expect(page.getByRole('heading', { name: 'Edit order' })).toBeVisible();
+    // Wait for the loaded order, otherwise it overwrites the typed value.
+    await expect(page.getByTestId('order-cargoDescription')).toHaveValue('Kuehlware');
     await page.getByTestId('order-cargoDescription').fill('Zu spaet');
     await page.getByTestId('order-save').click();
     await expect(page.getByTestId('order-form-error')).toBeVisible();
@@ -103,10 +109,10 @@ test('cancelledOrders_remainVisibleUnderTheStatusFilter', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
     const row = page.locator('tr').filter({ hasText: consignor });
     await row.getByTestId('order-cancel').click();
-    await row.getByTestId('order-cancel-confirm').click();
-    await expect(page.locator('tr').filter({ hasText: consignor }).getByTestId('order-status')).toHaveText(
-        'Cancelled',
-    );
+    await page.getByTestId('order-cancel-confirm').click();
+    await expect(
+        page.locator('tr').filter({ hasText: consignor }).getByTestId('order-status'),
+    ).toHaveText('Cancelled');
 
     // Filtering to Cancelled keeps it; filtering to Draft must not.
     await page.getByTestId('order-status-filter').click();

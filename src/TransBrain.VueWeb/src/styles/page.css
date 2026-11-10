@@ -1,0 +1,104 @@
+/*
+ * Layout classes shared by all screens, copied from the vehicle views (VehicleList.vue,
+ * VehicleForm.vue, VehicleCatalog.vue), which are the design reference.
+ */
+.page-container {
+    max-width: 1200px;
+}
+
+.back-button {
+    margin: 0 0 8px -8px;
+}
+
+.page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.page-header.form-header {
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.page-subtitle {
+    margin: 4px 0 0;
+}
+
+.title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.audit-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
+}
+
+.filter-bar {
+    margin-bottom: 16px;
+}
+
+.error-line {
+    margin-bottom: 16px;
+}
+
+.form-error {
+    margin: 8px 0;
+}
+
+.row-actions {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.section-card {
+    height: 100%;
+}
+
+.section-group-title {
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+
+.section-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.form-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 12px 0;
+    border-top: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+    background: rgb(var(--v-theme-background));
+}
+
+/* Leaflet stacks its panes up to z-index 1000; an own stacking context keeps a map below the
+   sticky action bar. */
+.map-frame {
+    position: relative;
+    z-index: 0;
+}

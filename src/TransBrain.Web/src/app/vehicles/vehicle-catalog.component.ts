@@ -23,7 +23,7 @@ import {
 } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { I18nService } from '../i18n/i18n.service';
-import { ConfirmDialogComponent, ConfirmDialogData } from './confirm-dialog.component';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import {
     VehicleCatalogDialogComponent,
     VehicleCatalogDialogData,
