@@ -2,13 +2,22 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
+/** The kinds behind the vehicle form, shown on '/vehicle-catalog'. */
 export const VEHICLE_CATALOG_KINDS = [
     'VehicleClass',
     'CarrierGroup',
     'InsuranceCompany',
     'DocumentType',
 ] as const;
-export type VehicleCatalogKind = (typeof VEHICLE_CATALOG_KINDS)[number];
+
+/**
+ * The kinds behind the customer form, shown on '/customer-catalog'. Despite the name the API keeps
+ * the customer classes in the same catalog.
+ */
+export const CUSTOMER_CATALOG_KINDS = ['CustomerClass'] as const;
+
+export type VehicleCatalogKind =
+    (typeof VEHICLE_CATALOG_KINDS)[number] | (typeof CUSTOMER_CATALOG_KINDS)[number];
 
 export interface VehicleCatalogEntry {
     id: string;
@@ -19,6 +28,7 @@ export interface VehicleCatalogEntry {
     name: string;
     /** Inactive entries stay valid where already used, but are not offered for new selection. */
     isActive: boolean;
+    /** Number of vehicles - for 'CustomerClass' customers - using the entry. */
     usageCount: number;
 }
 
@@ -103,7 +113,7 @@ export class VehicleCatalogService {
         return this.http.put<VehicleCatalogEntry>(`/api/vehicle-catalog/${kind}/${id}`, request);
     }
 
-    /** Answers 409 while any vehicle still uses the entry. */
+    /** Answers 409 while any vehicle (or customer) still uses the entry. */
     remove(kind: VehicleCatalogKind, id: string): Observable<void> {
         return this.http.delete<void>(`/api/vehicle-catalog/${kind}/${id}`);
     }

@@ -43,6 +43,17 @@ public class VehicleCatalogEndpointsTests(TransBrainApiFactory factory) : IClass
     }
 
     [Fact]
+    public async Task GetCustomerClasses_FreshDatabase_ReturnsTheSeededClass()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("viewer").GetAsync("/api/vehicle-catalog/CustomerClass");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        VehicleCatalogEntryResponse[] entries = (await response.Content.ReadFromJsonAsync<VehicleCatalogEntryResponse[]>())!;
+        entries.Select(e => (e.Code, e.Name)).Should().Contain(("HuterVilsAll", "Huter Vils alle Gattungen"));
+        entries.Should().AllSatisfy(e => e.Kind.Should().Be("CustomerClass"));
+    }
+
+    [Fact]
     public async Task GetCatalog_UnknownKind_ReturnsBadRequest()
     {
         HttpResponseMessage response = await factory.CreateClientAs("viewer").GetAsync("/api/vehicle-catalog/1");

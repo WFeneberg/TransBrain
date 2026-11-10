@@ -17,6 +17,11 @@ internal static class VehicleCatalogErrors
         VehicleCatalogKind.CarrierGroup => "carrier group",
         VehicleCatalogKind.InsuranceCompany => "insurance company",
         VehicleCatalogKind.DocumentType => "document type",
+        VehicleCatalogKind.CustomerClass => "customer class",
         _ => kind.ToString()
     };
+
+    /// <summary>What a catalog entry's usage count counts, for messages such as "used by 2 customer(s)".</summary>
+    public static string UsageUnit(VehicleCatalogKind kind) =>
+        kind == VehicleCatalogKind.CustomerClass ? "customer(s)" : "vehicle(s)";
 }

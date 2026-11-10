@@ -8,6 +8,7 @@ using TransBrain.Application.Common.Pagination;
 using TransBrain.Application.Tests.Fakes;
 using TransBrain.Domain.Common;
 using TransBrain.Domain.Customers;
+using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Tests.Features.Customers;
 
@@ -20,7 +21,8 @@ public class CustomerCommandHandlerTests
     public async Task Create_ValidCommand_PersistsCustomerAndReturnsResponse()
     {
         InMemoryCustomerRepository repository = new();
-        CreateCustomerCommandHandler handler = new(repository, new InMemoryCacheService());
+        CreateCustomerCommandHandler handler = new(
+            repository, InMemoryVehicleCatalogRepository.WithStandardEntries(), new InMemoryCacheService());
 
         Result<CustomerResponse> result = await handler.Handle(ValidCreate, CancellationToken.None);
 
@@ -35,7 +37,8 @@ public class CustomerCommandHandlerTests
     public async Task Create_InvalidCountry_ReturnsAddressError()
     {
         InMemoryCustomerRepository repository = new();
-        CreateCustomerCommandHandler handler = new(repository, new InMemoryCacheService());
+        CreateCustomerCommandHandler handler = new(
+            repository, InMemoryVehicleCatalogRepository.WithStandardEntries(), new InMemoryCacheService());
 
         Result<CustomerResponse> result = await handler.Handle(
             ValidCreate with { Country = "Austria" }, CancellationToken.None);
@@ -48,7 +51,10 @@ public class CustomerCommandHandlerTests
     [Fact]
     public async Task Create_NegativePaymentTerm_ReturnsDomainError()
     {
-        CreateCustomerCommandHandler handler = new(new InMemoryCustomerRepository(), new InMemoryCacheService());
+        CreateCustomerCommandHandler handler = new(
+            new InMemoryCustomerRepository(),
+            InMemoryVehicleCatalogRepository.WithStandardEntries(),
+            new InMemoryCacheService());
 
         Result<CustomerResponse> result = await handler.Handle(
             ValidCreate with { PaymentTermDays = -5 }, CancellationToken.None);
@@ -60,7 +66,10 @@ public class CustomerCommandHandlerTests
     [Fact]
     public async Task Update_UnknownId_ReturnsNotFound()
     {
-        UpdateCustomerCommandHandler handler = new(new InMemoryCustomerRepository(), new InMemoryCacheService());
+        UpdateCustomerCommandHandler handler = new(
+            new InMemoryCustomerRepository(),
+            InMemoryVehicleCatalogRepository.WithStandardEntries(),
+            new InMemoryCacheService());
 
         Result<CustomerResponse> result = await handler.Handle(
             new UpdateCustomerCommand(
@@ -80,7 +89,8 @@ public class CustomerCommandHandlerTests
             null, null, null, null, 30).Value;
         InMemoryCustomerRepository repository = new();
         repository.Seed(existing);
-        UpdateCustomerCommandHandler handler = new(repository, new InMemoryCacheService());
+        UpdateCustomerCommandHandler handler = new(
+            repository, InMemoryVehicleCatalogRepository.WithStandardEntries(), new InMemoryCacheService());
 
         Result<CustomerResponse> result = await handler.Handle(
             new UpdateCustomerCommand(
@@ -90,6 +100,150 @@ public class CustomerCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Name.Should().Be("Neu GmbH");
         result.Value.PaymentTermDays.Should().Be(14);
+    }
+
+    [Fact]
+    public async Task Create_WithAdditionalData_StoresItAndReturnsCanonicalClassCode()
+    {
+        InMemoryCustomerRepository repository = new();
+        CreateCustomerCommandHandler handler = new(
+            repository, InMemoryVehicleCatalogRepository.WithStandardEntries(), new InMemoryCacheService());
+        CustomerAdditionalData additional = new(
+            SecondaryName: "Werk Vils",
+            SecondaryStreet: "Industriestraße 5",
+            SecondaryPostalCode: "6682",
+            SecondaryCity: "Vils",
+            SecondaryCountry: "at",
+            FoundedOn: new DateOnly(1985, 4, 1),
+            WorkerCount: 120,
+            SalariedEmployeeCount: 35,
+            RequiresPalletCheck: true,
+            ExcludeTollFromInvoice: true,
+            ReimburseToll: false,
+            CustomerClass: "hutervilsall",
+            Comment: "  Nur werktags anliefern.  ");
+
+        Result<CustomerResponse> result = await handler.Handle(
+            ValidCreate with { Additional = additional }, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Additional.Should().Be(additional with
+        {
+            SecondaryCountry = "AT",
+            CustomerClass = "HuterVilsAll",
+            Comment = "Nur werktags anliefern."
+        });
+        repository.Customers.Single().Additional.WorkerCount.Should().Be(120);
+    }
+
+    [Fact]
+    public async Task Create_WithoutAdditionalData_ReturnsEmptyAdditionalData()
+    {
+        CreateCustomerCommandHandler handler = new(
+            new InMemoryCustomerRepository(),
+            InMemoryVehicleCatalogRepository.WithStandardEntries(),
+            new InMemoryCacheService());
+
+        Result<CustomerResponse> result = await handler.Handle(ValidCreate, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Additional.Should().Be(new CustomerAdditionalData());
+    }
+
+    [Fact]
+    public async Task Create_UnknownCustomerClass_ReturnsValidationFailureForField()
+    {
+        InMemoryCustomerRepository repository = new();
+        CreateCustomerCommandHandler handler = new(
+            repository, InMemoryVehicleCatalogRepository.WithStandardEntries(), new InMemoryCacheService());
+
+        Result<CustomerResponse> result = await handler.Handle(
+            ValidCreate with { Additional = new CustomerAdditionalData(CustomerClass: "Unknown") },
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Failures.Should().ContainKey("Additional.CustomerClass");
+        repository.Customers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Create_InactiveCustomerClass_ReturnsValidationFailure()
+    {
+        InMemoryVehicleCatalogRepository catalog = new();
+        catalog.Seed(VehicleCatalogKind.CustomerClass, "Old", "Alt", isActive: false);
+        CreateCustomerCommandHandler handler = new(
+            new InMemoryCustomerRepository(), catalog, new InMemoryCacheService());
+
+        Result<CustomerResponse> result = await handler.Handle(
+            ValidCreate with { Additional = new CustomerAdditionalData(CustomerClass: "Old") },
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Failures.Should().ContainKey("Additional.CustomerClass");
+    }
+
+    [Fact]
+    public async Task Create_InvalidSecondaryCountry_ReturnsDomainError()
+    {
+        CreateCustomerCommandHandler handler = new(
+            new InMemoryCustomerRepository(),
+            InMemoryVehicleCatalogRepository.WithStandardEntries(),
+            new InMemoryCacheService());
+
+        Result<CustomerResponse> result = await handler.Handle(
+            ValidCreate with { Additional = new CustomerAdditionalData(SecondaryCountry: "Austria") },
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Customer.SecondaryCountryInvalid");
+    }
+
+    [Fact]
+    public async Task Update_KeepsInactiveCustomerClassAlreadyAssigned()
+    {
+        InMemoryVehicleCatalogRepository catalog = new();
+        VehicleCatalogEntry entry = catalog.Seed(VehicleCatalogKind.CustomerClass, "Old", "Alt");
+        Customer existing = Customer.Create(
+            "Alt GmbH",
+            Address.Create("Alt GmbH", "Weg 1", "4020", "Linz", "AT").Value,
+            null, null, null, null, 30,
+            CustomerAdditionalInfo.Create(customerClass: "Old").Value).Value;
+        entry.Update("Alt", isActive: false);
+        InMemoryCustomerRepository repository = new();
+        repository.Seed(existing);
+        UpdateCustomerCommandHandler handler = new(repository, catalog, new InMemoryCacheService());
+
+        Result<CustomerResponse> result = await handler.Handle(
+            new UpdateCustomerCommand(
+                existing.Id, "Alt GmbH", "Weg 1", "4020", "Linz", "AT", null, null, null, null, 30,
+                new CustomerAdditionalData(WorkerCount: 3, CustomerClass: "Old")),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Additional.CustomerClass.Should().Be("Old");
+        result.Value.Additional.WorkerCount.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Update_WithoutAdditionalData_ClearsIt()
+    {
+        Customer existing = Customer.Create(
+            "Alt GmbH",
+            Address.Create("Alt GmbH", "Weg 1", "4020", "Linz", "AT").Value,
+            null, null, null, null, 30,
+            CustomerAdditionalInfo.Create(requiresPalletCheck: true, comment: "x").Value).Value;
+        InMemoryCustomerRepository repository = new();
+        repository.Seed(existing);
+        UpdateCustomerCommandHandler handler = new(
+            repository, InMemoryVehicleCatalogRepository.WithStandardEntries(), new InMemoryCacheService());
+
+        Result<CustomerResponse> result = await handler.Handle(
+            new UpdateCustomerCommand(
+                existing.Id, "Alt GmbH", "Weg 1", "4020", "Linz", "AT", null, null, null, null, 30),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Additional.Should().Be(new CustomerAdditionalData());
     }
 
     [Fact]

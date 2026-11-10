@@ -15,6 +15,8 @@ public sealed record CustomerResponse(
     string? VatId,
     int PaymentTermDays)
 {
+    public CustomerAdditionalData Additional { get; init; } = new();
+
     public static CustomerResponse From(Customer customer) => new(
         customer.Id,
         customer.Name,
@@ -26,5 +28,8 @@ public sealed record CustomerResponse(
         customer.Email,
         customer.Phone,
         customer.VatId,
-        customer.PaymentTermDays);
+        customer.PaymentTermDays)
+    {
+        Additional = CustomerAdditionalData.From(customer.Additional),
+    };
 }

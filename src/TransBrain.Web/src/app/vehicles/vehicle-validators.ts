@@ -18,6 +18,20 @@ export function amountInRange(min: number, max: number) {
     };
 }
 
+/** Optional whole number: empty is fine, a filled-in value must be an integer within [min, max]. */
+export function wholeNumberInRange(min: number, max: number) {
+    return (control: AbstractControl<number | null>): ValidationErrors | null => {
+        const value = control.value;
+        if (value === null || (value as unknown) === '') {
+            return null;
+        }
+        const number = Number(value);
+        return Number.isInteger(number) && number >= min && number <= max
+            ? null
+            : { range: { min, max } };
+    };
+}
+
 /** Optional "YYYY-MM-DD" date: empty is fine, a filled-in date must not lie before `year`. */
 export function dateFromYear(year: number) {
     return (control: AbstractControl<string | null>): ValidationErrors | null => {

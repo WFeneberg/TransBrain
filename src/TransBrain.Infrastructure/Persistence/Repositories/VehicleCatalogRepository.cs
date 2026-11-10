@@ -43,6 +43,8 @@ internal sealed class VehicleCatalogRepository(TransBrainDbContext context) : IV
         VehicleCatalogKind.DocumentType =>
             CountCodesAsync(context.VehicleDocuments.Select(d => (string?)d.DocumentType), cancellationToken),
         VehicleCatalogKind.InsuranceCompany => CountInsurerUsageAsync(cancellationToken),
+        VehicleCatalogKind.CustomerClass =>
+            CountCodesAsync(context.Customers.Select(c => c.Additional.CustomerClass), cancellationToken),
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
     };
 

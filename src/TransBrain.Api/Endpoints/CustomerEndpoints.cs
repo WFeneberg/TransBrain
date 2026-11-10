@@ -64,7 +64,8 @@ public sealed class CustomerEndpoints : IEndpointGroup
                         request.Email,
                         request.Phone,
                         request.VatId,
-                        request.PaymentTermDays),
+                        request.PaymentTermDays,
+                        request.Additional),
                     ct);
                 return result.ToHttpResult();
             })
@@ -86,7 +87,10 @@ public sealed class CustomerEndpoints : IEndpointGroup
     }
 }
 
-/// <summary>Body of a customer update. The id comes from the route, not the payload.</summary>
+/// <summary>
+/// Body of a customer update. The id comes from the route, not the payload. A missing
+/// <see cref="Additional"/> clears the additional data, like on create.
+/// </summary>
 public sealed record UpdateCustomerRequest(
     string Name,
     string Street,
@@ -97,4 +101,5 @@ public sealed record UpdateCustomerRequest(
     string? Email,
     string? Phone,
     string? VatId,
-    int PaymentTermDays);
+    int PaymentTermDays,
+    CustomerAdditionalData? Additional = null);

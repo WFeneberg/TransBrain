@@ -11,6 +11,7 @@ public sealed class Customer
     {
         Name = null!;
         Address = null!;
+        Additional = null!;
     }
 
     private Customer(
@@ -21,7 +22,8 @@ public sealed class Customer
         string? email,
         string? phone,
         string? vatId,
-        int paymentTermDays)
+        int paymentTermDays,
+        CustomerAdditionalInfo additional)
     {
         Id = id;
         Name = name;
@@ -31,6 +33,7 @@ public sealed class Customer
         Phone = phone;
         VatId = vatId;
         PaymentTermDays = paymentTermDays;
+        Additional = additional;
     }
 
     public Guid Id { get; private set; }
@@ -51,6 +54,9 @@ public sealed class Customer
     /// <summary>Days from invoice date until payment is due. Zero means due immediately.</summary>
     public int PaymentTermDays { get; private set; }
 
+    /// <summary>The additional data ("Zusatz"); <see cref="CustomerAdditionalInfo.Empty"/> when nothing is set.</summary>
+    public CustomerAdditionalInfo Additional { get; private set; }
+
     public static Result<Customer> Create(
         string name,
         Address address,
@@ -58,7 +64,8 @@ public sealed class Customer
         string? email,
         string? phone,
         string? vatId,
-        int paymentTermDays)
+        int paymentTermDays,
+        CustomerAdditionalInfo? additional = null)
     {
         Result<Unit> validation = Validate(name, paymentTermDays);
         if (!validation.IsSuccess)
@@ -74,7 +81,8 @@ public sealed class Customer
             OptionalText.Normalize(email),
             OptionalText.Normalize(phone),
             OptionalText.Normalize(vatId),
-            paymentTermDays);
+            paymentTermDays,
+            additional ?? CustomerAdditionalInfo.Empty);
     }
 
     public Result<Customer> Update(
@@ -84,7 +92,8 @@ public sealed class Customer
         string? email,
         string? phone,
         string? vatId,
-        int paymentTermDays)
+        int paymentTermDays,
+        CustomerAdditionalInfo? additional = null)
     {
         Result<Unit> validation = Validate(name, paymentTermDays);
         if (!validation.IsSuccess)
@@ -99,6 +108,7 @@ public sealed class Customer
         Phone = OptionalText.Normalize(phone);
         VatId = OptionalText.Normalize(vatId);
         PaymentTermDays = paymentTermDays;
+        Additional = additional ?? CustomerAdditionalInfo.Empty;
 
         return this;
     }

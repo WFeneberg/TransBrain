@@ -13,4 +13,5 @@ public sealed record UpdateCustomerCommand(
     string? Email,
     string? Phone,
     string? VatId,
-    int PaymentTermDays) : ICommand<CustomerResponse>;
+    int PaymentTermDays,
+    CustomerAdditionalData? Additional = null) : ICommand<CustomerResponse>;

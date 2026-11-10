@@ -8,6 +8,7 @@ import {
     listCustomerLocations,
     type CustomerLocation,
 } from '../api/customerLocations';
+import { catalogSelectOptions, listVehicleCatalog, type VehicleCatalogEntry } from '../api/vehicleCatalog';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useI18n, type MessageKey } from '../i18n';
@@ -19,6 +20,16 @@ interface ProblemDetailsBody {
 }
 
 const MAX_PAYMENT_TERM_DAYS = 365;
+// Mirrors CustomerAdditionalInfo on the API.
+const MAX_HEADCOUNT = 1_000_000;
+const MIN_FOUNDING_YEAR = 1800;
+const COMMENT_MAX_LENGTH = 2000;
+const SECONDARY_MAX_LENGTHS = {
+    secondaryName: 200,
+    secondaryStreet: 200,
+    secondaryPostalCode: 20,
+    secondaryCity: 200,
+} as const;
 
 const { t } = useI18n();
 const route = useRoute();
@@ -56,6 +67,68 @@ const fieldErrors = reactive<Record<keyof typeof form, string | null>>({
 // Gates field errors the same way the Angular form does: shown only after the first submit.
 const attemptedSubmit = ref(false);
 const formError = ref<string | null>(null);
+
+// The "Zusatz" card. Numbers stay `number | string` because a cleared number field yields ''.
+const additional = reactive({
+    secondaryName: '',
+    secondaryStreet: '',
+    secondaryPostalCode: '',
+    secondaryCity: '',
+    secondaryCountry: '',
+    foundedOn: '',
+    workerCount: 0 as number | string,
+    salariedEmployeeCount: 0 as number | string,
+    requiresPalletCheck: false,
+    excludeTollFromInvoice: false,
+    reimburseToll: false,
+    customerClass: '',
+    comment: '',
+});
+
+type AdditionalErrorField = Exclude<
+    keyof typeof additional,
+    'requiresPalletCheck' | 'excludeTollFromInvoice' | 'reimburseToll'
+>;
+
+const additionalErrors = reactive<Record<AdditionalErrorField, string | null>>({
+    secondaryName: null,
+    secondaryStreet: null,
+    secondaryPostalCode: null,
+    secondaryCity: null,
+    secondaryCountry: null,
+    foundedOn: null,
+    workerCount: null,
+    salariedEmployeeCount: null,
+    customerClass: null,
+    comment: null,
+});
+
+type AdditionalTextField = 'secondaryName' | 'secondaryStreet' | 'secondaryPostalCode' | 'secondaryCity' | 'secondaryCountry';
+
+const secondaryAddressFields: { name: AdditionalTextField; label: MessageKey; sm: number }[] = [
+    { name: 'secondaryName', label: 'customers.additional.secondaryName', sm: 12 },
+    { name: 'secondaryStreet', label: 'common.street', sm: 12 },
+    { name: 'secondaryCountry', label: 'customers.additional.secondaryCountry', sm: 2 },
+    { name: 'secondaryPostalCode', label: 'common.postalCode', sm: 3 },
+    { name: 'secondaryCity', label: 'common.city', sm: 7 },
+];
+
+const flagFields: { name: 'requiresPalletCheck' | 'excludeTollFromInvoice' | 'reimburseToll'; label: MessageKey }[] = [
+    { name: 'requiresPalletCheck', label: 'customers.additional.requiresPalletCheck' },
+    { name: 'excludeTollFromInvoice', label: 'customers.additional.excludeTollFromInvoice' },
+    { name: 'reimburseToll', label: 'customers.additional.reimburseToll' },
+];
+
+const customerClasses = ref<VehicleCatalogEntry[]>([]);
+// The class stored on the customer stays selectable even when it has been deactivated since.
+const storedCustomerClass = ref<string | null>(null);
+
+const customerClassOptions = computed(() => [
+    { title: '–', value: '' },
+    ...catalogSelectOptions(customerClasses.value, storedCustomerClass.value, (name) =>
+        t('vehicles.inactiveOption', { name }),
+    ),
+]);
 
 const requiredFields = ['name', 'street', 'postalCode', 'city', 'country'] as const;
 
@@ -101,6 +174,7 @@ const sections: { key: string; icon: string; title: MessageKey; fields: SectionF
 ];
 
 onMounted(async () => {
+    const catalogLoad = loadCustomerClasses();
     if (isEditMode.value) {
         try {
             const customer = await getCustomer(customerId!);
@@ -114,12 +188,38 @@ onMounted(async () => {
             form.phone = customer.phone ?? '';
             form.vatId = customer.vatId ?? '';
             form.paymentTermDays = customer.paymentTermDays;
+            const data = customer.additional;
+            additional.secondaryName = data.secondaryName ?? '';
+            additional.secondaryStreet = data.secondaryStreet ?? '';
+            additional.secondaryPostalCode = data.secondaryPostalCode ?? '';
+            additional.secondaryCity = data.secondaryCity ?? '';
+            additional.secondaryCountry = data.secondaryCountry ?? '';
+            additional.foundedOn = data.foundedOn ?? '';
+            additional.workerCount = data.workerCount;
+            additional.salariedEmployeeCount = data.salariedEmployeeCount;
+            additional.requiresPalletCheck = data.requiresPalletCheck;
+            additional.excludeTollFromInvoice = data.excludeTollFromInvoice;
+            additional.reimburseToll = data.reimburseToll;
+            additional.customerClass = data.customerClass ?? '';
+            additional.comment = data.comment ?? '';
+            storedCustomerClass.value = data.customerClass;
         } catch (error) {
             formError.value = describeFailure(error, t('customers.error.load'));
         }
         await loadLocations();
     }
+    await catalogLoad;
 });
+
+// Without the list the stored class could not even be displayed, so the failure is reported.
+async function loadCustomerClasses(): Promise<void> {
+    try {
+        customerClasses.value = await listVehicleCatalog('CustomerClass');
+    } catch {
+        const message = t('customers.error.catalogLoad');
+        formError.value = formError.value ? `${formError.value} ${message}` : message;
+    }
+}
 
 const locations = ref<CustomerLocation[]>([]);
 const locationsLoading = ref(false);
@@ -180,7 +280,58 @@ function validate(): boolean {
     } else {
         fieldErrors.email = null;
     }
-    return Object.values(fieldErrors).every((message) => message === null);
+    validateAdditional();
+    return (
+        Object.values(fieldErrors).every((message) => message === null) &&
+        Object.values(additionalErrors).every((message) => message === null)
+    );
+}
+
+function validateAdditional(): void {
+    for (const [field, max] of Object.entries(SECONDARY_MAX_LENGTHS) as [keyof typeof SECONDARY_MAX_LENGTHS, number][]) {
+        additionalErrors[field] = additional[field].trim().length > max ? t('vehicleCatalog.maxLength', { max }) : null;
+    }
+    const country = additional.secondaryCountry.trim();
+    additionalErrors.secondaryCountry = !country || /^[A-Za-z]{2}$/.test(country) ? null : t('common.invalid');
+    additionalErrors.foundedOn =
+        !additional.foundedOn || Number(additional.foundedOn.slice(0, 4)) >= MIN_FOUNDING_YEAR
+            ? null
+            : t('customers.additional.foundedOnTooEarly', { year: MIN_FOUNDING_YEAR });
+    additionalErrors.workerCount = headcountError(additional.workerCount);
+    additionalErrors.salariedEmployeeCount = headcountError(additional.salariedEmployeeCount);
+    additionalErrors.customerClass = null;
+    additionalErrors.comment =
+        additional.comment.trim().length > COMMENT_MAX_LENGTH
+            ? t('vehicleCatalog.maxLength', { max: COMMENT_MAX_LENGTH })
+            : null;
+}
+
+function headcountError(value: number | string): string | null {
+    const count = Number(value);
+    return value !== '' && Number.isInteger(count) && count >= 0 && count <= MAX_HEADCOUNT ? null : t('common.invalid');
+}
+
+function optionalText(value: string): string | null {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+}
+
+function additionalRequest(): CustomerWriteRequest['additional'] {
+    return {
+        secondaryName: optionalText(additional.secondaryName),
+        secondaryStreet: optionalText(additional.secondaryStreet),
+        secondaryPostalCode: optionalText(additional.secondaryPostalCode),
+        secondaryCity: optionalText(additional.secondaryCity),
+        secondaryCountry: optionalText(additional.secondaryCountry)?.toUpperCase() ?? null,
+        foundedOn: additional.foundedOn || null,
+        workerCount: Number(additional.workerCount),
+        salariedEmployeeCount: Number(additional.salariedEmployeeCount),
+        requiresPalletCheck: additional.requiresPalletCheck,
+        excludeTollFromInvoice: additional.excludeTollFromInvoice,
+        reimburseToll: additional.reimburseToll,
+        customerClass: additional.customerClass || null,
+        comment: optionalText(additional.comment),
+    };
 }
 
 async function save(): Promise<void> {
@@ -190,7 +341,11 @@ async function save(): Promise<void> {
         return;
     }
 
-    const request: CustomerWriteRequest = { ...form, paymentTermDays: Number(form.paymentTermDays) };
+    const request: CustomerWriteRequest = {
+        ...form,
+        paymentTermDays: Number(form.paymentTermDays),
+        additional: additionalRequest(),
+    };
 
     try {
         if (isEditMode.value) {
@@ -217,15 +372,29 @@ function errorsFor(field: keyof typeof form): string[] {
     return attemptedSubmit.value && message ? [message] : [];
 }
 
+function additionalErrorsFor(field: AdditionalErrorField): string[] {
+    const message = additionalErrors[field];
+    return attemptedSubmit.value && message ? [message] : [];
+}
+
 // Keys are .NET property names (PascalCase); lowercase the first letter to find the field.
+// The additional data comes as a dotted path ("Additional.WorkerCount").
 function applyServerErrors(error: unknown): void {
     if (axios.isAxiosError(error)) {
         const problem = error.response?.data as ProblemDetailsBody | undefined;
 
         if (problem?.errors) {
             for (const [field, messages] of Object.entries(problem.errors)) {
-                const fieldName = field.charAt(0).toLowerCase() + field.slice(1);
                 const message = messages.join(' ');
+                if (field.startsWith('Additional.')) {
+                    const nested = field.slice('Additional.'.length);
+                    const nestedName = nested.charAt(0).toLowerCase() + nested.slice(1);
+                    if (nestedName in additionalErrors) {
+                        additionalErrors[nestedName as AdditionalErrorField] = message;
+                        continue;
+                    }
+                }
+                const fieldName = field.charAt(0).toLowerCase() + field.slice(1);
                 if (fieldName in fieldErrors) {
                     fieldErrors[fieldName as keyof typeof fieldErrors] = message;
                 } else {
@@ -301,6 +470,124 @@ function describeFailure(error: unknown, fallback: string): string {
                                             <span data-testid="customer-paymentTermDays-error">{{ message }}</span>
                                         </template>
                                     </v-text-field>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+
+                <v-col cols="12">
+                    <v-card border flat class="section-card" data-testid="customer-additional">
+                        <v-card-item prepend-icon="mdi-card-account-details-outline" :title="t('customers.section.additional')" />
+                        <v-card-text>
+                            <v-row>
+                                <v-col cols="12" md="6">
+                                    <div class="section-group-title">{{ t('customers.additional.secondaryAddress') }}</div>
+                                    <v-row dense>
+                                        <v-col v-for="field in secondaryAddressFields" :key="field.name" cols="12" :sm="field.sm">
+                                            <v-text-field
+                                                v-model="additional[field.name]"
+                                                v-native-testid="'customer-' + field.name"
+                                                :label="t(field.label)"
+                                                :error-messages="additionalErrorsFor(field.name)"
+                                                variant="outlined"
+                                                density="comfortable"
+                                                hide-details="auto"
+                                            >
+                                                <template #message="{ message }">
+                                                    <span :data-testid="'customer-' + field.name + '-error'">{{ message }}</span>
+                                                </template>
+                                            </v-text-field>
+                                        </v-col>
+                                    </v-row>
+                                </v-col>
+                                <v-col cols="12" md="6">
+                                    <div class="section-group-title">{{ t('customers.additional.companyFigures') }}</div>
+                                    <v-row dense>
+                                        <v-col cols="12" sm="4">
+                                            <v-text-field
+                                                v-model="additional.foundedOn"
+                                                v-native-testid="'customer-foundedOn'"
+                                                :label="t('customers.additional.foundedOn')"
+                                                type="date"
+                                                :error-messages="additionalErrorsFor('foundedOn')"
+                                                variant="outlined"
+                                                density="comfortable"
+                                                hide-details="auto"
+                                            >
+                                                <template #message="{ message }">
+                                                    <span data-testid="customer-foundedOn-error">{{ message }}</span>
+                                                </template>
+                                            </v-text-field>
+                                        </v-col>
+                                        <v-col
+                                            v-for="field in (['workerCount', 'salariedEmployeeCount'] as const)"
+                                            :key="field"
+                                            cols="12"
+                                            sm="4"
+                                        >
+                                            <v-text-field
+                                                v-model.number="additional[field]"
+                                                v-native-testid="'customer-' + field"
+                                                :label="t(`customers.additional.${field}`)"
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                :error-messages="additionalErrorsFor(field)"
+                                                variant="outlined"
+                                                density="comfortable"
+                                                hide-details="auto"
+                                            >
+                                                <template #message="{ message }">
+                                                    <span :data-testid="'customer-' + field + '-error'">{{ message }}</span>
+                                                </template>
+                                            </v-text-field>
+                                        </v-col>
+                                        <v-col cols="12">
+                                            <v-select
+                                                v-model="additional.customerClass"
+                                                :label="t('customers.additional.customerClass')"
+                                                :items="customerClassOptions"
+                                                :error-messages="additionalErrorsFor('customerClass')"
+                                                variant="outlined"
+                                                density="comfortable"
+                                                hide-details="auto"
+                                                data-testid="customer-customerClass"
+                                            >
+                                                <template #message="{ message }">
+                                                    <span data-testid="customer-customerClass-error">{{ message }}</span>
+                                                </template>
+                                            </v-select>
+                                        </v-col>
+                                        <v-col cols="12">
+                                            <v-checkbox
+                                                v-for="flag in flagFields"
+                                                :key="flag.name"
+                                                v-model="additional[flag.name]"
+                                                v-native-testid="'customer-' + flag.name"
+                                                :label="t(flag.label)"
+                                                density="compact"
+                                                hide-details
+                                            />
+                                        </v-col>
+                                    </v-row>
+                                </v-col>
+                                <v-col cols="12">
+                                    <v-textarea
+                                        v-model="additional.comment"
+                                        v-native-testid="'customer-comment'"
+                                        :label="t('customers.additional.comment')"
+                                        :counter="COMMENT_MAX_LENGTH"
+                                        :error-messages="additionalErrorsFor('comment')"
+                                        rows="3"
+                                        auto-grow
+                                        variant="outlined"
+                                        hide-details="auto"
+                                    >
+                                        <template #message="{ message }">
+                                            <span data-testid="customer-comment-error">{{ message }}</span>
+                                        </template>
+                                    </v-textarea>
                                 </v-col>
                             </v-row>
                         </v-card-text>

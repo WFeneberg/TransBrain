@@ -41,7 +41,7 @@ import {
     VehicleDocumentDialogData,
 } from './vehicle-document-dialog.component';
 import { VehicleDocument, VehicleDocumentService } from './vehicle-document.service';
-import { amountInRange, dateFromYear } from './vehicle-validators';
+import { amountInRange, dateFromYear, wholeNumberInRange } from './vehicle-validators';
 import {
     EMPTY_VEHICLE_COMMERCIAL,
     EMPTY_VEHICLE_EQUIPMENT,
@@ -72,19 +72,6 @@ function positiveOrEmpty(control: AbstractControl<number | null>): ValidationErr
     return value === null || Number(value) > 0 ? null : { positive: true };
 }
 
-/** Optional whole number: empty is fine, a filled-in value must be an integer within [min, max]. */
-function wholeNumberInRange(min: number, max: number) {
-    return (control: AbstractControl<number | null>): ValidationErrors | null => {
-        const value = control.value;
-        if (value === null || (value as unknown) === '') {
-            return null;
-        }
-        const number = Number(value);
-        return Number.isInteger(number) && number >= min && number <= max
-            ? null
-            : { range: { min, max } };
-    };
-}
 
 type EquipmentFlag = {
     [K in keyof VehicleEquipment]: VehicleEquipment[K] extends boolean ? K : never;

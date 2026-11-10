@@ -22,13 +22,14 @@ import {
     tap,
 } from 'rxjs';
 import { SessionService } from '../auth/session.service';
-import { I18nService } from '../i18n/i18n.service';
+import { I18nService, TranslationKey } from '../i18n/i18n.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import {
     VehicleCatalogDialogComponent,
     VehicleCatalogDialogData,
 } from './vehicle-catalog-dialog.component';
 import {
+    CUSTOMER_CATALOG_KINDS,
     VEHICLE_CATALOG_KINDS,
     VehicleCatalogEntry,
     VehicleCatalogKind,
@@ -42,13 +43,47 @@ const KIND_ICONS: Record<VehicleCatalogKind, string> = {
     CarrierGroup: 'groups',
     InsuranceCompany: 'shield',
     DocumentType: 'description',
+    CustomerClass: 'star_outline',
 };
 
-function toKind(value: string | null): VehicleCatalogKind {
-    const match = VEHICLE_CATALOG_KINDS.find(
-        (kind) => kind.toLowerCase() === value?.toLowerCase(),
-    );
-    return match ?? 'VehicleClass';
+/**
+ * The page serves two routes: 'vehicle-catalog' with the lists behind the vehicle form and
+ * 'customer-catalog' (route data `catalogScope: 'customer'`) with those behind the customer form.
+ */
+interface CatalogScope {
+    kinds: readonly VehicleCatalogKind[];
+    title: TranslationKey;
+    subtitle: TranslationKey;
+    back: TranslationKey;
+    backLink: string;
+    usage: TranslationKey;
+    testIdPrefix: string;
+}
+
+const SCOPES: Record<'vehicle' | 'customer', CatalogScope> = {
+    vehicle: {
+        kinds: VEHICLE_CATALOG_KINDS,
+        title: 'vehicleCatalog.title',
+        subtitle: 'vehicleCatalog.subtitle',
+        back: 'vehicleCatalog.back',
+        backLink: '/vehicles',
+        usage: 'vehicleCatalog.usage',
+        testIdPrefix: 'vehicle-catalog',
+    },
+    customer: {
+        kinds: CUSTOMER_CATALOG_KINDS,
+        title: 'customerCatalog.title',
+        subtitle: 'customerCatalog.subtitle',
+        back: 'customerCatalog.back',
+        backLink: '/customers',
+        usage: 'customerCatalog.usage',
+        testIdPrefix: 'customer-catalog',
+    },
+};
+
+function toKind(scope: CatalogScope, value: string | null): VehicleCatalogKind {
+    const match = scope.kinds.find((kind) => kind.toLowerCase() === value?.toLowerCase());
+    return match ?? scope.kinds[0];
 }
 
 @Component({
@@ -70,17 +105,17 @@ function toKind(value: string | null): VehicleCatalogKind {
                 <a
                     mat-button
                     class="back"
-                    routerLink="/vehicles"
-                    data-testid="vehicle-catalog-back"
+                    [routerLink]="scope.backLink"
+                    [attr.data-testid]="scope.testIdPrefix + '-back'"
                 >
                     <mat-icon>arrow_back</mat-icon>
-                    {{ i18n.t('vehicleCatalog.back') }}
+                    {{ i18n.t(scope.back) }}
                 </a>
 
                 <header class="page-header">
                     <div>
-                        <h1>{{ i18n.t('vehicleCatalog.title') }}</h1>
-                        <p class="subtitle">{{ i18n.t('vehicleCatalog.subtitle') }}</p>
+                        <h1>{{ i18n.t(scope.title) }}</h1>
+                        <p class="subtitle">{{ i18n.t(scope.subtitle) }}</p>
                     </div>
                 </header>
 
@@ -92,7 +127,7 @@ function toKind(value: string | null): VehicleCatalogKind {
                                 [routerLink]="[]"
                                 [queryParams]="{ kind: k }"
                                 [active]="kind() === k"
-                                [attr.data-testid]="'vehicle-catalog-tab-' + k"
+                                [attr.data-testid]="scope.testIdPrefix + '-tab-' + k"
                             >
                                 <mat-icon class="tab-icon" aria-hidden="true">{{
                                     kindIcon(k)
@@ -183,7 +218,7 @@ function toKind(value: string | null): VehicleCatalogKind {
                                         [class.unused]="e.usageCount === 0"
                                         data-testid="catalog-entry-usage"
                                     >
-                                        {{ i18n.t('vehicleCatalog.usage', { count: e.usageCount }) }}
+                                        {{ i18n.t(scope.usage, { count: e.usageCount }) }}
                                     </td>
                                 </ng-container>
                                 <ng-container matColumnDef="actions">
@@ -436,10 +471,13 @@ export class VehicleCatalogComponent {
     protected readonly session = inject(SessionService);
     protected readonly i18n = inject(I18nService);
 
-    protected readonly kinds = VEHICLE_CATALOG_KINDS;
+    // Angular recreates the component when navigating between the two routes, so a snapshot is enough.
+    protected readonly scope =
+        SCOPES[this.route.snapshot.data['catalogScope'] === 'customer' ? 'customer' : 'vehicle'];
+    protected readonly kinds = this.scope.kinds;
     protected readonly kind = toSignal(
-        this.route.queryParamMap.pipe(map((params) => toKind(params.get('kind')))),
-        { initialValue: toKind(this.route.snapshot.queryParamMap.get('kind')) },
+        this.route.queryParamMap.pipe(map((params) => toKind(this.scope, params.get('kind')))),
+        { initialValue: toKind(this.scope, this.route.snapshot.queryParamMap.get('kind')) },
     );
     protected readonly columns = computed(() =>
         this.session.can('masterData.write') ? [...BASE_COLUMNS, 'actions'] : BASE_COLUMNS,
@@ -454,7 +492,7 @@ export class VehicleCatalogComponent {
 
     constructor() {
         const kind$ = this.route.queryParamMap.pipe(
-            map((params) => toKind(params.get('kind'))),
+            map((params) => toKind(this.scope, params.get('kind'))),
             distinctUntilChanged(),
             // A tab switch must not show the previous tab's rows while the new ones load.
             tap(() => {

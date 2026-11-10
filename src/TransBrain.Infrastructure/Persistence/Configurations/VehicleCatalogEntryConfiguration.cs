@@ -42,7 +42,8 @@ internal sealed class VehicleCatalogEntryConfiguration : IEntityTypeConfiguratio
             Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000104", "Tachograph", "Tachographenprüfung"),
             Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000105", "UVV", "UVV-Prüfung"),
             Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000106", "Crane", "Kranprüfung"),
-            Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000107", "TailLift", "Ladebordwandprüfung"));
+            Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000107", "TailLift", "Ladebordwandprüfung"),
+            Seed(VehicleCatalogKind.CustomerClass, "0199a6c0-0000-7000-8000-000000000301", "HuterVilsAll", "Huter Vils alle Gattungen"));
     }
 
     private static object Seed(VehicleCatalogKind kind, string id, string code, string name) => new
