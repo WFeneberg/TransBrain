@@ -110,7 +110,8 @@ Startseite. Hier pflegen Sie die Stammdaten des Fuhrparks.
   - Alle Filter wirken sofort und lassen sich kombinieren. Passt kein Fahrzeug, erscheint
     „No vehicles found.“
 - **Spalten:** License plate, Vehicle type, Make / Model, Vehicle class, Payload (kg),
-  Default driver, Next inspection, Status. Die Spalte Vehicle class zeigt die Bezeichnung aus\n  den Fahrzeug-Stammdaten. Ein Klick auf eine Spaltenüberschrift sortiert
+  Default driver, Next inspection, Status. Die Spalte Vehicle class zeigt die Bezeichnung aus
+  den Fahrzeug-Stammdaten. Ein Klick auf eine Spaltenüberschrift sortiert
   auf- bzw. absteigend.
 - **Markierungen:**
   - Ein **Schloss** neben dem Kennzeichen bedeutet „Kennzeichen geheim“.
@@ -276,10 +277,11 @@ Alle angemeldeten Benutzer sehen die Listen, ändern dürfen sie nur Administrat
 
 ![Fahrzeug-Stammdaten](img/web/fahrzeug-stammdaten.png)
 
-- **Reiter:** **Vehicle classes** (Fahrzeugklassen, z. B. Plane, Kühlkoffer, Tank),
+- **Reiter:** **Vehicle classes** (Fahrzeugklassen, z. B. Plane, Kühler, Tank),
   **Carrier groups** (Frächtergruppen), **Insurance companies** (Versicherungsgesellschaften
   für Fahrzeug- und Transportversicherung) und **Document types** (Sonderpapier-Arten). Beim
-  ersten Start sind die bisherigen elf Fahrzeugklassen und sieben Sonderpapier-Arten (ADR,
+  ersten Start sind die Fahrzeugklassen des Altsystems (Sonstige, Tank, Kühler, Plane, Kipper,
+  Leihfahrzeug) und sieben Sonderpapier-Arten (ADR,
   ATP, CEMT, Tachograph, UVV, Kran, Ladebordwand) bereits angelegt; Frächtergruppen und
   Versicherungen legen Sie selbst an.
 - **Spalten:** Code, Name (Bezeichnung), Status (**Active** grün / **Inactive** grau) und

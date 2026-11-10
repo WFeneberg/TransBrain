@@ -296,27 +296,11 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("0199a6c0-0000-7000-8000-000000000001"),
-                            Code = "Tarpaulin",
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000000b"),
+                            Code = "Other",
                             IsActive = true,
                             Kind = "VehicleClass",
-                            Name = "Plane"
-                        },
-                        new
-                        {
-                            Id = new Guid("0199a6c0-0000-7000-8000-000000000002"),
-                            Code = "Box",
-                            IsActive = true,
-                            Kind = "VehicleClass",
-                            Name = "Koffer"
-                        },
-                        new
-                        {
-                            Id = new Guid("0199a6c0-0000-7000-8000-000000000003"),
-                            Code = "Refrigerated",
-                            IsActive = true,
-                            Kind = "VehicleClass",
-                            Name = "Kühlkoffer"
+                            Name = "Sonstige"
                         },
                         new
                         {
@@ -328,11 +312,19 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            Id = new Guid("0199a6c0-0000-7000-8000-000000000005"),
-                            Code = "Silo",
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000003"),
+                            Code = "Refrigerated",
                             IsActive = true,
                             Kind = "VehicleClass",
-                            Name = "Silo"
+                            Name = "Kühler"
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000001"),
+                            Code = "Tarpaulin",
+                            IsActive = true,
+                            Kind = "VehicleClass",
+                            Name = "Plane"
                         },
                         new
                         {
@@ -344,43 +336,11 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            Id = new Guid("0199a6c0-0000-7000-8000-000000000007"),
-                            Code = "Flatbed",
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000000c"),
+                            Code = "Rental",
                             IsActive = true,
                             Kind = "VehicleClass",
-                            Name = "Pritsche"
-                        },
-                        new
-                        {
-                            Id = new Guid("0199a6c0-0000-7000-8000-000000000008"),
-                            Code = "Container",
-                            IsActive = true,
-                            Kind = "VehicleClass",
-                            Name = "Container"
-                        },
-                        new
-                        {
-                            Id = new Guid("0199a6c0-0000-7000-8000-000000000009"),
-                            Code = "CarTransporter",
-                            IsActive = true,
-                            Kind = "VehicleClass",
-                            Name = "Autotransporter"
-                        },
-                        new
-                        {
-                            Id = new Guid("0199a6c0-0000-7000-8000-00000000000a"),
-                            Code = "LowLoader",
-                            IsActive = true,
-                            Kind = "VehicleClass",
-                            Name = "Tieflader"
-                        },
-                        new
-                        {
-                            Id = new Guid("0199a6c0-0000-7000-8000-00000000000b"),
-                            Code = "Other",
-                            IsActive = true,
-                            Kind = "VehicleClass",
-                            Name = "Sonstige"
+                            Name = "Leihfahrzeug"
                         },
                         new
                         {
