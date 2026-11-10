@@ -162,8 +162,8 @@ dotnet dev-certs https --trust
 dotnet run --project src/TransBrain.AppHost
 ```
 
-Data is deliberately not persisted in this mode (no volumes for Postgres/Keycloak); the schema is rebuilt
-by migrations and the realm re-imported on every start. Test users: README, "Test users".
+Postgres data persists in a Docker volume (pending migrations apply on start); Keycloak has no volume and
+re-imports the realm on every start. Test users: README, "Test users".
 
 ## 5. Common tasks
 
