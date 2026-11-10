@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using TransBrain.Domain.Drivers;
 using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
@@ -29,5 +30,42 @@ internal sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
         builder.Property(v => v.PayloadKg).IsRequired();
         builder.Property(v => v.LoadMeters).HasPrecision(6, 2).IsRequired();
         builder.Property(v => v.NextInspectionDue).IsRequired();
+        builder.Property(v => v.ModifiedBy).HasMaxLength(Vehicle.MaxModifiedByLength);
+
+        // Deleting a driver must not delete or block their vehicles; it only clears the assignment.
+        builder.HasOne<Driver>()
+            .WithMany()
+            .HasForeignKey(v => v.DefaultDriverId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // Unprefixed column names: the details are plain vehicle attributes, the owned type only
+        // groups them in the domain.
+        builder.OwnsOne(v => v.Details, details =>
+        {
+            details.Property(d => d.IsLicensePlateConfidential)
+                .HasColumnName("IsLicensePlateConfidential").HasDefaultValue(false).IsRequired();
+            details.Property(d => d.Make).HasColumnName("Make").HasMaxLength(VehicleDetails.MaxNameLength);
+            details.Property(d => d.Model).HasColumnName("Model").HasMaxLength(VehicleDetails.MaxNameLength);
+            details.Property(d => d.ManufacturedOn).HasColumnName("ManufacturedOn");
+            details.Property(d => d.PowerKw).HasColumnName("PowerKw");
+            details.Property(d => d.VehicleClass)
+                .HasColumnName("VehicleClass").HasConversion<string>().HasMaxLength(20);
+            details.Property(d => d.CarrierGroup)
+                .HasColumnName("CarrierGroup").HasMaxLength(VehicleDetails.MaxNameLength);
+            details.Property(d => d.ChassisNumber)
+                .HasColumnName("ChassisNumber").HasMaxLength(VehicleDetails.MaxIdentifierLength);
+            details.Property(d => d.EngineNumber)
+                .HasColumnName("EngineNumber").HasMaxLength(VehicleDetails.MaxIdentifierLength);
+            details.Property(d => d.LengthMm).HasColumnName("LengthMm");
+            details.Property(d => d.WidthMm).HasColumnName("WidthMm");
+            details.Property(d => d.HeightMm).HasColumnName("HeightMm");
+            details.Property(d => d.CurbWeightKg).HasColumnName("CurbWeightKg");
+            details.Property(d => d.GrossWeightKg).HasColumnName("GrossWeightKg");
+            details.Property(d => d.MaxFifthWheelLoadKg).HasColumnName("MaxFifthWheelLoadKg");
+            details.Property(d => d.Notes).HasColumnName("Notes").HasMaxLength(VehicleDetails.MaxNotesLength);
+        });
+
+        builder.Navigation(v => v.Details).IsRequired();
     }
 }
+

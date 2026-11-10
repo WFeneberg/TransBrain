@@ -5,7 +5,12 @@ using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Features.Vehicles.UpdateVehicle;
 
-internal sealed class UpdateVehicleCommandHandler(IVehicleRepository repository, ICacheService cache)
+internal sealed class UpdateVehicleCommandHandler(
+    IVehicleRepository repository,
+    IDriverRepository drivers,
+    ICacheService cache,
+    ICurrentUser currentUser,
+    TimeProvider timeProvider)
     : ICommandHandler<UpdateVehicleCommand, VehicleResponse>
 {
     public async Task<Result<VehicleResponse>> Handle(
@@ -24,9 +29,23 @@ internal sealed class UpdateVehicleCommandHandler(IVehicleRepository repository,
             return plate.Error!;
         }
 
-        if (!Enum.TryParse(command.Type, ignoreCase: true, out VehicleType type) || !Enum.IsDefined(type))
+        Result<VehicleType> type = VehicleWriteMapping.ParseType(command.Type);
+        if (!type.IsSuccess)
         {
-            return Error.Validation("Vehicle.UnknownType", $"'{command.Type}' is not a known vehicle type.");
+            return type.Error!;
+        }
+
+        Result<VehicleDetails> details = VehicleWriteMapping.ToDetails(command);
+        if (!details.IsSuccess)
+        {
+            return details.Error!;
+        }
+
+        Result<Unit> driver = await VehicleWriteMapping.EnsureDriverExistsAsync(
+            drivers, command.DefaultDriverId, cancellationToken);
+        if (!driver.IsSuccess)
+        {
+            return driver.Error!;
         }
 
         // excludingId is what stops a vehicle colliding with its own plate on an update that
@@ -39,12 +58,20 @@ internal sealed class UpdateVehicleCommandHandler(IVehicleRepository repository,
         }
 
         Result<Vehicle> updated = vehicle.Update(
-            plate.Value, type, command.PayloadKg, command.LoadMeters, command.NextInspectionDue);
+            plate.Value,
+            type.Value,
+            command.PayloadKg,
+            command.LoadMeters,
+            command.NextInspectionDue,
+            details.Value,
+            command.DefaultDriverId);
 
         if (!updated.IsSuccess)
         {
             return updated.Error!;
         }
+
+        updated.Value.RecordModification(currentUser.UserName, timeProvider.GetUtcNow());
 
         await repository.SaveChangesAsync(cancellationToken);
 

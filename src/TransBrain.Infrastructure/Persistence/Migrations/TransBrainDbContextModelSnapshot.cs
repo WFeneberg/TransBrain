@@ -216,6 +216,9 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("DefaultDriverId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("LicensePlate")
                         .IsRequired()
                         .HasMaxLength(15)
@@ -225,6 +228,13 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("LoadMeters")
                         .HasPrecision(6, 2)
                         .HasColumnType("numeric(6,2)");
+
+                    b.Property<DateTimeOffset?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateOnly>("NextInspectionDue")
                         .HasColumnType("date");
@@ -243,6 +253,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DefaultDriverId");
 
                     b.HasIndex("LicensePlate")
                         .IsUnique();
@@ -571,6 +583,103 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Stops");
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Vehicles.Vehicle", b =>
+                {
+                    b.HasOne("TransBrain.Domain.Drivers.Driver", null)
+                        .WithMany()
+                        .HasForeignKey("DefaultDriverId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.OwnsOne("TransBrain.Domain.Vehicles.VehicleDetails", "Details", b1 =>
+                        {
+                            b1.Property<Guid>("VehicleId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("CarrierGroup")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("CarrierGroup");
+
+                            b1.Property<string>("ChassisNumber")
+                                .HasMaxLength(30)
+                                .HasColumnType("character varying(30)")
+                                .HasColumnName("ChassisNumber");
+
+                            b1.Property<int?>("CurbWeightKg")
+                                .HasColumnType("integer")
+                                .HasColumnName("CurbWeightKg");
+
+                            b1.Property<string>("EngineNumber")
+                                .HasMaxLength(30)
+                                .HasColumnType("character varying(30)")
+                                .HasColumnName("EngineNumber");
+
+                            b1.Property<int?>("GrossWeightKg")
+                                .HasColumnType("integer")
+                                .HasColumnName("GrossWeightKg");
+
+                            b1.Property<int?>("HeightMm")
+                                .HasColumnType("integer")
+                                .HasColumnName("HeightMm");
+
+                            b1.Property<bool>("IsLicensePlateConfidential")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("boolean")
+                                .HasDefaultValue(false)
+                                .HasColumnName("IsLicensePlateConfidential");
+
+                            b1.Property<int?>("LengthMm")
+                                .HasColumnType("integer")
+                                .HasColumnName("LengthMm");
+
+                            b1.Property<string>("Make")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("Make");
+
+                            b1.Property<DateOnly?>("ManufacturedOn")
+                                .HasColumnType("date")
+                                .HasColumnName("ManufacturedOn");
+
+                            b1.Property<int?>("MaxFifthWheelLoadKg")
+                                .HasColumnType("integer")
+                                .HasColumnName("MaxFifthWheelLoadKg");
+
+                            b1.Property<string>("Model")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("Model");
+
+                            b1.Property<string>("Notes")
+                                .HasMaxLength(2000)
+                                .HasColumnType("character varying(2000)")
+                                .HasColumnName("Notes");
+
+                            b1.Property<int?>("PowerKw")
+                                .HasColumnType("integer")
+                                .HasColumnName("PowerKw");
+
+                            b1.Property<string>("VehicleClass")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("VehicleClass");
+
+                            b1.Property<int?>("WidthMm")
+                                .HasColumnType("integer")
+                                .HasColumnName("WidthMm");
+
+                            b1.HasKey("VehicleId");
+
+                            b1.ToTable("vehicles");
+
+                            b1.WithOwner()
+                                .HasForeignKey("VehicleId");
+                        });
+
+                    b.Navigation("Details")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

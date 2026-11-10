@@ -45,6 +45,9 @@ test('adminUser_afterKeycloakLogin_seesVehicleList', async ({ page }) => {
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Vehicles' })).toBeVisible();
     await expect(page.getByTestId('vehicle-plate').filter({ hasText: licensePlate })).toBeVisible();
+    await expect(
+        page.locator('tr').filter({ hasText: licensePlate }).getByTestId('vehicle-status-chip'),
+    ).toContainText('Available');
 });
 
 test('viewerUser_onTheVehicleList_seesNoWriteActions', async ({ page }) => {

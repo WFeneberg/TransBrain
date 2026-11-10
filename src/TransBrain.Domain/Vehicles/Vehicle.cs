@@ -4,9 +4,12 @@ namespace TransBrain.Domain.Vehicles;
 
 public sealed class Vehicle
 {
+    public const int MaxModifiedByLength = 100;
+
     private Vehicle()
     {
         LicensePlate = null!;
+        Details = VehicleDetails.Empty;
     }
 
     private Vehicle(
@@ -16,7 +19,9 @@ public sealed class Vehicle
         int payloadKg,
         decimal loadMeters,
         DateOnly nextInspectionDue,
-        VehicleStatus status)
+        VehicleStatus status,
+        VehicleDetails details,
+        Guid? defaultDriverId)
     {
         Id = id;
         LicensePlate = licensePlate;
@@ -25,6 +30,8 @@ public sealed class Vehicle
         LoadMeters = loadMeters;
         NextInspectionDue = nextInspectionDue;
         Status = status;
+        Details = details;
+        DefaultDriverId = defaultDriverId;
     }
 
     public Guid Id { get; private set; }
@@ -41,21 +48,29 @@ public sealed class Vehicle
 
     public VehicleStatus Status { get; private set; }
 
+    public VehicleDetails Details { get; private set; }
+
+    /// <summary>The driver who usually drives this vehicle ("Stammfahrer").</summary>
+    public Guid? DefaultDriverId { get; private set; }
+
+    public DateTimeOffset? ModifiedAt { get; private set; }
+
+    /// <summary>Login name of whoever last changed the vehicle.</summary>
+    public string? ModifiedBy { get; private set; }
+
     public static Result<Vehicle> Create(
         LicensePlate licensePlate,
         VehicleType type,
         int payloadKg,
         decimal loadMeters,
-        DateOnly nextInspectionDue)
+        DateOnly nextInspectionDue,
+        VehicleDetails? details = null,
+        Guid? defaultDriverId = null)
     {
-        if (payloadKg <= 0)
+        Result<Unit> validation = Validate(payloadKg, loadMeters);
+        if (!validation.IsSuccess)
         {
-            return Error.Validation("Vehicle.PayloadKgNotPositive", "Payload must be greater than zero.");
-        }
-
-        if (loadMeters <= 0m)
-        {
-            return Error.Validation("Vehicle.LoadMetersNotPositive", "Load meters must be greater than zero.");
+            return validation.Error!;
         }
 
         return new Vehicle(
@@ -65,7 +80,9 @@ public sealed class Vehicle
             payloadKg,
             loadMeters,
             nextInspectionDue,
-            VehicleStatus.Available);
+            VehicleStatus.Available,
+            details ?? VehicleDetails.Empty,
+            defaultDriverId);
     }
 
     public Result<Vehicle> Update(
@@ -73,16 +90,14 @@ public sealed class Vehicle
         VehicleType type,
         int payloadKg,
         decimal loadMeters,
-        DateOnly nextInspectionDue)
+        DateOnly nextInspectionDue,
+        VehicleDetails details,
+        Guid? defaultDriverId)
     {
-        if (payloadKg <= 0)
+        Result<Unit> validation = Validate(payloadKg, loadMeters);
+        if (!validation.IsSuccess)
         {
-            return Error.Validation("Vehicle.PayloadKgNotPositive", "Payload must be greater than zero.");
-        }
-
-        if (loadMeters <= 0m)
-        {
-            return Error.Validation("Vehicle.LoadMetersNotPositive", "Load meters must be greater than zero.");
+            return validation.Error!;
         }
 
         LicensePlate = licensePlate;
@@ -90,6 +105,8 @@ public sealed class Vehicle
         PayloadKg = payloadKg;
         LoadMeters = loadMeters;
         NextInspectionDue = nextInspectionDue;
+        Details = details;
+        DefaultDriverId = defaultDriverId;
 
         return this;
     }
@@ -112,4 +129,65 @@ public sealed class Vehicle
     }
 
     public void Decommission() => Status = VehicleStatus.Decommissioned;
+
+    /// <summary>
+    /// Moves the vehicle to <paramref name="target"/>. Unlike the silent transition methods above,
+    /// this reports the one forbidden move — reviving a decommissioned vehicle — as a conflict,
+    /// because a user asked for it explicitly and must learn that it did not happen.
+    /// </summary>
+    public Result<Vehicle> ChangeStatus(VehicleStatus target)
+    {
+        if (!Enum.IsDefined(target))
+        {
+            return Error.Validation("Vehicle.UnknownStatus", $"'{target}' is not a known vehicle status.");
+        }
+
+        if (Status == target)
+        {
+            return this;
+        }
+
+        if (Status == VehicleStatus.Decommissioned)
+        {
+            return Error.Conflict(
+                "Vehicle.Decommissioned", "A decommissioned vehicle cannot be returned to service.");
+        }
+
+        switch (target)
+        {
+            case VehicleStatus.InWorkshop:
+                SendToWorkshop();
+                break;
+            case VehicleStatus.Available:
+                ReturnToService();
+                break;
+            default:
+                Decommission();
+                break;
+        }
+
+        return this;
+    }
+
+    public void RecordModification(string? modifiedBy, DateTimeOffset modifiedAt)
+    {
+        string? name = OptionalText.Normalize(modifiedBy);
+        ModifiedBy = name is { Length: > MaxModifiedByLength } ? name[..MaxModifiedByLength] : name;
+        ModifiedAt = modifiedAt;
+    }
+
+    private static Result<Unit> Validate(int payloadKg, decimal loadMeters)
+    {
+        if (payloadKg <= 0)
+        {
+            return Error.Validation("Vehicle.PayloadKgNotPositive", "Payload must be greater than zero.");
+        }
+
+        if (loadMeters <= 0m)
+        {
+            return Error.Validation("Vehicle.LoadMetersNotPositive", "Load meters must be greater than zero.");
+        }
+
+        return Unit.Value;
+    }
 }

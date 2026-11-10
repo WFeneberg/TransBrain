@@ -6,6 +6,7 @@ import * as components from 'vuetify/components';
 import * as directives from 'vuetify/directives';
 import { de, en as vuetifyEn } from 'vuetify/locale';
 import 'vuetify/styles';
+import '@mdi/font/css/materialdesignicons.css';
 import App from './App.vue';
 import Home from './views/Home.vue';
 import VehicleList from './views/VehicleList.vue';

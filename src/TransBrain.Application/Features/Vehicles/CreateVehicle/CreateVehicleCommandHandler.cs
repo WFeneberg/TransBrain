@@ -5,7 +5,12 @@ using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Features.Vehicles.CreateVehicle;
 
-internal sealed class CreateVehicleCommandHandler(IVehicleRepository repository, ICacheService cache)
+internal sealed class CreateVehicleCommandHandler(
+    IVehicleRepository repository,
+    IDriverRepository drivers,
+    ICacheService cache,
+    ICurrentUser currentUser,
+    TimeProvider timeProvider)
     : ICommandHandler<CreateVehicleCommand, VehicleResponse>
 {
     public async Task<Result<VehicleResponse>> Handle(
@@ -18,12 +23,23 @@ internal sealed class CreateVehicleCommandHandler(IVehicleRepository repository,
             return plate.Error!;
         }
 
-        // Enum.TryParse alone accepts any numeric string (e.g. "99") and maps it to the
-        // underlying integer value even when no member defines it, silently persisting an
-        // undefined VehicleType via HasConversion<string>(). Enum.IsDefined closes that gap.
-        if (!Enum.TryParse(command.Type, ignoreCase: true, out VehicleType type) || !Enum.IsDefined(type))
+        Result<VehicleType> type = VehicleWriteMapping.ParseType(command.Type);
+        if (!type.IsSuccess)
         {
-            return Error.Validation("Vehicle.UnknownType", $"'{command.Type}' is not a known vehicle type.");
+            return type.Error!;
+        }
+
+        Result<VehicleDetails> details = VehicleWriteMapping.ToDetails(command);
+        if (!details.IsSuccess)
+        {
+            return details.Error!;
+        }
+
+        Result<Unit> driver = await VehicleWriteMapping.EnsureDriverExistsAsync(
+            drivers, command.DefaultDriverId, cancellationToken);
+        if (!driver.IsSuccess)
+        {
+            return driver.Error!;
         }
 
         if (await repository.ExistsByLicensePlateAsync(plate.Value, excludingId: null, cancellationToken))
@@ -35,15 +51,19 @@ internal sealed class CreateVehicleCommandHandler(IVehicleRepository repository,
 
         Result<Vehicle> vehicle = Vehicle.Create(
             plate.Value,
-            type,
+            type.Value,
             command.PayloadKg,
             command.LoadMeters,
-            command.NextInspectionDue);
+            command.NextInspectionDue,
+            details.Value,
+            command.DefaultDriverId);
 
         if (!vehicle.IsSuccess)
         {
             return vehicle.Error!;
         }
+
+        vehicle.Value.RecordModification(currentUser.UserName, timeProvider.GetUtcNow());
 
         Result<Vehicle> added = await repository.AddAsync(vehicle.Value, cancellationToken);
         if (!added.IsSuccess)

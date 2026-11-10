@@ -13,5 +13,11 @@ public interface ICurrentUser
 {
     string? UserId { get; }
 
+    /// <summary>
+    /// A human-readable login name for audit stamps (Keycloak's <c>preferred_username</c>),
+    /// falling back to <see cref="UserId"/> when the token carries no name.
+    /// </summary>
+    string? UserName { get; }
+
     bool IsInRole(string role);
 }
