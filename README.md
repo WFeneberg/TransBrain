@@ -62,15 +62,19 @@ container sets were left behind in state `Exited (143)`. Prefer `dotnet run` abo
 you do use `aspire run` and it times out, check `docker ps -a` for orphaned containers
 from the run before starting again — do not just retry on top of them.
 
-### Data does not survive a restart
+### What survives a restart
 
-Neither Postgres nor Keycloak has a data volume attached — both were removed
-deliberately. Postgres re-runs EF Core migrations from scratch on every start, and
-Keycloak re-imports `src/TransBrain.AppHost/realms/transbrain-realm.json` on every start.
-This is intentional: it is what makes a run reproducible, and it is what keeps the realm
-file (rather than whatever accumulated in a volume) the authoritative source of realm
-configuration. Do not expect vehicles you created, or realm edits you made through the
-Keycloak admin console, to still be there after a restart.
+Postgres has a persistent data volume: data survives a restart, and EF Core applies only
+pending migrations on start. To start from an empty database, stop the AppHost and remove
+the volume (`docker volume ls | grep postgres`, then `docker volume rm <name>`). The volume
+is tied to the generated password in the AppHost's user secrets
+(`Parameters:postgres-password`); if those are cleared, Postgres rejects the connection and
+the API hangs in `Waiting` — remove the volume in that case.
+
+Keycloak has deliberately no data volume: it re-imports
+`src/TransBrain.AppHost/realms/transbrain-realm.json` on every start, so that file stays the
+authoritative source of realm configuration. Realm edits made through the Keycloak admin
+console are gone after a restart.
 
 ### Database migrations are only applied automatically in Development
 
