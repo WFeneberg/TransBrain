@@ -92,4 +92,5 @@ test('viewerUser_onGeodata_seesNoWriteActions', async ({ page }) => {
     await expect(page.getByTestId('geodata-map-status')).toBeVisible();
     await expect(page.getByTestId('geodata-map-geocoder')).toContainText('Geocoder (Nominatim)');
     await expect(page.getByTestId('geodata-map-routing')).toContainText('Routing (OpenRouteService)');
+    await expect(page.getByTestId('geodata-map-extract')).toContainText('Map extract');
 });

@@ -61,10 +61,27 @@ export interface MapServiceStatus {
     osmDataUpdatedAt: string | null;
 }
 
+/** Coverage of the extract file in WGS 84 degrees. */
+export interface MapExtractBoundingBox {
+    minLatitude: number;
+    minLongitude: number;
+    maxLatitude: number;
+    maxLongitude: number;
+}
+
+/** The OSM extract file on the server; region is null for merged or hand-built files. */
+export interface MapExtract {
+    region: string | null;
+    osmDataTimestamp: string | null;
+    fileSizeBytes: number;
+    boundingBox: MapExtractBoundingBox | null;
+}
+
 /** State of the map material: geocoder (Nominatim) and route planner (OpenRouteService). */
 export interface MapDataStatus {
     geocoder: MapServiceStatus;
     routing: MapServiceStatus;
+    extract: MapExtract | null;
 }
 
 const client = axios.create({ baseURL: '/api' });

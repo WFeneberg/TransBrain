@@ -76,6 +76,10 @@ var nominatim = builder.AddContainer("nominatim", "mediagis/nominatim", "5.3")
 var api = builder.AddProject<Projects.TransBrain_Api>("api")
     .WithEnvironment("OpenRouteService__BaseUrl", ReferenceExpression.Create($"{ors.GetEndpoint("http")}/ors/"))
     .WithEnvironment("Nominatim__BaseUrl", ReferenceExpression.Create($"{nominatim.GetEndpoint("http")}/"))
+    // The Api reads only the extract's PBF header, to show region and data age on the geodata page.
+    .WithEnvironment(
+        "OsmExtract__Path",
+        Path.GetFullPath(Path.Combine(builder.AppHostDirectory, osmDirectory, "region.osm.pbf")))
     .WithReference(database).WaitFor(database)
     .WithReference(cache).WaitFor(cache)
     .WithReference(keycloak).WaitFor(keycloak)

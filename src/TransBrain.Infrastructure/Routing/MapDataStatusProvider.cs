@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using TransBrain.Application.Abstractions;
 
 namespace TransBrain.Infrastructure.Routing;
@@ -9,7 +10,9 @@ namespace TransBrain.Infrastructure.Routing;
 /// <see cref="OpenRouteServiceClient"/>. Every probe is bounded by a short timeout and never
 /// throws: "unavailable" is the answer the maintenance page exists to show, not an exception.
 /// </remarks>
-internal sealed class MapDataStatusProvider(IHttpClientFactory httpClientFactory) : IMapDataStatusProvider
+internal sealed class MapDataStatusProvider(
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration) : IMapDataStatusProvider
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(5);
 
@@ -60,6 +63,40 @@ internal sealed class MapDataStatusProvider(IHttpClientFactory httpClientFactory
         return new MapServiceStatus(
             Available: true,
             OsmDataUpdatedAt: detail is null ? null : FindOsmDate(detail.RootElement));
+    }
+
+    // The extract file (OsmExtract:Path, injected by the AppHost) lives beside the containers'
+    // bind mount, so the Api can describe it without touching Docker. Its header names the
+    // Geofabrik region and the data cutoff of the FILE — newer than what the services report
+    // until they re-import it, which is exactly the difference the page should make visible.
+    public async Task<MapExtractInfo?> GetExtractInfoAsync(CancellationToken cancellationToken)
+    {
+        string? path = configuration["OsmExtract:Path"];
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        FileInfo file = new(path);
+        if (!file.Exists)
+        {
+            return null;
+        }
+
+        try
+        {
+            await using FileStream stream = file.OpenRead();
+            OsmPbfHeaderReader.OsmPbfHeader? header = await OsmPbfHeaderReader.ReadAsync(stream, cancellationToken);
+            return new MapExtractInfo(
+                Region: OsmPbfHeaderReader.RegionFromReplicationUrl(header?.ReplicationBaseUrl),
+                OsmDataTimestamp: header?.ReplicationTimestamp,
+                FileSizeBytes: file.Length,
+                BoundingBox: header?.BoundingBox);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static async Task<JsonDocument?> ProbeAsync(

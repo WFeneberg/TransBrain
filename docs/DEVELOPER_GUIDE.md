@@ -212,8 +212,13 @@ addresses lie outside it or use invented street names.
   containers take exactly one file; merge extracts with `osmium merge` if you need several.
 - **Status:** `GET /api/geodata/map-status` probes both services (Nominatim `/status`, ORS `/v2/health`)
   and reports availability plus the OSM data date; the geodata page in both frontends shows it as a status
-  card. There is deliberately no import button — the import runs for minutes to hours inside the containers
-  and the Api has no (and should get no) Docker access.
+  card. The response also names the installed extract: the Api parses the PBF header of the file at
+  `OsmExtract:Path` (the AppHost sets `OsmExtract__Path` to `data/osm/region.osm.pbf`) and reports the
+  Geofabrik region path (from `osmosis_replication_base_url`), file date, size and bounding box — merged
+  files without replication info fall back to the bounding box. A file date newer than the service dates
+  means the extract was swapped but not yet re-imported. There is deliberately no import button — the
+  import runs for minutes to hours inside the containers and the Api has no (and should get no) Docker
+  access.
 - **Sizing:** the ORS heap is `XMX` in `AppHost.cs` (4g; rule of thumb 2 × pbf size per profile). All of
   Germany needs a server (tens of GB of RAM, >100 GB disk, a day or more of import).
 - **Still external:** the map background tiles in both frontends load from `tile.openstreetmap.org`.

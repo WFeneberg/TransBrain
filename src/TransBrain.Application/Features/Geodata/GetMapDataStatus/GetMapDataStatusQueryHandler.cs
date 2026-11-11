@@ -17,10 +17,24 @@ internal sealed class GetMapDataStatusQueryHandler(IMapDataStatusProvider provid
     {
         Task<MapServiceStatus> geocoder = provider.GetGeocoderStatusAsync(cancellationToken);
         Task<MapServiceStatus> routing = provider.GetRoutingStatusAsync(cancellationToken);
-        await Task.WhenAll(geocoder, routing);
+        Task<MapExtractInfo?> extract = provider.GetExtractInfoAsync(cancellationToken);
+        await Task.WhenAll(geocoder, routing, extract);
 
         return new MapDataStatusResponse(
             new MapServiceStatusResponse(geocoder.Result.Available, geocoder.Result.OsmDataUpdatedAt),
-            new MapServiceStatusResponse(routing.Result.Available, routing.Result.OsmDataUpdatedAt));
+            new MapServiceStatusResponse(routing.Result.Available, routing.Result.OsmDataUpdatedAt),
+            ToResponse(extract.Result));
     }
+
+    private static MapExtractResponse? ToResponse(MapExtractInfo? extract)
+        => extract is null
+            ? null
+            : new MapExtractResponse(
+                extract.Region,
+                extract.OsmDataTimestamp,
+                extract.FileSizeBytes,
+                extract.BoundingBox is { } box
+                    ? new MapExtractBoundingBoxResponse(
+                        box.MinLatitude, box.MinLongitude, box.MaxLatitude, box.MaxLongitude)
+                    : null);
 }

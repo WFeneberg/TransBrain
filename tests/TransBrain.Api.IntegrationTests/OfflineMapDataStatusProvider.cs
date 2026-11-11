@@ -10,4 +10,7 @@ internal sealed class OfflineMapDataStatusProvider : IMapDataStatusProvider
 
     public Task<MapServiceStatus> GetRoutingStatusAsync(CancellationToken cancellationToken)
         => Task.FromResult(new MapServiceStatus(Available: false, OsmDataUpdatedAt: null));
+
+    public Task<MapExtractInfo?> GetExtractInfoAsync(CancellationToken cancellationToken)
+        => Task.FromResult<MapExtractInfo?>(null);
 }

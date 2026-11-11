@@ -10,6 +10,7 @@ import {
     type GeodataEntry,
     type GeodataSource,
     type MapDataStatus,
+    type MapExtract,
 } from '../api/geodata';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { vNativeTestid } from '../directives/nativeTestId';
@@ -115,6 +116,28 @@ function formatOsmDate(iso: string): string {
         dateStyle: 'short',
         timeStyle: 'short',
     });
+}
+
+/** Geofabrik region path when the file names one, otherwise the rough coverage. */
+function extractRegion(extract: MapExtract): string {
+    if (extract.region) {
+        return extract.region;
+    }
+    const box = extract.boundingBox;
+    if (box) {
+        return t('geodata.mapData.extractCoverage', {
+            south: box.minLatitude.toFixed(1),
+            north: box.maxLatitude.toFixed(1),
+            west: box.minLongitude.toFixed(1),
+            east: box.maxLongitude.toFixed(1),
+        });
+    }
+    return t('geodata.mapData.extractUnknown');
+}
+
+function formatSize(bytes: number): string {
+    const mebibytes = Math.max(1, Math.round(bytes / 1048576));
+    return `${mebibytes.toLocaleString(locale.value === 'de' ? 'de-DE' : 'en-US')} MiB`;
 }
 
 async function refresh(): Promise<void> {
@@ -334,6 +357,14 @@ function describe(error: unknown, fallback: string): string {
                     </template>
                 </span>
             </div>
+            <p v-if="mapStatus.extract" class="map-extract" data-testid="geodata-map-extract">
+                <v-icon icon="mdi-map-outline" size="18" class="text-medium-emphasis" />
+                {{ t('geodata.mapData.extract') }}: {{ extractRegion(mapStatus.extract) }} ·
+                {{ formatSize(mapStatus.extract.fileSizeBytes) }}
+                <template v-if="mapStatus.extract.osmDataTimestamp">
+                    · {{ t('geodata.mapData.dataFrom', { date: formatOsmDate(mapStatus.extract.osmDataTimestamp) }) }}
+                </template>
+            </p>
             <p class="map-hint text-medium-emphasis">{{ t('geodata.mapData.hint') }}</p>
         </v-card>
 
@@ -625,6 +656,13 @@ function describe(error: unknown, fallback: string): string {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+}
+
+.map-extract {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0 0;
 }
 
 .map-hint {

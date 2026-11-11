@@ -17,7 +17,7 @@ import { I18nService, TranslationKey } from '../i18n/i18n.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import { formatDateTime } from '../vehicles/vehicle-format';
 import { GeodataDialogComponent, GeodataDialogData } from './geodata-dialog.component';
-import { GeodataEntry, GeodataService, GeodataSource, MapDataStatus } from './geodata.service';
+import { GeodataEntry, GeodataService, GeodataSource, MapDataStatus, MapExtract } from './geodata.service';
 
 const BASE_COLUMNS = ['address', 'coordinates', 'source', 'usage'];
 
@@ -128,6 +128,21 @@ const SOURCE_TONES: Record<GeodataSource, string> = {
                                 }
                             </span>
                         </div>
+                        @if (status.extract; as extract) {
+                            <p class="extract" data-testid="geodata-map-extract">
+                                <mat-icon aria-hidden="true">map</mat-icon>
+                                {{ i18n.t('geodata.mapData.extract') }}: {{ extractRegion(extract) }} ·
+                                {{ formatSize(extract.fileSizeBytes) }}
+                                @if (extract.osmDataTimestamp) {
+                                    ·
+                                    {{
+                                        i18n.t('geodata.mapData.dataFrom', {
+                                            date: formatUpdated(extract.osmDataTimestamp)
+                                        })
+                                    }}
+                                }
+                            </p>
+                        }
                         <p class="hint">{{ i18n.t('geodata.mapData.hint') }}</p>
                     </section>
                 }
@@ -391,6 +406,21 @@ const SOURCE_TONES: Record<GeodataSource, string> = {
                 color: var(--mat-sys-error);
             }
 
+            .map-status .extract {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin: 8px 0 0;
+                font: var(--mat-sys-body-medium);
+            }
+
+            .map-status .extract mat-icon {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+                color: var(--mat-sys-on-surface-variant);
+            }
+
             .map-status .hint {
                 margin: 8px 0 0;
                 color: var(--mat-sys-on-surface-variant);
@@ -621,6 +651,28 @@ export class GeodataListComponent {
 
     protected formatUpdated(iso: string | null): string {
         return iso ? formatDateTime(iso, this.i18n.locale()) : '';
+    }
+
+    /** Geofabrik region path when the file names one, otherwise the rough coverage. */
+    protected extractRegion(extract: MapExtract): string {
+        if (extract.region) {
+            return extract.region;
+        }
+        const box = extract.boundingBox;
+        if (box) {
+            return this.i18n.t('geodata.mapData.extractCoverage', {
+                south: box.minLatitude.toFixed(1),
+                north: box.maxLatitude.toFixed(1),
+                west: box.minLongitude.toFixed(1),
+                east: box.maxLongitude.toFixed(1),
+            });
+        }
+        return this.i18n.t('geodata.mapData.extractUnknown');
+    }
+
+    protected formatSize(bytes: number): string {
+        const mebibytes = Math.max(1, Math.round(bytes / 1048576));
+        return `${mebibytes.toLocaleString(this.i18n.locale() === 'de' ? 'de-DE' : 'en-US')} MiB`;
     }
 
     protected openDialog(entry: GeodataEntry | null): void {

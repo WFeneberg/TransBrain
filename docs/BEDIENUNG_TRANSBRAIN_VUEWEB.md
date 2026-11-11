@@ -820,7 +820,10 @@ Je Dienst steht dort **Ready** (grünes Häkchen) oder **Unavailable** (durchges
 und, sobald der Dienst es meldet, das Alter des Kartenmaterials („OSM data from …“). So ist auf
 einen Blick erkennbar, ob fehlende Koordinaten am Kartenausschnitt, an veraltetem Material oder
 an einem nicht laufenden Dienst liegen. Lässt sich der Status selbst nicht abrufen, wird die
-Karte ausgeblendet.
+Karte ausgeblendet. Die Zeile **Kartenauszug** darunter zeigt, welche Region als OSM-Auszug auf
+dem Server installiert ist (z. B. `europe/germany/bayern/oberbayern`), die Dateigröße und den
+Datenstand der Datei. Ist das Dateidatum neuer als das der Dienste, wurde der Auszug bereits
+ausgetauscht, aber noch nicht neu importiert.
 
 Beide Dienste lesen einen OpenStreetMap-Auszug, der auf dem Server liegt. **Das Aktualisieren
 oder Ersetzen des Kartenmaterials ist bewusst keine Funktion dieser Seite**, sondern eine

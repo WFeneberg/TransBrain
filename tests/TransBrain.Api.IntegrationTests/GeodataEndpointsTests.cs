@@ -203,5 +203,7 @@ public class GeodataEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         json.RootElement.GetProperty("geocoder").GetProperty("osmDataUpdatedAt").ValueKind
             .Should().Be(JsonValueKind.Null);
         json.RootElement.GetProperty("routing").GetProperty("available").GetBoolean().Should().BeFalse();
+        // No extract file is configured in the test host, which is a regular answer too.
+        json.RootElement.GetProperty("extract").ValueKind.Should().Be(JsonValueKind.Null);
     }
 }

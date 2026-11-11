@@ -432,6 +432,9 @@ export const en = {
     'geodata.mapData.ready': 'Ready',
     'geodata.mapData.unavailable': 'Unavailable',
     'geodata.mapData.dataFrom': 'OSM data from {date}',
+    'geodata.mapData.extract': 'Map extract',
+    'geodata.mapData.extractUnknown': 'unknown region',
+    'geodata.mapData.extractCoverage': 'covers {south}°–{north}° N, {west}°–{east}° E',
     'geodata.mapData.hint':
         'Both services read an OpenStreetMap extract stored on the server. Updating or replacing the map material is an administrator task — see the operator guide.',
 };

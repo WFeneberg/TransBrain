@@ -447,6 +447,9 @@ export const de: Record<keyof typeof en, string> = {
     'geodata.mapData.ready': 'Bereit',
     'geodata.mapData.unavailable': 'Nicht verfügbar',
     'geodata.mapData.dataFrom': 'OSM-Daten vom {date}',
+    'geodata.mapData.extract': 'Kartenauszug',
+    'geodata.mapData.extractUnknown': 'Region unbekannt',
+    'geodata.mapData.extractCoverage': 'Abdeckung {south}°–{north}° N, {west}°–{east}° O',
     'geodata.mapData.hint':
         'Beide Dienste lesen einen OpenStreetMap-Auszug auf dem Server. Das Aktualisieren oder Ersetzen des Kartenmaterials übernimmt die Administration — siehe Bedienungsanleitung.',
 };

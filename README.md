@@ -255,7 +255,8 @@ and customer locations with its resolution status; `PUT /api/geodata/overrides` 
 `POST /api/geodata/resolve` (`Read`) probes a single address. A manual override takes precedence
 over the geocoder everywhere a position is resolved. The same page shows the state of the map
 material: `GET /api/geodata/map-status` (`Read`) probes both self-hosted services and reports their
-availability and OSM data date; replacing the extract itself is a server-side task
+availability and OSM data date, plus the installed extract (region, file date, size — parsed from
+the PBF header); replacing the extract itself is a server-side task
 (`scripts/update-osm-extract.py`, see the developer guide).
 
 The timeline follows Regulation (EC) No 561/2006: a 45-minute break after 4 h 30 min of continuous
