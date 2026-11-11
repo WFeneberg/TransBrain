@@ -381,6 +381,8 @@ export const de: Record<MessageKey, string> = {
     'route.violations': 'Hinweise zu Lenk- und Ruhezeiten',
     'route.noViolations': 'Keine Verstöße oder Warnungen.',
     'route.loadFailed': 'Die Route konnte nicht geladen werden.',
+    'route.addressNotFound':
+        'Die Adresse „{address}“ wurde im geladenen Kartenausschnitt nicht gefunden. Ohne sie lässt sich die Route nicht berechnen.',
     'route.kind.Driving': 'Fahrt',
     'route.kind.Break': 'Pause',
     'route.kind.Service': 'Standzeit (Be- und Entladung)',

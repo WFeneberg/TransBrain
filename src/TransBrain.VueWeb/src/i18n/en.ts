@@ -379,6 +379,8 @@ export const en = {
     'route.violations': 'Driving and rest time notes',
     'route.noViolations': 'No violations or warnings.',
     'route.loadFailed': 'The route could not be loaded.',
+    'route.addressNotFound':
+        'The address "{address}" was not found in the loaded map extract, so the route cannot be calculated.',
     'route.kind.Driving': 'Driving',
     'route.kind.Break': 'Break',
     'route.kind.Service': 'Stop time (loading and unloading)',

@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using Microsoft.Extensions.Options;
 using TransBrain.Application.Abstractions;
 using TransBrain.Domain.Common;
 using TransBrain.Domain.Routing;
@@ -7,30 +6,23 @@ using TransBrain.Domain.Routing;
 namespace TransBrain.Infrastructure.Routing;
 
 /// <remarks>
-/// OpenRouteService answers truck routing behind an API key. Routing uses the driving-hgv profile,
-/// so the road network excludes roads closed to heavy goods vehicles. Without a key every call
-/// answers Unavailable instead of guessing, so the map shows an honest error rather than a route
-/// that ignores truck restrictions. Geocoding is handled by NominatimGeocoder instead.
+/// Talks to the self-hosted OpenRouteService container the AppHost starts; no API key and no
+/// external service. Routing uses the driving-hgv profile, so the road network excludes roads
+/// closed to heavy goods vehicles. While the container is down or still building its graph every
+/// call answers Unavailable instead of guessing, so the map shows an honest error rather than a
+/// route that ignores truck restrictions. Geocoding is handled by NominatimGeocoder instead.
 /// </remarks>
-internal sealed class OpenRouteServiceClient(HttpClient httpClient, IOptions<OpenRouteServiceOptions> options)
-    : IRoutePlanner
+internal sealed class OpenRouteServiceClient(HttpClient httpClient) : IRoutePlanner
 {
     private const string TruckProfile = "driving-hgv";
 
-    private readonly OpenRouteServiceOptions _options = options.Value;
-
     public async Task<Result<RoadRoute>> PlanAsync(IReadOnlyList<GeoPoint> waypoints, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_options.ApiKey))
-        {
-            return NotConfigured();
-        }
-
-        // ORS takes [longitude, latitude] pairs, the reverse of how GeoPoint reads.
+        // ORS takes [longitude, latitude] pairs, the reverse of how GeoPoint reads. Instructions stay
+        // on: with "instructions": false ORS 10 leaves out the per-segment distances and durations.
         object body = new
         {
-            coordinates = waypoints.Select(point => new[] { point.Longitude, point.Latitude }).ToArray(),
-            instructions = false
+            coordinates = waypoints.Select(point => new[] { point.Longitude, point.Latitude }).ToArray()
         };
 
         Result<DirectionsResponse> response = await PostAsync<DirectionsResponse>(
@@ -70,12 +62,6 @@ internal sealed class OpenRouteServiceClient(HttpClient httpClient, IOptions<Ope
         return new RoadRoute(segments, geometry);
     }
 
-    private async Task<Result<T>> GetAsync<T>(string path, CancellationToken cancellationToken) where T : class
-    {
-        using HttpRequestMessage request = new(HttpMethod.Get, path);
-        return await SendAsync<T>(request, cancellationToken);
-    }
-
     private async Task<Result<T>> PostAsync<T>(string path, object body, CancellationToken cancellationToken)
         where T : class
     {
@@ -86,8 +72,6 @@ internal sealed class OpenRouteServiceClient(HttpClient httpClient, IOptions<Ope
     private async Task<Result<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken cancellationToken)
         where T : class
     {
-        request.Headers.TryAddWithoutValidation("Authorization", _options.ApiKey);
-
         try
         {
             using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken);
@@ -115,10 +99,6 @@ internal sealed class OpenRouteServiceClient(HttpClient httpClient, IOptions<Ope
         }
     }
 
-    private static Error NotConfigured() => Error.Unavailable(
-        "Routing.NotConfigured",
-        "Routing is not configured. Set OpenRouteService:ApiKey.");
-
     private sealed record DirectionsResponse(IReadOnlyList<LineFeature> Features);
 
     private sealed record LineFeature(LineGeometry Geometry, LineProperties Properties);
@@ -130,12 +110,10 @@ internal sealed class OpenRouteServiceClient(HttpClient httpClient, IOptions<Ope
     private sealed record SegmentSummary(double Distance, double Duration);
 }
 
-/// <summary>Settings for the OpenRouteService adapter. The key comes from configuration, never from code.</summary>
+/// <summary>Settings for the OpenRouteService adapter. The AppHost injects the container's address.</summary>
 public sealed class OpenRouteServiceOptions
 {
     public const string SectionName = "OpenRouteService";
 
-    public string ApiKey { get; set; } = string.Empty;
-
-    public string BaseUrl { get; set; } = "https://api.openrouteservice.org/";
+    public string BaseUrl { get; set; } = "http://localhost:8082/ors/";
 }

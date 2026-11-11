@@ -430,6 +430,8 @@ Dieser Abschnitt erscheint erst im Bearbeitungsmodus, also nachdem der Kunde ges
 - Die Spalte **„Contact persons“** der Tabelle zeigt je Anlieferort alle Ansprechpersonen,
   eine pro Zeile mit Name · Telefon · E-Mail.
 - Felder: Bezeichnung des Anlieferorts (Pflicht), Straße, PLZ, Ort und Land (Pflicht, wie beim
+  Kunden), Ansprechperson, deren Telefon und E-Mail (optional).
+- Die Adresse eines Anlieferorts ist unabhängig von der Firmenadresse des Kunden. Im Bearbeitungsmodus zeigt eine Karte die Lage des Anlieferorts. Die Position wird aus der Adresse über einen Dienst auf dem eigenen Server bestimmt (Nominatim mit OpenStreetMap-Daten), der nur Adressen im geladenen Kartenausschnitt kennt. Ist die Adresse unbekannt, sagt ein Hinweis das ausdrücklich. Wird ein Kunde
   Kunden).
 - Karte **„Contact persons“**: **„Add contact person“** fügt eine leere Zeile mit Name
   (Pflicht), Telefon und E-Mail (beide optional, die E-Mail muss gültig sein) hinzu; das
@@ -535,9 +537,9 @@ neuen Auftrags noch nicht vorhanden. Kartenkacheln: © OpenStreetMap contributor
 - **Adresse nicht gefunden:** Lässt sich eine Adresse nicht auf der Karte verorten, fehlt ihr Pin,
   und darunter erscheint ein Hinweis, z. B. „Die Adresse des Empfängers konnte nicht auf der Karte
   verortet werden.“ Der andere Pin bleibt sichtbar.
-- **Routing-Dienst nicht verfügbar:** Die Karte und das Verorten der Adressen nutzen den
-  Routing-Dienst OpenRouteService. Auf dem Server muss dafür ein **OpenRouteService-API-Schlüssel**
-  konfiguriert sein. Ist der Dienst nicht konfiguriert oder nicht erreichbar, erscheint anstelle
+- **Kartendienst nicht verfügbar:** Das Verorten der Adressen übernimmt ein Dienst, der auf dem
+  eigenen Server läuft; ein externer Dienst oder Schlüssel ist nicht nötig. Er kennt nur Adressen
+  im geladenen Kartenausschnitt. Ist der Dienst nicht erreichbar oder noch im Aufbau, erscheint anstelle
   der Karte die Meldung „Die Karte ist derzeit nicht verfügbar …“. Die Auftragsdaten lassen sich
   trotzdem bearbeiten und speichern.
 
@@ -687,10 +689,11 @@ Auftrags neu geladen. Sie besteht aus:
 - **Verstöße und Warnungen:** Verstöße werden rot, Warnungen bernsteinfarben angezeigt. Der Text
   stammt vom Server.
 
-**Hinweis:** Die Route wird über den Routing-Dienst OpenRouteService berechnet. Damit der Bereich
-„Route“ mit Karte und Zeitplan erscheint, muss auf dem Server ein **OpenRouteService-API-Schlüssel**
-konfiguriert sein. Fehlt der Schlüssel oder ist der Dienst nicht erreichbar, zeigt der Bereich die
+**Hinweis:** Die Route berechnet ein Routing-Dienst, der auf dem eigenen Server läuft; ein externer
+Dienst oder Schlüssel ist nicht nötig. Er kann nur Strecken im geladenen Kartenausschnitt planen.
+Ist der Dienst nicht erreichbar oder noch im Aufbau, zeigt der Bereich die
 Meldung „Die Routenberechnung ist derzeit nicht verfügbar …“ an; die übrige Seite bleibt benutzbar.
+Liegt die Adresse eines Stopps außerhalb des geladenen Kartenausschnitts oder ist sie unbekannt, nennt die Meldung diese Adresse: „Die Adresse „…“ wurde im geladenen Kartenausschnitt nicht gefunden. Ohne sie lässt sich die Route nicht berechnen.“
 
 Kann die Route nicht berechnet werden (z. B. weil die Tour keine berechenbaren Stopps hat), zeigt
 der Bereich die Meldung des Servers mit dem HTTP-Statuscode an, statt stillschweigend leer zu

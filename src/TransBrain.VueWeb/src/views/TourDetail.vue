@@ -99,10 +99,15 @@ async function loadRoute(): Promise<void> {
         routeError.value = null;
     } catch (error) {
         tourRoute.value = null;
+        const problem = axios.isAxiosError(error) ? error.response?.data : undefined;
+        const detail: string = problem?.detail ?? '';
         routeError.value =
             axios.isAxiosError(error) && error.response?.status === 503
                 ? t('map.unavailable')
-                : describe(error, t('route.loadFailed'));
+                : problem?.title === 'Geocoding.NoMatch'
+                  ? // The server quotes the address it could not place.
+                    t('route.addressNotFound', { address: /'(.+)'/.exec(detail)?.[1] ?? detail })
+                  : describe(error, t('route.loadFailed'));
     }
 }
 

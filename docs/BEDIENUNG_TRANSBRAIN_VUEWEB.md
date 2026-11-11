@@ -422,6 +422,8 @@ Dieser Abschnitt erscheint erst im Bearbeitungsmodus, also nachdem der Kunde ges
 - Die Spalte **„Contact persons“** der Tabelle zeigt je Anlieferort alle Ansprechpersonen,
   eine pro Zeile mit Name · Telefon · E-Mail.
 - Felder: Bezeichnung des Anlieferorts (Pflicht), Straße, PLZ, Ort und Land (Pflicht, wie beim
+  Kunden), Ansprechperson, deren Telefon und E-Mail (optional).
+- Die Adresse eines Anlieferorts ist unabhängig von der Firmenadresse des Kunden. Im Bearbeitungsmodus zeigt eine Karte die Lage des Anlieferorts. Die Position wird aus der Adresse über einen Dienst auf dem eigenen Server bestimmt (Nominatim mit OpenStreetMap-Daten), der nur Adressen im geladenen Kartenausschnitt kennt. Ist die Adresse unbekannt, sagt ein Hinweis das ausdrücklich. Wird ein Kunde
   Kunden).
 - Karte **„Contact persons“**: **„Add contact person“** fügt eine leere Zeile mit Name
   (Pflicht), Telefon und E-Mail (beide optional, die E-Mail muss gültig sein) hinzu; das
@@ -523,8 +525,9 @@ nicht beim Anlegen eines neuen Auftrags.
 
 - Lässt sich eine Adresse nicht finden, steht darunter der Hinweis „… konnte nicht auf der Karte
   platziert werden: Die Adresse wurde nicht gefunden.“ Der Auftrag selbst ist davon nicht betroffen.
-- Die Kartenfunktion benötigt einen auf dem Server konfigurierten **OpenRouteService-Schlüssel**.
-  Ist er nicht eingerichtet oder der Dienst nicht erreichbar, erscheint anstelle der Karte die
+- Die Adressen verortet ein Dienst, der auf dem eigenen Server läuft; ein externer Dienst oder
+  Schlüssel ist nicht nötig. Er kennt nur Adressen im geladenen Kartenausschnitt.
+  Ist der Dienst nicht erreichbar oder noch im Aufbau, erscheint anstelle der Karte die
   Meldung „Der Karten- und Routingdienst ist nicht verfügbar …“. Das Formular bleibt voll nutzbar.
 
 ## Auftragsstatus: welche Schritte abgelehnt werden
@@ -671,11 +674,12 @@ Stopps. Darunter stehen:
 - **Hinweise zu Lenk- und Ruhezeiten** — ein Verstoß erscheint rot, eine Warnung gelb. Ohne
   Befund steht dort „Keine Verstöße oder Warnungen.“
 
-Die Route berechnet der Server neu, sobald sich die Stopps ändern. Sie benötigt einen auf dem
-Server konfigurierten **OpenRouteService-Schlüssel**. Ist der Dienst nicht eingerichtet oder nicht
+Die Route berechnet der Server neu, sobald sich die Stopps ändern. Das übernimmt ein Routing-Dienst auf dem
+eigenen Server, ohne externen Dienst oder Schlüssel; er kann nur Strecken im geladenen
+Kartenausschnitt planen. Ist der Dienst noch im Aufbau oder nicht
 erreichbar, erscheint anstelle der Route die Meldung „Der Karten- und Routingdienst ist nicht
-verfügbar …“. Schlägt die Berechnung aus einem anderen Grund fehl, wird der Grund angezeigt. Die
-übrige Tourseite bleibt in beiden Fällen nutzbar.
+verfügbar …“. Liegt die Adresse eines Stopps außerhalb des geladenen Kartenausschnitts oder ist sie unbekannt, nennt die Meldung diese Adresse: „Die Adresse „…“ wurde im geladenen Kartenausschnitt nicht gefunden. Ohne sie lässt sich die Route nicht berechnen.“ Schlägt die Berechnung aus einem
+anderen Grund fehl, wird der Grund angezeigt. Die übrige Tourseite bleibt in allen Fällen nutzbar.
 
 ### Was beim Zuordnen abgelehnt wird
 

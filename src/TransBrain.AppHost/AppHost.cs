@@ -41,7 +41,41 @@ var keycloak = builder.AddKeycloak("keycloak", 8080)
     .WithEnvironment("KC_HOSTNAME", "https://localhost:8080")
     .WithRealmImport("./realms");
 
+// Self-hosted routing and geocoding, so no external service is called at runtime. Both read the
+// same OpenStreetMap extract, downloaded once by hand to data/osm/region.osm.pbf (see README).
+// The first start builds the routing graph (minutes) and imports the geocoding database (hours
+// for a German state); the results live in the named volumes. To switch the region, replace the
+// file and delete both volumes. The api deliberately does not WaitFor these: until they are
+// ready its map endpoints answer 503.
+const string osmDirectory = "../../data/osm";
+
+// Elevation is off because building it downloads height data from external servers.
+// XMX is the knob for larger extracts: roughly <pbf size> * 2 for the one enabled profile.
+var ors = builder.AddContainer("ors", "openrouteservice/openrouteservice", "v10.1.0")
+    .WithHttpEndpoint(targetPort: 8082)
+    .WithVolume("transbrain-ors", "/home/ors")
+    .WithBindMount(osmDirectory, "/home/ors/files", isReadOnly: true)
+    .WithEnvironment("XMX", "4g")
+    .WithEnvironment("ors.engine.profile_default.build.source_file", "/home/ors/files/region.osm.pbf")
+    .WithEnvironment("ors.engine.profile_default.build.elevation", "false")
+    .WithEnvironment("ors.engine.profiles.driving-car.enabled", "false")
+    .WithEnvironment("ors.engine.profiles.driving-hgv.enabled", "true")
+    .WithHttpHealthCheck("/ors/v2/health");
+
+// The extract is mounted outside /nominatim: the image chowns that folder recursively on start,
+// which fails on a read-only mount.
+var nominatim = builder.AddContainer("nominatim", "mediagis/nominatim", "5.3")
+    .WithHttpEndpoint(targetPort: 8080)
+    .WithVolume("transbrain-nominatim", "/var/lib/postgresql/16/main")
+    .WithBindMount(osmDirectory, "/osm", isReadOnly: true)
+    .WithContainerRuntimeArgs("--shm-size=1g")
+    .WithEnvironment("PBF_PATH", "/osm/region.osm.pbf")
+    .WithEnvironment("FREEZE", "true")
+    .WithHttpHealthCheck("/status");
+
 var api = builder.AddProject<Projects.TransBrain_Api>("api")
+    .WithEnvironment("OpenRouteService__BaseUrl", ReferenceExpression.Create($"{ors.GetEndpoint("http")}/ors/"))
+    .WithEnvironment("Nominatim__BaseUrl", ReferenceExpression.Create($"{nominatim.GetEndpoint("http")}/"))
     .WithReference(database).WaitFor(database)
     .WithReference(cache).WaitFor(cache)
     .WithReference(keycloak).WaitFor(keycloak)

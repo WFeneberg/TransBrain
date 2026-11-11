@@ -40,6 +40,7 @@ tests/
 deploy/                       nginx config for the SPA containers, Keycloak production image + realm
 infra/main.bicep              Azure deployment
 docker-compose.yml            Local/demo stack
+scripts/seed-testdata.py      Seeds a running dev stack with test data (section 4)
 docs/                         This guide, installation, Keycloak, operator guides, design specs and plans
 ```
 
@@ -164,6 +165,52 @@ dotnet run --project src/TransBrain.AppHost
 
 Postgres data persists in a Docker volume (pending migrations apply on start); Keycloak has no volume and
 re-imports the realm on every start. Test users: README, "Test users".
+
+Test data: with the AppHost running and an empty database, run
+
+```bash
+python3 scripts/seed-testdata.py   # --api / --keycloak to override http://localhost:5265 / https://localhost:8080
+```
+
+It signs in as `admin.user` and creates, through the API (so every validation applies), 5 drivers, 5 vehicles
+with special documents, 5 customers with delivery locations, 5 orders and 5 tours, plus the insurer and
+customer-class catalog entries they use. Dates are relative to today, so the "expires soon" / "expired"
+cases (licence, ADR document, UVV, inspection) stay meaningful. The driver Franz Huber is linked to
+`fahrer.user` by its Keycloak id, which changes on every Keycloak start — re-link it in the driver form
+after a restart. The script refuses to run when vehicles already exist; to reseed, delete the Postgres
+volume with the AppHost stopped (`docker volume ls | grep postgres`, then `docker volume rm <name>`).
+
+### 4.1 Routing and geocoding (self-hosted)
+
+Route planning and address lookup call no external service. The AppHost starts two containers that read
+one OpenStreetMap extract, which you download once (the folder is gitignored):
+
+```bash
+curl -L -o data/osm/region.osm.pbf https://download.geofabrik.de/europe/germany/bayern-latest.osm.pbf
+```
+
+| Resource | Image | Purpose | First start (Upper Bavaria, 260 MB, measured on 4 cores) | Volume |
+|---|---|---|---|---|
+| `ors` | `openrouteservice/openrouteservice:v10.1.0` | truck routes, profile `driving-hgv` only | builds the graph, about 3 min, 0.2 GB | `transbrain-ors` |
+| `nominatim` | `mediagis/nominatim:5.3` | address → position | imports the database, about 85 min, 3 GB | `transbrain-nominatim` |
+
+All of Bavaria is about three times that extract, so expect several hours for the Nominatim import. For a
+quick dev setup use `.../germany/bayern/oberbayern-latest.osm.pbf` instead.
+
+The AppHost injects both addresses into the Api (`OpenRouteService__BaseUrl`, `Nominatim__BaseUrl`). The Api
+does not wait for them: until a container is healthy, `GET /api/tours/{id}/route` and the position/location
+endpoints answer `503`. Addresses and routes outside the extract are not found (`404 Geocoding.NoMatch`) —
+with a Bavarian extract that includes the Austrian addresses of `scripts/seed-testdata.py`. The seed tour
+Weilheim → München and the locations in Landsberg, Kaufering and München use real addresses in Upper
+Bavaria, so they get map pins and a route even with the small `oberbayern` extract; the other seed
+addresses lie outside it or use invented street names.
+
+- **Other region:** stop the AppHost, replace `data/osm/region.osm.pbf`, delete both volumes
+  (`docker volume rm transbrain-ors transbrain-nominatim`), start again. Both containers take exactly one
+  file; merge extracts with `osmium merge` if you need several.
+- **Sizing:** the ORS heap is `XMX` in `AppHost.cs` (4g; rule of thumb 2 × pbf size per profile). All of
+  Germany needs a server (tens of GB of RAM, >100 GB disk, a day or more of import).
+- **Still external:** the map background tiles in both frontends load from `tile.openstreetmap.org`.
 
 ## 5. Common tasks
 
