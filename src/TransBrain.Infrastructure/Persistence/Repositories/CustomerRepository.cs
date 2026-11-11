@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TransBrain.Application.Abstractions;
+using TransBrain.Application.Features.Customers.CustomerLocations;
 using TransBrain.Application.Features.Customers.CustomerLocations.ListAllCustomerLocations;
 using TransBrain.Domain.Customers;
 
@@ -53,26 +54,29 @@ internal sealed class CustomerRepository(TransBrainDbContext context) : ICustome
 
     public async Task<IReadOnlyList<CustomerLocationListItem>> ListAllLocationsAsync(
         int skip, int take, CancellationToken cancellationToken)
-        => await context.CustomerLocations
-            .Join(context.Customers, l => l.CustomerId, c => c.Id, (l, c) => new { l, c })
-            .OrderBy(x => x.c.Name)
-            .ThenBy(x => x.l.Name)
+    {
+        var rows = await context.CustomerLocations
+            .Join(context.Customers, l => l.CustomerId, c => c.Id, (l, c) => new { Location = l, CustomerName = c.Name })
+            .OrderBy(x => x.CustomerName)
+            .ThenBy(x => x.Location.Name)
             .Skip(skip)
             .Take(take)
-            .Select(x => new CustomerLocationListItem(
-                x.l.Id,
-                x.c.Id,
-                x.c.Name,
-                x.l.Name,
-                x.l.Address.Street,
-                x.l.Address.PostalCode,
-                x.l.Address.City,
-                x.l.Address.Country,
-                x.l.ContactPerson,
-                x.l.Email,
-                x.l.Phone))
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(x => new CustomerLocationListItem(
+                x.Location.Id,
+                x.Location.CustomerId,
+                x.CustomerName,
+                x.Location.Name,
+                x.Location.Address.Street,
+                x.Location.Address.PostalCode,
+                x.Location.Address.City,
+                x.Location.Address.Country,
+                x.Location.Contacts.Select(CustomerLocationContactData.From).ToList()))
+            .ToList();
+    }
 
     public Task<int> CountAllLocationsAsync(CancellationToken cancellationToken)
         => context.CustomerLocations.CountAsync(cancellationToken);

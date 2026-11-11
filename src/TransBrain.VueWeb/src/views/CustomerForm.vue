@@ -230,9 +230,7 @@ const locationDeleteTarget = ref<CustomerLocation | null>(null);
 const locationHeaders = computed(() => [
     { title: t('customers.location.name'), key: 'name' },
     { title: t('common.city'), key: 'city', value: (location: CustomerLocation) => `${location.postalCode} ${location.city}` },
-    { title: t('customers.contactPerson'), key: 'contactPerson' },
-    { title: t('customers.location.contactPhone'), key: 'phone' },
-    { title: t('customers.location.contactEmail'), key: 'email' },
+    { title: t('customers.location.contacts'), key: 'contacts', sortable: false },
     { title: t('common.actions'), key: 'actions', sortable: false, align: 'end' as const },
 ]);
 
@@ -626,9 +624,16 @@ function describeFailure(error: unknown, fallback: string): string {
                                 <template #item.name="{ item }">
                                     <span class="font-weight-bold" data-testid="location-name">{{ item.name }}</span>
                                 </template>
-                                <template #item.contactPerson="{ value }">{{ value || '–' }}</template>
-                                <template #item.phone="{ value }">{{ value || '–' }}</template>
-                                <template #item.email="{ value }">{{ value || '–' }}</template>
+                                <template #item.contacts="{ item }">
+                                    <div class="py-2" data-testid="location-contacts">
+                                        <div v-for="(contact, index) in item.contacts" :key="index" class="text-no-wrap">
+                                            <span class="font-weight-medium">{{ contact.name }}</span>
+                                            <template v-if="contact.phone"> · {{ contact.phone }}</template>
+                                            <template v-if="contact.email"> · {{ contact.email }}</template>
+                                        </div>
+                                        <template v-if="item.contacts.length === 0">–</template>
+                                    </div>
+                                </template>
                                 <template #item.actions="{ item }">
                                     <div class="row-actions">
                                         <v-tooltip :text="t('common.edit')" location="top">

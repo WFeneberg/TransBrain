@@ -24,8 +24,14 @@ internal sealed class AddCustomerLocationCommandHandler(ICustomerRepository repo
             return address.Error!;
         }
 
+        Result<List<CustomerLocationContact>> contacts = CustomerLocationContactData.ToDomain(command.Contacts);
+        if (!contacts.IsSuccess)
+        {
+            return contacts.Error!;
+        }
+
         Result<CustomerLocation> location = CustomerLocation.Create(
-            command.CustomerId, command.Name, address.Value, command.ContactPerson, command.Email, command.Phone);
+            command.CustomerId, command.Name, address.Value, contacts.Value);
         if (!location.IsSuccess)
         {
             return location.Error!;

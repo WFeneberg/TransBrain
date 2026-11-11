@@ -3,11 +3,15 @@ using TransBrain.Domain.Common;
 namespace TransBrain.Domain.Customers;
 
 /// <summary>
-/// A place a customer delivers to, with its own address and contact person. A customer can have
+/// A place a customer delivers to, with its own address and contact persons. A customer can have
 /// many of these; each one is independent of the customer's registered address.
 /// </summary>
 public sealed class CustomerLocation
 {
+    public const int MaxContacts = 20;
+
+    private readonly List<CustomerLocationContact> _contacts = [];
+
     // EF Core materialization only. Every other construction goes through Create.
     private CustomerLocation()
     {
@@ -15,22 +19,12 @@ public sealed class CustomerLocation
         Address = null!;
     }
 
-    private CustomerLocation(
-        Guid id,
-        Guid customerId,
-        string name,
-        Address address,
-        string? contactPerson,
-        string? email,
-        string? phone)
+    private CustomerLocation(Guid id, Guid customerId, string name, Address address)
     {
         Id = id;
         CustomerId = customerId;
         Name = name;
         Address = address;
-        ContactPerson = contactPerson;
-        Email = email;
-        Phone = phone;
     }
 
     public Guid Id { get; private set; }
@@ -41,44 +35,32 @@ public sealed class CustomerLocation
 
     public Address Address { get; private set; }
 
-    public string? ContactPerson { get; private set; }
-
-    public string? Email { get; private set; }
-
-    public string? Phone { get; private set; }
+    /// <summary>The contact persons in the order they were entered.</summary>
+    public IReadOnlyList<CustomerLocationContact> Contacts => _contacts.OrderBy(c => c.Sequence).ToList();
 
     public static Result<CustomerLocation> Create(
         Guid customerId,
         string name,
         Address address,
-        string? contactPerson,
-        string? email,
-        string? phone)
+        IReadOnlyList<CustomerLocationContact> contacts)
     {
-        Result<Unit> validation = ValidateName(name);
+        Result<Unit> validation = Validate(name, contacts);
         if (!validation.IsSuccess)
         {
             return validation.Error!;
         }
 
-        return new CustomerLocation(
-            Guid.CreateVersion7(),
-            customerId,
-            name.Trim(),
-            address,
-            OptionalText.Normalize(contactPerson),
-            OptionalText.Normalize(email),
-            OptionalText.Normalize(phone));
+        var location = new CustomerLocation(Guid.CreateVersion7(), customerId, name.Trim(), address);
+        location.ReplaceContacts(contacts);
+        return location;
     }
 
     public Result<CustomerLocation> Update(
         string name,
         Address address,
-        string? contactPerson,
-        string? email,
-        string? phone)
+        IReadOnlyList<CustomerLocationContact> contacts)
     {
-        Result<Unit> validation = ValidateName(name);
+        Result<Unit> validation = Validate(name, contacts);
         if (!validation.IsSuccess)
         {
             return validation.Error!;
@@ -86,15 +68,31 @@ public sealed class CustomerLocation
 
         Name = name.Trim();
         Address = address;
-        ContactPerson = OptionalText.Normalize(contactPerson);
-        Email = OptionalText.Normalize(email);
-        Phone = OptionalText.Normalize(phone);
+        ReplaceContacts(contacts);
 
         return this;
     }
 
-    private static Result<Unit> ValidateName(string name) =>
-        string.IsNullOrWhiteSpace(name)
-            ? Error.Validation("CustomerLocation.NameRequired", "Location name must not be empty.")
-            : Unit.Value;
+    private void ReplaceContacts(IReadOnlyList<CustomerLocationContact> contacts)
+    {
+        _contacts.Clear();
+        _contacts.AddRange(contacts.Select((contact, index) => contact.WithSequence(index + 1)));
+    }
+
+    private static Result<Unit> Validate(string name, IReadOnlyList<CustomerLocationContact> contacts)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return Error.Validation("CustomerLocation.NameRequired", "Location name must not be empty.");
+        }
+
+        if (contacts.Count > MaxContacts)
+        {
+            return Error.Validation(
+                "CustomerLocation.TooManyContacts",
+                $"A delivery location can have at most {MaxContacts} contact persons.");
+        }
+
+        return Unit.Value;
+    }
 }

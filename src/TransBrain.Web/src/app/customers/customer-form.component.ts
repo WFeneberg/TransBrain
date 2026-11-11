@@ -344,28 +344,28 @@ const ADDITIONAL_FLAGS = [
                                                     {{ l.postalCode }} {{ l.city }}
                                                 </td>
                                             </ng-container>
-                                            <ng-container matColumnDef="contactPerson">
+                                            <ng-container matColumnDef="contacts">
                                                 <th mat-header-cell *matHeaderCellDef>
-                                                    {{ i18n.t('customers.contactPerson') }}
+                                                    {{ i18n.t('customers.location.contacts') }}
                                                 </th>
-                                                <td mat-cell *matCellDef="let l">
-                                                    {{ l.contactPerson || '–' }}
-                                                </td>
-                                            </ng-container>
-                                            <ng-container matColumnDef="contactPhone">
-                                                <th mat-header-cell *matHeaderCellDef>
-                                                    {{ i18n.t('customers.location.contactPhone') }}
-                                                </th>
-                                                <td mat-cell *matCellDef="let l">
-                                                    {{ l.phone || '–' }}
-                                                </td>
-                                            </ng-container>
-                                            <ng-container matColumnDef="contactEmail">
-                                                <th mat-header-cell *matHeaderCellDef>
-                                                    {{ i18n.t('customers.location.contactEmail') }}
-                                                </th>
-                                                <td mat-cell *matCellDef="let l">
-                                                    {{ l.email || '–' }}
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let l"
+                                                    data-testid="location-contacts"
+                                                >
+                                                    @for (c of l.contacts; track $index) {
+                                                        <div class="contact-line">
+                                                            <span class="strong">{{ c.name }}</span>
+                                                            @if (c.phone) {
+                                                                · {{ c.phone }}
+                                                            }
+                                                            @if (c.email) {
+                                                                · {{ c.email }}
+                                                            }
+                                                        </div>
+                                                    } @empty {
+                                                        –
+                                                    }
                                                 </td>
                                             </ng-container>
                                             <ng-container matColumnDef="actions">
@@ -470,6 +470,16 @@ const ADDITIONAL_FLAGS = [
                 margin-bottom: 12px;
             }
 
+            td[data-testid='location-contacts'] {
+                padding-top: 6px;
+                padding-bottom: 6px;
+            }
+
+            .contact-line {
+                white-space: nowrap;
+                padding: 2px 0;
+            }
+
             .additional-groups {
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -520,9 +530,7 @@ export class CustomerFormComponent {
     protected readonly locationColumns = [
         'name',
         'city',
-        'contactPerson',
-        'contactPhone',
-        'contactEmail',
+        'contacts',
         'actions',
     ];
     protected readonly locations = signal<CustomerLocation[]>([]);

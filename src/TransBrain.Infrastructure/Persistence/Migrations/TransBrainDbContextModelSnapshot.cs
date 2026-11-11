@@ -66,25 +66,13 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ContactPerson")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(320)
-                        .HasColumnType("character varying(320)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
 
@@ -670,8 +658,49 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("CustomerLocationId");
                         });
 
+                    b.OwnsMany("TransBrain.Domain.Customers.CustomerLocationContact", "Contacts", b1 =>
+                        {
+                            b1.Property<Guid>("customer_location_id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Id"));
+
+                            b1.Property<string>("Email")
+                                .HasMaxLength(320)
+                                .HasColumnType("character varying(320)")
+                                .HasColumnName("email");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("name");
+
+                            b1.Property<string>("Phone")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("phone");
+
+                            b1.Property<int>("Sequence")
+                                .HasColumnType("integer")
+                                .HasColumnName("sequence");
+
+                            b1.HasKey("customer_location_id", "Id");
+
+                            b1.ToTable("customer_location_contacts", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("customer_location_id");
+                        });
+
                     b.Navigation("Address")
                         .IsRequired();
+
+                    b.Navigation("Contacts");
                 });
 
             modelBuilder.Entity("TransBrain.Domain.Orders.TransportOrder", b =>
