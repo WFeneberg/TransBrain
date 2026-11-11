@@ -5,6 +5,8 @@ using TransBrain.Application.Common.Pagination;
 using TransBrain.Application.Features.Invoices;
 using TransBrain.Application.Features.Invoices.CancelInvoice;
 using TransBrain.Application.Features.Invoices.CreateInvoice;
+using TransBrain.Application.Features.Invoices.ExportInvoicePdf;
+using TransBrain.Application.Features.Invoices.ExportInvoiceXRechnung;
 using TransBrain.Application.Features.Invoices.GetInvoiceById;
 using TransBrain.Application.Features.Invoices.IssueInvoice;
 using TransBrain.Application.Features.Invoices.ListBillableOrders;
@@ -75,6 +77,30 @@ public sealed class InvoiceEndpoints : IEndpointGroup
             .WithName("GetInvoiceById")
             .Produces<InvoiceResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // Document exports are reads: anyone who may see an invoice may print it or hand it to
+        // the customer. Only issued or paid invoices are documents (409 otherwise).
+        group.MapGet("/{id:guid}/pdf", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                Result<InvoiceDocumentResponse> result = await sender.Send(new ExportInvoicePdfQuery(id), ct);
+                return result.ToHttpResult(doc => Results.File(doc.Content, doc.ContentType, doc.FileName));
+            })
+            .RequireAuthorization(Policies.Read)
+            .WithName("ExportInvoicePdf")
+            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapGet("/{id:guid}/xrechnung", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                Result<InvoiceDocumentResponse> result = await sender.Send(new ExportInvoiceXRechnungQuery(id), ct);
+                return result.ToHttpResult(doc => Results.File(doc.Content, doc.ContentType, doc.FileName));
+            })
+            .RequireAuthorization(Policies.Read)
+            .WithName("ExportInvoiceXRechnung")
+            .Produces(StatusCodes.Status200OK, contentType: "application/xml")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPost("/{id:guid}/issue", async (Guid id, ISender sender, CancellationToken ct) =>
             {

@@ -257,6 +257,44 @@ public class InvoiceTests
     }
 
     [Fact]
+    public void IsDocument_DraftInvoice_ReturnsFalse()
+    {
+        AnInvoice().IsDocument.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsDocument_IssuedInvoice_ReturnsTrue()
+    {
+        Invoice invoice = AnInvoice();
+        invoice.AddLine(AnOrder(), 100m);
+        invoice.Issue(CreatedAt);
+
+        invoice.IsDocument.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsDocument_PaidInvoice_ReturnsTrue()
+    {
+        Invoice invoice = AnInvoice();
+        invoice.AddLine(AnOrder(), 100m);
+        invoice.Issue(CreatedAt);
+        invoice.MarkPaid(CreatedAt.AddDays(5));
+
+        invoice.IsDocument.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsDocument_CancelledInvoice_ReturnsFalse()
+    {
+        Invoice invoice = AnInvoice();
+        invoice.AddLine(AnOrder(), 100m);
+        invoice.Issue(CreatedAt);
+        invoice.Cancel();
+
+        invoice.IsDocument.Should().BeFalse();
+    }
+
+    [Fact]
     public void MarkPaid_IssuedInvoice_SetsPaidAt()
     {
         Invoice invoice = AnInvoice();

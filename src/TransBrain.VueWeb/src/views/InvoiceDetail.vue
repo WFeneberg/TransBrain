@@ -4,9 +4,12 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import {
     cancelInvoice,
+    downloadInvoicePdf,
+    downloadInvoiceXRechnung,
     getInvoice,
     issueInvoice,
     markInvoicePaid,
+    saveBlob,
     type Invoice,
 } from '../api/invoices';
 import { formatCalendarDate, statusColor } from '../composables/statusColor';
@@ -47,6 +50,29 @@ async function markPaid(): Promise<void> {
 async function cancel(): Promise<void> {
     confirmingCancel.value = false;
     await transition(() => cancelInvoice(invoice.value!.id), t('invoices.cancelFailed'));
+}
+
+async function savePdf(): Promise<void> {
+    await download(
+        () => downloadInvoicePdf(invoice.value!.id),
+        `${invoice.value!.invoiceNumber}.pdf`,
+    );
+}
+
+async function saveXRechnung(): Promise<void> {
+    await download(
+        () => downloadInvoiceXRechnung(invoice.value!.id),
+        `${invoice.value!.invoiceNumber}-xrechnung.xml`,
+    );
+}
+
+async function download(request: () => Promise<Blob>, fileName: string): Promise<void> {
+    errorMessage.value = null;
+    try {
+        saveBlob(await request(), fileName);
+    } catch (error) {
+        errorMessage.value = describe(error, t('invoices.downloadFailed'));
+    }
 }
 
 async function transition(request: () => Promise<Invoice>, fallback: string): Promise<void> {
@@ -99,8 +125,25 @@ function describe(error: unknown, fallback: string): string {
                     </h1>
                     <p class="text-medium-emphasis page-subtitle" data-testid="invoice-detail-customer">{{ invoice.customerName }}</p>
                 </div>
-                <div v-if="auth.can('dispatch.write')" class="header-actions">
-                    <template v-if="confirmingCancel">
+                <div class="header-actions">
+                    <template v-if="invoice.status === 'Issued' || invoice.status === 'Paid'">
+                        <v-btn
+                            variant="outlined"
+                            prepend-icon="mdi-printer"
+                            data-testid="invoice-detail-pdf"
+                            @click="savePdf()"
+                            >{{ t('invoices.downloadPdf') }}</v-btn
+                        >
+                        <v-btn
+                            variant="outlined"
+                            prepend-icon="mdi-file-xml-box"
+                            data-testid="invoice-detail-xrechnung"
+                            @click="saveXRechnung()"
+                            >{{ t('invoices.downloadXRechnung') }}</v-btn
+                        >
+                    </template>
+                    <template v-if="auth.can('dispatch.write')">
+                        <template v-if="confirmingCancel">
                         <v-btn
                             color="error"
                             variant="tonal"
@@ -138,6 +181,7 @@ function describe(error: unknown, fallback: string): string {
                             @click="confirmingCancel = true"
                             >{{ t('invoices.cancel') }}</v-btn
                         >
+                    </template>
                     </template>
                 </div>
             </div>

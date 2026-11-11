@@ -106,3 +106,24 @@ export async function cancelInvoice(id: string): Promise<Invoice> {
     const response = await client.post<Invoice>(`/invoices/${id}/cancel`);
     return response.data;
 }
+
+// Document downloads: the shared client's interceptor adds the token, so plain blob GETs suffice.
+export async function downloadInvoicePdf(id: string): Promise<Blob> {
+    const response = await client.get<Blob>(`/invoices/${id}/pdf`, { responseType: 'blob' });
+    return response.data;
+}
+
+export async function downloadInvoiceXRechnung(id: string): Promise<Blob> {
+    const response = await client.get<Blob>(`/invoices/${id}/xrechnung`, { responseType: 'blob' });
+    return response.data;
+}
+
+/** Hands a downloaded document blob to the browser as a named file download. */
+export function saveBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+}

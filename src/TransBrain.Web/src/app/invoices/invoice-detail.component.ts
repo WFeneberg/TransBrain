@@ -12,7 +12,7 @@ import { Observable, filter, switchMap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { I18nService } from '../i18n/i18n.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
-import { Invoice, InvoiceService, invoiceStatusTone } from './invoice.service';
+import { Invoice, InvoiceService, invoiceStatusTone, saveBlob } from './invoice.service';
 
 const LINE_COLUMNS = ['position', 'orderNumber', 'description', 'netAmount'];
 
@@ -56,8 +56,26 @@ const LINE_COLUMNS = ['position', 'orderNumber', 'description', 'netAmount'];
                         </div>
                         <p class="subtitle" data-testid="invoice-detail-customer">{{ inv.customerName }}</p>
                     </div>
-                    @if (session.can('dispatch.write')) {
-                        <div class="header-actions">
+                    <div class="header-actions">
+                        @if (inv.status === 'Issued' || inv.status === 'Paid') {
+                            <button
+                                mat-stroked-button
+                                data-testid="invoice-detail-pdf"
+                                (click)="downloadPdf(inv)"
+                            >
+                                <mat-icon>print</mat-icon>
+                                {{ i18n.t('invoices.downloadPdf') }}
+                            </button>
+                            <button
+                                mat-stroked-button
+                                data-testid="invoice-detail-xrechnung"
+                                (click)="downloadXRechnung(inv)"
+                            >
+                                <mat-icon>receipt_long</mat-icon>
+                                {{ i18n.t('invoices.downloadXRechnung') }}
+                            </button>
+                        }
+                        @if (session.can('dispatch.write')) {
                             @if (inv.status === 'Draft') {
                                 <button
                                     mat-flat-button
@@ -89,8 +107,8 @@ const LINE_COLUMNS = ['position', 'orderNumber', 'description', 'netAmount'];
                                     {{ i18n.t('invoices.cancel') }}
                                 </button>
                             }
-                        </div>
-                    }
+                        }
+                    </div>
                 </header>
 
                 <div class="cards">
@@ -251,6 +269,28 @@ export class InvoiceDetailComponent {
 
     protected markPaid(invoice: Invoice): void {
         this.apply(this.service.markPaid(invoice.id), 'invoices.error.pay');
+    }
+
+    protected downloadPdf(invoice: Invoice): void {
+        this.download(this.service.downloadPdf(invoice.id), `${invoice.invoiceNumber}.pdf`);
+    }
+
+    protected downloadXRechnung(invoice: Invoice): void {
+        this.download(
+            this.service.downloadXRechnung(invoice.id),
+            `${invoice.invoiceNumber}-xrechnung.xml`,
+        );
+    }
+
+    private download(request: Observable<Blob>, fileName: string): void {
+        this.errorMessage.set(null);
+        request.subscribe({
+            next: (blob) => saveBlob(blob, fileName),
+            error: (error: HttpErrorResponse) =>
+                this.errorMessage.set(
+                    this.describe(error, this.i18n.t('invoices.error.download')),
+                ),
+        });
     }
 
     protected cancel(invoice: Invoice): void {

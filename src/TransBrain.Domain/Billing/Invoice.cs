@@ -93,6 +93,13 @@ public sealed class Invoice
 
     public decimal GrossTotal => NetTotal + VatAmount;
 
+    /// <summary>
+    /// Whether this invoice is a finished commercial document. Only issued (and later paid)
+    /// invoices may leave the house as PDF or XRechnung; drafts are not yet invoices and a
+    /// cancelled invoice must not be sent again.
+    /// </summary>
+    public bool IsDocument => Status is InvoiceStatus.Issued or InvoiceStatus.Paid;
+
     public static Result<Invoice> Create(
         InvoiceNumber invoiceNumber,
         Customer customer,

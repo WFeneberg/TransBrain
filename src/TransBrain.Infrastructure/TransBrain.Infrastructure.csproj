@@ -13,7 +13,14 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="PDFsharp-MigraDoc" />
     <PackageReference Include="StackExchange.Redis" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Billing\Fonts\DejaVuSans.ttf" />
+    <EmbeddedResource Include="Billing\Fonts\DejaVuSans-Bold.ttf" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -382,6 +382,9 @@ export const de: Record<MessageKey, string> = {
     'invoices.issueFailed': 'Die Rechnung konnte nicht ausgestellt werden.',
     'invoices.payFailed': 'Die Rechnung konnte nicht als bezahlt markiert werden.',
     'invoices.cancelFailed': 'Die Rechnung konnte nicht storniert werden.',
+    'invoices.downloadFailed': 'Das Rechnungsdokument konnte nicht heruntergeladen werden.',
+    'invoices.downloadPdf': 'PDF herunterladen',
+    'invoices.downloadXRechnung': 'XRechnung herunterladen',
 
     'tours.add': 'Tour anlegen',
     'tours.new': 'Neue Tour',

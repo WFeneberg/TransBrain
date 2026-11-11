@@ -831,7 +831,9 @@ sich nicht mehr rückwirkend.
 Erreichbar über die Rechnungsnummer in der Liste (`/invoices/{id}`). Zeigt den Status als
 farbigen Chip neben der Rechnungsnummer sowie — je nach Status und nur für `admin` und
 `disponent` — die Aktionen **Ausstellen**, **Als bezahlt markieren** und **Stornieren**
-(mit derselben Rückfrage „Stornierung bestätigen“ / „Rechnung behalten“).
+(mit derselben Rückfrage „Stornierung bestätigen“ / „Rechnung behalten“). Bei ausgestellten
+und bezahlten Rechnungen stehen zusätzlich für alle Rollen die Schaltflächen
+**PDF herunterladen** und **XRechnung herunterladen** bereit (siehe unten).
 
 ![Rechnungsdetail](img/vueweb/rechnungsdetail.png)
 
@@ -866,6 +868,33 @@ einer nicht stornierten Rechnung steht, taucht er im Rechnungsformular nicht meh
 abrechenbaren Aufträgen auf. Wird die Rechnung storniert, sind ihre Aufträge sofort wieder
 abrechenbar — so lässt sich eine fehlerhafte Rechnung durch Stornieren und Neuanlegen
 korrigieren, ohne dass ein Auftrag doppelt oder gar nicht abgerechnet wird.
+
+### Drucken und E-Rechnung (XRechnung)
+
+Sobald eine Rechnung **ausgestellt** oder **bezahlt** ist, erscheinen im Kopf des
+Rechnungsdetails zwei zusätzliche Schaltflächen — für **alle** Rollen, denn das Herunterladen
+ist ein Lesevorgang und verändert nichts:
+
+- **PDF herunterladen** lädt die Rechnung als druckfertiges PDF (`RE-2026-00002.pdf`):
+  Briefkopf mit Absenderzeile, Empfängeranschrift, Rechnungsnummer, Ausstellungs- und
+  Fälligkeitsdatum, Positionstabelle sowie Netto, USt. und Brutto. Bei offenen Rechnungen
+  folgt die Zahlungsaufforderung mit IBAN und Verwendungszweck, bei bezahlten ein Hinweis
+  auf den Zahlungseingang. Das PDF wird zum Drucken oder Archivieren im Browser gespeichert.
+- **XRechnung herunterladen** erzeugt die elektronische Rechnung als XML
+  (`RE-2026-00002-xrechnung.xml`) im UBL-Format nach **XRechnung 3.0** — das Format, das
+  deutsche Behörden und zunehmend Geschäftskunden verlangen. Die Datei wird per E-Mail oder
+  über ein Rechnungsportal an den Kunden übermittelt; einen automatischen Versand aus
+  TransBrain heraus gibt es nicht.
+
+Beide Exporte gibt es nur für Dokumente, also ausgestellte oder bezahlte Rechnungen. Für
+einen **Entwurf** oder eine **stornierte** Rechnung zeigt die Oberfläche die Schaltflächen
+nicht an; ein direkter API-Aufruf wird abgelehnt mit „An invoice in status 'Draft' cannot be
+exported; only issued or paid invoices can. (HTTP 409)“.
+
+Die Absenderangaben des PDFs und der XRechnung (Firmenname, Anschrift, USt-IdNr., IBAN)
+stammen aus dem Abschnitt `InvoiceSeller` der API-Konfiguration (`appsettings.json`) und
+sind im Auslieferungszustand mit Beispieldaten der TransBrain Logistik GmbH belegt — vor dem
+Echtbetrieb anpassen.
 
 ## Geodaten-Wartung
 
@@ -1001,6 +1030,7 @@ dann die passende Oberfläche.
   Fahrer für diesen Tag weiter.
 - Eine Rechnung lässt sich nach dem Anlegen nicht bearbeiten — der Korrekturweg ist Stornieren
   und Neuanlegen. Eine bezahlte Rechnung lässt sich auch nicht mehr stornieren; eine Gutschrift
-  gibt es noch nicht. Ein Rechnungsdruck (PDF) ist ebenfalls noch nicht umgesetzt.
+  gibt es noch nicht. PDF und XRechnung werden nur heruntergeladen — einen automatischen
+  Versand (z. B. per E-Mail) aus dem System heraus gibt es nicht.
 - Die Listen zeigen bis zu 100 Einträge und haben keine Blätterfunktion; darüber hinaus sind
   ältere Einträge nicht erreichbar.

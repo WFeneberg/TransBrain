@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TransBrain.Application.Abstractions;
+using TransBrain.Infrastructure.Billing;
 using TransBrain.Infrastructure.Persistence.Caching;
 using TransBrain.Infrastructure.Persistence.InvoiceNumbering;
 using TransBrain.Infrastructure.Persistence.OrderNumbering;
@@ -23,6 +24,8 @@ public static class DependencyInjection
         services.AddScoped<ITourRepository, TourRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IInvoiceNumberGenerator, SequentialInvoiceNumberGenerator>();
+        services.AddSingleton<IInvoicePdfRenderer, MigraDocInvoicePdfRenderer>();
+        services.AddSingleton<IXRechnungWriter, UblXRechnungWriter>();
         services.AddScoped<IGeoOverrideRepository, GeoOverrideRepository>();
         services.AddScoped<ICacheService, RedisCacheService>();
         services.AddHttpClient<OpenRouteServiceClient>((provider, client) =>

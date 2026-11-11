@@ -380,6 +380,9 @@ export const en = {
     'invoices.issueFailed': 'The invoice could not be issued.',
     'invoices.payFailed': 'The invoice could not be marked as paid.',
     'invoices.cancelFailed': 'The invoice could not be cancelled.',
+    'invoices.downloadFailed': 'The invoice document could not be downloaded.',
+    'invoices.downloadPdf': 'Download PDF',
+    'invoices.downloadXRechnung': 'Download XRechnung',
 
     'tours.add': 'Add tour',
     'tours.new': 'New tour',

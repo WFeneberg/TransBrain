@@ -314,4 +314,81 @@ public class InvoiceEndpointsTests(TransBrainApiFactory factory) : IClassFixture
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task ExportInvoicePdf_IssuedInvoice_ReturnsPdfFile()
+    {
+        CustomerResponse customer = await CreateCustomerAsync("PDF Export GmbH");
+        OrderResponse order = await CreateDeliveredOrderAsync("PDF Order GmbH");
+        InvoiceResponse invoice = await CreateInvoiceAsync(customer.Id, order.Id);
+        HttpClient dispatcher = factory.CreateClientAs("disponent");
+        (await dispatcher.PostAsync($"/api/invoices/{invoice.Id}/issue", null))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Viewers may download documents: exporting is a read, not a billing action.
+        HttpResponseMessage response = await factory.CreateClientAs("viewer")
+            .GetAsync($"/api/invoices/{invoice.Id}/pdf");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf");
+        response.Content.Headers.ContentDisposition!.FileName.Should().Contain(".pdf");
+        byte[] bytes = await response.Content.ReadAsByteArrayAsync();
+        bytes.Length.Should().BeGreaterThan(1_000);
+        bytes.Take(4).Should().Equal((byte)'%', (byte)'P', (byte)'D', (byte)'F');
+    }
+
+    [Fact]
+    public async Task ExportInvoicePdf_DraftInvoice_ReturnsConflict()
+    {
+        CustomerResponse customer = await CreateCustomerAsync("PDF Entwurf GmbH");
+        OrderResponse order = await CreateDeliveredOrderAsync("PDF Entwurf Order GmbH");
+        InvoiceResponse invoice = await CreateInvoiceAsync(customer.Id, order.Id);
+
+        HttpResponseMessage response = await factory.CreateClientAs("disponent")
+            .GetAsync($"/api/invoices/{invoice.Id}/pdf");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Invoice.NotADocument");
+    }
+
+    [Fact]
+    public async Task ExportInvoiceXRechnung_IssuedInvoice_ReturnsUblXml()
+    {
+        CustomerResponse customer = await CreateCustomerAsync("XRechnung Export GmbH");
+        OrderResponse order = await CreateDeliveredOrderAsync("XRechnung Order GmbH");
+        InvoiceResponse invoice = await CreateInvoiceAsync(customer.Id, order.Id, netAmount: 500m);
+        HttpClient dispatcher = factory.CreateClientAs("disponent");
+        (await dispatcher.PostAsync($"/api/invoices/{invoice.Id}/issue", null))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        HttpResponseMessage response = await factory.CreateClientAs("viewer")
+            .GetAsync($"/api/invoices/{invoice.Id}/xrechnung");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/xml");
+
+        System.Xml.Linq.XDocument doc = System.Xml.Linq.XDocument.Parse(await response.Content.ReadAsStringAsync());
+        System.Xml.Linq.XNamespace cbc =
+            "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
+        doc.Root!.Name.LocalName.Should().Be("Invoice");
+        doc.Root.Element(cbc + "ID")!.Value.Should().Be(invoice.InvoiceNumber);
+        doc.Root.Element(cbc + "CustomizationID")!.Value.Should().Contain("xrechnung_3.0");
+        doc.ToString().Should().Contain("TransBrain Logistik GmbH");
+        doc.ToString().Should().Contain("XRechnung Export GmbH");
+        doc.ToString().Should().Contain("595.00");
+    }
+
+    [Fact]
+    public async Task ExportInvoiceXRechnung_DraftInvoice_ReturnsConflict()
+    {
+        CustomerResponse customer = await CreateCustomerAsync("XRechnung Entwurf GmbH");
+        OrderResponse order = await CreateDeliveredOrderAsync("XRechnung Entwurf Order GmbH");
+        InvoiceResponse invoice = await CreateInvoiceAsync(customer.Id, order.Id);
+
+        HttpResponseMessage response = await factory.CreateClientAs("disponent")
+            .GetAsync($"/api/invoices/{invoice.Id}/xrechnung");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Invoice.NotADocument");
+    }
 }

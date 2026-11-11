@@ -89,6 +89,25 @@ export class InvoiceService {
     cancel(id: string): Observable<Invoice> {
         return this.http.post<Invoice>(`/api/invoices/${id}/cancel`, null);
     }
+
+    // Document downloads: the auth interceptor adds the token, so a plain blob GET suffices.
+    downloadPdf(id: string): Observable<Blob> {
+        return this.http.get(`/api/invoices/${id}/pdf`, { responseType: 'blob' });
+    }
+
+    downloadXRechnung(id: string): Observable<Blob> {
+        return this.http.get(`/api/invoices/${id}/xrechnung`, { responseType: 'blob' });
+    }
+}
+
+/** Hands a downloaded document blob to the browser as a named file download. */
+export function saveBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
 }
 
 export function invoiceStatusTone(status: string): string {
