@@ -22,7 +22,8 @@ public class GetCustomerLocationPositionQueryHandlerTests
         InMemoryCustomerRepository repository = new();
         repository.SeedLocations(location);
         FakeGeocoder geocoder = new FakeGeocoder().Knows("Wien", 48.19, 16.37);
-        GetCustomerLocationPositionQueryHandler handler = new(repository, geocoder, new InMemoryCacheService());
+        GetCustomerLocationPositionQueryHandler handler = new(
+            repository, new InMemoryGeoOverrideRepository(), geocoder, new InMemoryCacheService());
 
         Result<CustomerLocationPositionResponse> result = await handler.Handle(
             new GetCustomerLocationPositionQuery(customerId, location.Id), CancellationToken.None);
@@ -34,13 +35,36 @@ public class GetCustomerLocationPositionQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ManualOverrideExists_WinsOverGeocoder()
+    {
+        Guid customerId = Guid.CreateVersion7();
+        CustomerLocation location = LocationIn("Wien", customerId);
+        InMemoryCustomerRepository repository = new();
+        repository.SeedLocations(location);
+        InMemoryGeoOverrideRepository overrides = new InMemoryGeoOverrideRepository().Seed(
+            TransBrain.Domain.Routing.GeoOverride.Create(
+                "Südbahnstraße 5", "1100", "Wien", "AT", 48.00, 16.00, DateTimeOffset.UtcNow).Value);
+        FakeGeocoder geocoder = new FakeGeocoder().Knows("Wien", 48.19, 16.37);
+        GetCustomerLocationPositionQueryHandler handler = new(
+            repository, overrides, geocoder, new InMemoryCacheService());
+
+        Result<CustomerLocationPositionResponse> result = await handler.Handle(
+            new GetCustomerLocationPositionQuery(customerId, location.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Latitude.Should().Be(48.00);
+        result.Value.Longitude.Should().Be(16.00);
+    }
+
+    [Fact]
     public async Task Handle_UnknownAddress_ReturnsNotFound()
     {
         Guid customerId = Guid.CreateVersion7();
         CustomerLocation location = LocationIn("Atlantis", customerId);
         InMemoryCustomerRepository repository = new();
         repository.SeedLocations(location);
-        GetCustomerLocationPositionQueryHandler handler = new(repository, new FakeGeocoder(), new InMemoryCacheService());
+        GetCustomerLocationPositionQueryHandler handler = new(
+            repository, new InMemoryGeoOverrideRepository(), new FakeGeocoder(), new InMemoryCacheService());
 
         Result<CustomerLocationPositionResponse> result = await handler.Handle(
             new GetCustomerLocationPositionQuery(customerId, location.Id), CancellationToken.None);
@@ -57,7 +81,8 @@ public class GetCustomerLocationPositionQueryHandlerTests
         InMemoryCustomerRepository repository = new();
         repository.SeedLocations(location);
         FakeGeocoder geocoder = new() { Failure = Error.Unavailable("Routing.NotConfigured", "not configured") };
-        GetCustomerLocationPositionQueryHandler handler = new(repository, geocoder, new InMemoryCacheService());
+        GetCustomerLocationPositionQueryHandler handler = new(
+            repository, new InMemoryGeoOverrideRepository(), geocoder, new InMemoryCacheService());
 
         Result<CustomerLocationPositionResponse> result = await handler.Handle(
             new GetCustomerLocationPositionQuery(customerId, location.Id), CancellationToken.None);
@@ -70,7 +95,7 @@ public class GetCustomerLocationPositionQueryHandlerTests
     public async Task Handle_UnknownLocation_ReturnsNotFound()
     {
         GetCustomerLocationPositionQueryHandler handler = new(
-            new InMemoryCustomerRepository(), new FakeGeocoder(), new InMemoryCacheService());
+            new InMemoryCustomerRepository(), new InMemoryGeoOverrideRepository(), new FakeGeocoder(), new InMemoryCacheService());
 
         Result<CustomerLocationPositionResponse> result = await handler.Handle(
             new GetCustomerLocationPositionQuery(Guid.CreateVersion7(), Guid.CreateVersion7()), CancellationToken.None);

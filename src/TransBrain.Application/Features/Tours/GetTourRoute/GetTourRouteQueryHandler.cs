@@ -14,6 +14,7 @@ internal sealed class GetTourRouteQueryHandler(
     IDriverRepository drivers,
     ITransportOrderRepository orders,
     ICurrentUser currentUser,
+    IGeoOverrideRepository geoOverrides,
     IGeocoder geocoder,
     IRoutePlanner routePlanner,
     ICacheService cache)
@@ -111,7 +112,8 @@ internal sealed class GetTourRouteQueryHandler(
             }
 
             Address address = stop.StopType == StopType.Pickup ? order.Consignor : order.Consignee;
-            Result<GeoPoint> point = await LocationResolver.ResolveAsync(address, geocoder, cache, cancellationToken);
+            Result<GeoPoint> point = await LocationResolver.ResolveAsync(
+                address, geoOverrides, geocoder, cache, cancellationToken);
             if (!point.IsSuccess)
             {
                 return point.Error!;

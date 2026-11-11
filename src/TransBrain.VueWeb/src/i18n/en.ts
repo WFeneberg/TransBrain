@@ -388,6 +388,45 @@ export const en = {
     'route.stopType.Delivery': 'Delivery',
 
     'callback.error': 'Sign-in could not be completed. Please try again.',
+
+    'nav.geodata': 'Geodata',
+    'geodata.title': 'Geodata maintenance',
+    'geodata.subtitle':
+        'Coordinates for every known address - fix wrong positions or add missing ones manually',
+    'geodata.add': 'Add coordinates',
+    'geodata.filter': 'Filter addresses',
+    'geodata.count': '{count} addresses',
+    'geodata.address': 'Address',
+    'geodata.coordinates': 'Coordinates',
+    'geodata.latitude': 'Latitude',
+    'geodata.longitude': 'Longitude',
+    'geodata.latitudeRange': 'Please enter a latitude between -90 and 90.',
+    'geodata.longitudeRange': 'Please enter a longitude between -180 and 180.',
+    'geodata.countryHint': 'ISO code, e.g. DE',
+    'geodata.countryInvalid': 'Please enter the two-letter ISO code, e.g. DE.',
+    'geodata.coordinatesHint':
+        'Decimal degrees (WGS 84), e.g. 48.37154, 10.89851. Manual coordinates take precedence over the geocoder.',
+    'geodata.usedBy': 'Used by',
+    'geodata.usage': '{orders} orders · {locations} locations',
+    'geodata.notInUse': 'Not in use',
+    'geodata.source.manual': 'Manual',
+    'geodata.source.geocoded': 'Geocoded',
+    'geodata.source.unresolved': 'Unresolved',
+    'geodata.editTitle': 'Set coordinates manually',
+    'geodata.newTitle': 'Add address with coordinates',
+    'geodata.setCoordinates': 'Set coordinates',
+    'geodata.resolve': 'Try geocoding',
+    'geodata.deleteOverride': 'Remove manual coordinates',
+    'geodata.deleteTitle': 'Remove manual coordinates',
+    'geodata.deleteConfirm':
+        'Remove the manual coordinates for {street}, {city}? The address falls back to the geocoder.',
+    'geodata.empty': 'No addresses found.',
+    'geodata.error.list': 'The geodata could not be loaded.',
+    'geodata.error.save': 'The coordinates could not be saved.',
+    'geodata.error.delete': 'The manual coordinates could not be removed.',
+    'geodata.error.resolve': 'The address could not be resolved.',
+    'geodata.error.resolveFailed':
+        'The geocoder does not know this address. Set the coordinates manually.',
 };
 
 export type MessageKey = keyof typeof en;

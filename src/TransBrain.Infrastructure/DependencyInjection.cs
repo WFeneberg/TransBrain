@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<ITransportOrderRepository, TransportOrderRepository>();
         services.AddScoped<IOrderNumberGenerator, SequentialOrderNumberGenerator>();
         services.AddScoped<ITourRepository, TourRepository>();
+        services.AddScoped<IGeoOverrideRepository, GeoOverrideRepository>();
         services.AddScoped<ICacheService, RedisCacheService>();
         services.AddHttpClient<OpenRouteServiceClient>((provider, client) =>
             client.BaseAddress = new Uri(provider.GetRequiredService<IOptions<OpenRouteServiceOptions>>().Value.BaseUrl));

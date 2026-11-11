@@ -403,4 +403,43 @@ export const de: Record<keyof typeof en, string> = {
         'Die Adresse „{address}“ wurde im geladenen Kartenausschnitt nicht gefunden. Ohne sie lässt sich die Route nicht berechnen.',
     'tours.route.error.unavailable':
         'Die Routenberechnung ist derzeit nicht verfügbar. Der Routing-Dienst ist nicht konfiguriert oder nicht erreichbar.',
+
+    'nav.geodata': 'Geodaten',
+    'geodata.title': 'Geodaten-Wartung',
+    'geodata.subtitle':
+        'Koordinaten aller bekannten Adressen – falsche Positionen korrigieren oder fehlende manuell ergänzen',
+    'geodata.signIn': 'Bitte anmelden, um Geodaten zu pflegen.',
+    'geodata.add': 'Koordinaten ergänzen',
+    'geodata.filter': 'Adressen filtern',
+    'geodata.count': '{count} Adressen',
+    'geodata.address': 'Adresse',
+    'geodata.coordinates': 'Koordinaten',
+    'geodata.latitude': 'Breitengrad',
+    'geodata.longitude': 'Längengrad',
+    'geodata.latitudeRange': 'Bitte einen Breitengrad zwischen -90 und 90 eingeben.',
+    'geodata.longitudeRange': 'Bitte einen Längengrad zwischen -180 und 180 eingeben.',
+    'geodata.countryHint': 'ISO-Code, z. B. DE',
+    'geodata.coordinatesHint':
+        'Dezimalgrad (WGS 84), z. B. 48.37154, 10.89851. Manuelle Koordinaten haben Vorrang vor dem Geocoder.',
+    'geodata.usedBy': 'Verwendet von',
+    'geodata.usage': '{orders} Aufträge · {locations} Standorte',
+    'geodata.notInUse': 'Nicht verwendet',
+    'geodata.source.manual': 'Manuell',
+    'geodata.source.geocoded': 'Geokodiert',
+    'geodata.source.unresolved': 'Offen',
+    'geodata.editTitle': 'Koordinaten manuell setzen',
+    'geodata.newTitle': 'Adresse mit Koordinaten ergänzen',
+    'geodata.setCoordinates': 'Koordinaten setzen',
+    'geodata.resolve': 'Geokodierung versuchen',
+    'geodata.deleteOverride': 'Manuelle Koordinaten entfernen',
+    'geodata.deleteTitle': 'Manuelle Koordinaten entfernen',
+    'geodata.deleteConfirm':
+        'Manuelle Koordinaten für {street}, {city} entfernen? Die Adresse fällt auf den Geocoder zurück.',
+    'geodata.empty': 'Keine Adressen gefunden.',
+    'geodata.error.list': 'Die Geodaten konnten nicht geladen werden.',
+    'geodata.error.save': 'Die Koordinaten konnten nicht gespeichert werden.',
+    'geodata.error.delete': 'Die manuellen Koordinaten konnten nicht entfernt werden.',
+    'geodata.error.resolve': 'Die Adresse konnte nicht aufgelöst werden.',
+    'geodata.error.resolveFailed':
+        'Der Geocoder kennt diese Adresse nicht. Bitte Koordinaten manuell setzen.',
 };

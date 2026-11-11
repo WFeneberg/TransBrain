@@ -248,6 +248,13 @@ Until the containers are ready, and for addresses outside the extract, the endpo
 `404`. A route is never estimated from straight-line distances, because that would ignore truck
 restrictions.
 
+Addresses the geocoder does not know can be given coordinates by hand on the geodata maintenance
+page (`/geodata` in both frontends). `GET /api/geodata` (`Read`) lists every address used by orders
+and customer locations with its resolution status; `PUT /api/geodata/overrides` and
+`DELETE /api/geodata/overrides/{id}` (`MasterDataWrite`) maintain manual overrides, and
+`POST /api/geodata/resolve` (`Read`) probes a single address. A manual override takes precedence
+over the geocoder everywhere a position is resolved.
+
 The timeline follows Regulation (EC) No 561/2006: a 45-minute break after 4 h 30 min of continuous
 driving, 9 h daily driving (10 h is flagged as an extension, allowed twice a week), and the 11 h
 daily rest that follows. Countries outside the EU, EEA, Switzerland and Great Britain are reported
@@ -295,8 +302,8 @@ German, change both lines above (in `src/TransBrain.Api/Program.cs`) to
 
 ## Running the tests
 
-Domain, Application and the Testcontainers-backed API integration tests (375 tests at
-time of writing: 131 Domain, 171 Application, 73 API integration) all run with:
+Domain, Application and the Testcontainers-backed API integration tests (732 tests at
+time of writing: 275 Domain, 324 Application, 133 API integration) all run with:
 
 ```bash
 dotnet test TransBrain.slnx
@@ -304,9 +311,9 @@ dotnet test TransBrain.slnx
 
 This requires Docker to be running (for the integration tests).
 
-Each frontend additionally has Playwright end-to-end tests (6 spec files per frontend, 30
+Each frontend additionally has Playwright end-to-end tests (12 spec files per frontend, 46
 tests, covering the role-based home page for all four realm roles, sign-in and sign-out, the
-route guards, and the vehicle, driver, order and tour screens):
+route guards, and the vehicle, driver, customer, order, tour and geodata screens):
 
 ```bash
 npm run e2e

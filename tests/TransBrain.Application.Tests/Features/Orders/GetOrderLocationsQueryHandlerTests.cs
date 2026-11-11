@@ -9,8 +9,11 @@ namespace TransBrain.Application.Tests.Features.Orders;
 
 public class GetOrderLocationsQueryHandlerTests
 {
-    private static GetOrderLocationsQueryHandler Handler(InMemoryTransportOrderRepository orders, FakeGeocoder geocoder) =>
-        new(orders, geocoder, new InMemoryCacheService());
+    private static GetOrderLocationsQueryHandler Handler(
+        InMemoryTransportOrderRepository orders,
+        FakeGeocoder geocoder,
+        InMemoryGeoOverrideRepository? overrides = null) =>
+        new(orders, overrides ?? new InMemoryGeoOverrideRepository(), geocoder, new InMemoryCacheService());
 
     [Fact]
     public async Task Handle_BothAddressesLocatable_ReturnsBothPlaces()

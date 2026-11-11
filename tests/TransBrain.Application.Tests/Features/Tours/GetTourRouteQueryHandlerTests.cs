@@ -22,7 +22,7 @@ public class GetTourRouteQueryHandlerTests
         FakeRoutePlanner planner,
         Fakes.StubCurrentUser? caller = null) =>
         new(f.Tours, f.Vehicles, f.Drivers, f.Orders, caller ?? Fakes.StubCurrentUser.Dispatcher(),
-            geocoder, planner, new InMemoryCacheService());
+            new InMemoryGeoOverrideRepository(), geocoder, planner, new InMemoryCacheService());
 
     [Fact]
     public async Task Handle_TwoStopTour_ReturnsRouteStopsAndSchedule()

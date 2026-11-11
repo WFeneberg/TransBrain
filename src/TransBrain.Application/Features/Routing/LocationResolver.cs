@@ -5,22 +5,31 @@ using TransBrain.Domain.Routing;
 namespace TransBrain.Application.Features.Routing;
 
 /// <remarks>
-/// Geocoding is paid per call and rate limited, and an address rarely moves. A resolved point is
-/// cached under the address itself, so the map and the route planner share one lookup. Only
-/// successes are cached: a failure may be a transient outage that the next request should retry.
+/// A manual override is checked first: an operator-maintained position must win over anything the
+/// geocoder once answered, and the cache only ever stores geocoder results, so removing an
+/// override cleanly falls back to the automatic path. Geocoding is paid per call and rate
+/// limited, and an address rarely moves. A resolved point is cached under the address itself, so
+/// the map and the route planner share one lookup. Only successes are cached: a failure may be a
+/// transient outage that the next request should retry.
 /// </remarks>
 internal static class LocationResolver
 {
     public static async Task<Result<GeoPoint>> ResolveAsync(
         Address address,
+        IGeoOverrideRepository overrides,
         IGeocoder geocoder,
         ICacheService cache,
         CancellationToken cancellationToken)
     {
-        string key = $"geocode:{address.Country}|{address.PostalCode}|{address.City}|{address.Street}"
-            .ToLowerInvariant();
+        GeoOverride? manual = await overrides.GetByKeyAsync(GeoOverride.BuildKey(address), cancellationToken);
+        if (manual is not null)
+        {
+            return manual.Position;
+        }
 
-        CachedPoint? cached = await cache.GetAsync<CachedPoint>(key, cancellationToken);
+        string key = GeocodeCache.Key(address);
+
+        GeocodeCache.CachedPoint? cached = await cache.GetAsync<GeocodeCache.CachedPoint>(key, cancellationToken);
         if (cached is not null)
         {
             return GeoPoint.Create(cached.Latitude, cached.Longitude);
@@ -31,13 +40,10 @@ internal static class LocationResolver
         {
             await cache.SetAsync(
                 key,
-                new CachedPoint(resolved.Value.Latitude, resolved.Value.Longitude),
+                new GeocodeCache.CachedPoint(resolved.Value.Latitude, resolved.Value.Longitude),
                 cancellationToken);
         }
 
         return resolved;
     }
-
-    // GeoPoint keeps its constructor private, so the cache stores this plain shape instead.
-    private sealed record CachedPoint(double Latitude, double Longitude);
 }

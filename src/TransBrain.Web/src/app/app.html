@@ -18,6 +18,9 @@
             @if (session.areas().has('tours')) {
                 <a mat-button routerLink="/tours" data-testid="nav-tours">{{ i18n.t('nav.tours') }}</a>
             }
+            @if (session.can('masterData.write')) {
+                <a mat-button routerLink="/geodata" data-testid="nav-geodata">{{ i18n.t('nav.geodata') }}</a>
+            }
         </nav>
         <span class="spacer"></span>
         <span class="user-name" data-testid="nav-user">{{ session.displayName() }}</span>

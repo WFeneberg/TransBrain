@@ -162,6 +162,54 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.ToTable("transport_orders", (string)null);
                 });
 
+            modelBuilder.Entity("TransBrain.Domain.Routing.GeoOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AddressKey")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("address_key");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("country");
+
+                    b.Property<string>("PostalCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("postal_code");
+
+                    b.Property<string>("Street")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("street");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AddressKey")
+                        .IsUnique();
+
+                    b.ToTable("geo_overrides", (string)null);
+                });
+
             modelBuilder.Entity("TransBrain.Domain.Tours.Tour", b =>
                 {
                     b.Property<Guid>("Id")
@@ -881,6 +929,33 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("PickupWindow")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Routing.GeoOverride", b =>
+                {
+                    b.OwnsOne("TransBrain.Domain.Routing.GeoPoint", "Position", b1 =>
+                        {
+                            b1.Property<Guid>("GeoOverrideId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<double>("Latitude")
+                                .HasColumnType("double precision")
+                                .HasColumnName("latitude");
+
+                            b1.Property<double>("Longitude")
+                                .HasColumnType("double precision")
+                                .HasColumnName("longitude");
+
+                            b1.HasKey("GeoOverrideId");
+
+                            b1.ToTable("geo_overrides");
+
+                            b1.WithOwner()
+                                .HasForeignKey("GeoOverrideId");
+                        });
+
+                    b.Navigation("Position")
                         .IsRequired();
                 });
 

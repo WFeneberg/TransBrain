@@ -753,6 +753,62 @@ Fahrerdatensatz zu **niemandem, der sich anmelden kann** — dessen Touren kann 
 Fahrer starten. Das ist Absicht: Ein leeres Feld als „passt zu jedem“ zu behandeln, würde die
 Tour dem erstbesten Fahrer überlassen.
 
+## Geodaten-Wartung
+
+Erreichbar über den Menüpunkt **Geodata** (`/geodata`). Der Menüpunkt erscheint nur für
+Administratoren; über die Adresszeile können alle Rollen die Seite lesend öffnen.
+
+Hintergrund: Für Kartenpositionen und Tourrouten übersetzt das System Adressen in Koordinaten.
+Das erledigt der eingebaute Geocoder, der nur die Adressen seines Kartenausschnitts kennt.
+Adressen außerhalb davon bleiben ohne Koordinaten — das Tourendetail kann ihre Route dann nicht
+zeichnen. Diese Seite zeigt den Stand aller verwendeten Adressen und lässt Administratoren
+fehlende Koordinaten von Hand nachtragen oder falsche korrigieren.
+
+![Geodaten-Wartung](img/vueweb/geodaten.png)
+
+- Die Liste enthält jede Adresse aus Aufträgen (Abhol- und Lieferadressen) und
+  Kunden-Standorten, sortiert nach Land, Ort und Straße; die Anzahl steht rechts oben
+  (z. B. „14 addresses“).
+- **Spalten:** Address (Straße, darunter PLZ, Ort und Land), Coordinates (Breite und Länge
+  mit fünf Nachkommastellen, „—“ wenn unbekannt), Status und **Used by** — wie viele
+  Aufträge und Standorte die Adresse gerade verwenden (z. B. „1 orders · 0 locations“).
+- **Status:**
+  - **Manual** (blau): Koordinaten wurden von Hand gesetzt. Sie haben überall Vorrang
+    vor dem Geocoder — in Tourrouten, Auftragspositionen und Standortanzeigen.
+  - **Geocoded** (grün): der Geocoder hat die Adresse bereits aufgelöst.
+  - **Unresolved** (rot): noch keine Koordinaten bekannt.
+- **Filterleiste:** **„Filter addresses“** sucht in Straße, PLZ, Ort und Land; die Schalter
+  **All / Manual / Geocoded / Unresolved** schränken auf einen Status ein. Passt nichts,
+  erscheint „No addresses found.“
+- Aktionen pro Zeile (nur `admin`):
+  - **„Try geocoding“** (nur bei nicht-manuellen Zeilen) fragt den Geocoder an. Kennt er
+    die Adresse, wird die Zeile zu **Geocoded**; sonst meldet die Seite „The geocoder does
+    not know this address. Set the coordinates manually.“
+  - **„Set coordinates“** öffnet den Koordinaten-Dialog (siehe unten); die Adresse ist dort
+    schreibgeschützt.
+  - **„Remove manual coordinates“** (nur bei **Manual**) entfernt die manuellen Koordinaten
+    nach einer Sicherheitsabfrage („Remove the manual coordinates for …? The address falls
+    back to the geocoder.“).
+- **„Add coordinates“** legt Koordinaten für eine ganz neue Adresse an, bevor sie in einem
+  Auftrag oder Standort verwendet wird.
+- Manuelle Einträge zu Adressen, die nirgends mehr vorkommen, bleiben mit dem Hinweis
+  **„Not in use“** sichtbar, damit sie aufgeräumt werden können.
+
+![Geodaten-Dialog](img/vueweb/geodaten-dialog.png)
+
+Der Dialog **„Set coordinates manually“** (bzw. **„Add address with coordinates“** bei einer
+neuen Adresse) erwartet:
+
+| Feld | Pflicht | Regeln |
+|---|:---:|---|
+| Street, Postal code, City | ja | bei einer bestehenden Adresse schreibgeschützt |
+| Country | ja | ISO-Code, z. B. `DE` oder `AT` |
+| Latitude | ja | Dezimalgrad (WGS 84), −90 bis 90 |
+| Longitude | ja | Dezimalgrad (WGS 84), −180 bis 180 |
+
+Erneutes Speichern derselben Adresse überschreibt den bestehenden Eintrag — es entsteht kein
+Duplikat. Die Koordinaten entnehmen Sie z. B. einem Kartendienst (Rechtsklick auf den Punkt).
+
 ## Rollen und Rechte
 
 Die Anmeldung erfolgt über Keycloak mit genau einer der vier Rollen `admin`,
@@ -776,7 +832,9 @@ und abschließen — siehe Abschnitt „Touren als Fahrer“.
 **Die Oberfläche bietet nur an, was Ihre Rolle auch darf.** Die Schaltflächen
 „Add vehicle“/„Add driver“/„Add customer“, „Edit“ und „Delete“ erscheinen ausschließlich für die Rolle
 `admin`; „New order“, „Edit“, „Cancel order“ und „Plan tour“ nur für `admin` und
-`disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Wer
+`disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Der
+Menüpunkt **Geodata** und die Änderungen der Geodaten-Wartung („Add coordinates“,
+„Set coordinates“, „Remove manual coordinates“) sind ebenfalls `admin` vorbehalten. Wer
 eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
 
 Das **Lesen** ist davon unberührt: alle vier Rollen dürfen alle Listen ansehen, mit der

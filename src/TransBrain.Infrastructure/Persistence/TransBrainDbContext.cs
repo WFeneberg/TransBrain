@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TransBrain.Domain.Customers;
 using TransBrain.Domain.Drivers;
 using TransBrain.Domain.Orders;
+using TransBrain.Domain.Routing;
 using TransBrain.Domain.Tours;
 using TransBrain.Domain.Vehicles;
 
@@ -24,6 +25,8 @@ public sealed class TransBrainDbContext(DbContextOptions<TransBrainDbContext> op
     public DbSet<Customer> Customers => Set<Customer>();
 
     public DbSet<CustomerLocation> CustomerLocations => Set<CustomerLocation>();
+
+    public DbSet<GeoOverride> GeoOverrides => Set<GeoOverride>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

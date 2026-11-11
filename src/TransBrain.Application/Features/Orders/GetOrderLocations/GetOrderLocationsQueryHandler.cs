@@ -9,6 +9,7 @@ namespace TransBrain.Application.Features.Orders.GetOrderLocations;
 
 internal sealed class GetOrderLocationsQueryHandler(
     ITransportOrderRepository orders,
+    IGeoOverrideRepository geoOverrides,
     IGeocoder geocoder,
     ICacheService cache)
     : IQueryHandler<GetOrderLocationsQuery, OrderLocationsResponse>
@@ -42,7 +43,8 @@ internal sealed class GetOrderLocationsQueryHandler(
     // being down or unconfigured, is reported, because the map cannot be drawn honestly without it.
     private async Task<Result<PlaceResponse?>> PlaceAsync(Address address, CancellationToken cancellationToken)
     {
-        Result<GeoPoint> point = await LocationResolver.ResolveAsync(address, geocoder, cache, cancellationToken);
+        Result<GeoPoint> point = await LocationResolver.ResolveAsync(
+            address, geoOverrides, geocoder, cache, cancellationToken);
 
         if (point.IsSuccess)
         {
