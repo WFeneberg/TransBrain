@@ -200,8 +200,10 @@ quick dev setup use `.../germany/bayern/oberbayern-latest.osm.pbf` instead.
 The AppHost injects both addresses into the Api (`OpenRouteService__BaseUrl`, `Nominatim__BaseUrl`). The Api
 does not wait for them: until a container is healthy, `GET /api/tours/{id}/route` and the position/location
 endpoints answer `503`. Addresses and routes outside the extract are not found (`404 Geocoding.NoMatch`) —
-with a Bavarian extract that includes the Austrian addresses of `scripts/seed-testdata.py`. Several seed
-addresses also use invented street names, which no geocoder finds; only real addresses get a map pin.
+with a Bavarian extract that includes the Austrian addresses of `scripts/seed-testdata.py`. The seed tour
+Weilheim → München and the locations in Landsberg, Kaufering and München use real addresses in Upper
+Bavaria, so they get map pins and a route even with the small `oberbayern` extract; the other seed
+addresses lie outside it or use invented street names.
 
 - **Other region:** stop the AppHost, replace `data/osm/region.osm.pbf`, delete both volumes
   (`docker volume rm transbrain-ors transbrain-nominatim`), start again. Both containers take exactly one
