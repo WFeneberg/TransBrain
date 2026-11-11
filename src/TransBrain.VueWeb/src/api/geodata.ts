@@ -55,6 +55,18 @@ export interface GeodataPosition {
     source: GeodataSource;
 }
 
+/** One self-hosted map service: reachable or not, and the OSM data date it reports. */
+export interface MapServiceStatus {
+    available: boolean;
+    osmDataUpdatedAt: string | null;
+}
+
+/** State of the map material: geocoder (Nominatim) and route planner (OpenRouteService). */
+export interface MapDataStatus {
+    geocoder: MapServiceStatus;
+    routing: MapServiceStatus;
+}
+
 const client = axios.create({ baseURL: '/api' });
 
 client.interceptors.request.use(async (config) => {
@@ -85,5 +97,11 @@ export async function deleteGeodataOverride(id: string): Promise<void> {
 /** Resolves now (override, cache or live geocoder); a geocoder success fills the cache. */
 export async function resolveGeodata(request: GeodataResolveRequest): Promise<GeodataPosition> {
     const response = await client.post<GeodataPosition>('/geodata/resolve', request);
+    return response.data;
+}
+
+/** Whether the self-hosted map services are up and how old their map data is. */
+export async function getMapDataStatus(): Promise<MapDataStatus> {
+    const response = await client.get<MapDataStatus>('/geodata/map-status');
     return response.data;
 }

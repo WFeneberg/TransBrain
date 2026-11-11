@@ -182,4 +182,26 @@ public class GeodataEndpointsTests(TransBrainApiFactory factory) : IClassFixture
 
         response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
     }
+
+    [Fact]
+    public async Task MapStatus_Anonymous_IsUnauthorized()
+    {
+        HttpResponseMessage response = await factory.CreateClient().GetAsync("/api/geodata/map-status");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task MapStatus_AsViewer_ReportsBothServicesHonestly()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("viewer").GetAsync("/api/geodata/map-status");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using JsonDocument json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        // The factory wires the offline provider, so both services report as down - a 200, not an error.
+        json.RootElement.GetProperty("geocoder").GetProperty("available").GetBoolean().Should().BeFalse();
+        json.RootElement.GetProperty("geocoder").GetProperty("osmDataUpdatedAt").ValueKind
+            .Should().Be(JsonValueKind.Null);
+        json.RootElement.GetProperty("routing").GetProperty("available").GetBoolean().Should().BeFalse();
+    }
 }

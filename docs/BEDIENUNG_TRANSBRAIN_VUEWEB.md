@@ -809,6 +809,27 @@ neuen Adresse) erwartet:
 Erneutes Speichern derselben Adresse überschreibt den bestehenden Eintrag — es entsteht kein
 Duplikat. Die Koordinaten entnehmen Sie z. B. einem Kartendienst (Rechtsklick auf den Punkt).
 
+### Kartenmaterial (OSM)
+
+Oberhalb der Liste zeigt eine Statuskarte die beiden Kartendienste des Systems:
+
+- **Geocoder (Nominatim)** — übersetzt Adressen in Koordinaten.
+- **Routing (OpenRouteService)** — berechnet die Tourrouten.
+
+Je Dienst steht dort **Ready** (grünes Häkchen) oder **Unavailable** (durchgestrichene Wolke)
+und, sobald der Dienst es meldet, das Alter des Kartenmaterials („OSM data from …“). So ist auf
+einen Blick erkennbar, ob fehlende Koordinaten am Kartenausschnitt, an veraltetem Material oder
+an einem nicht laufenden Dienst liegen. Lässt sich der Status selbst nicht abrufen, wird die
+Karte ausgeblendet.
+
+Beide Dienste lesen einen OpenStreetMap-Auszug, der auf dem Server liegt. **Das Aktualisieren
+oder Ersetzen des Kartenmaterials ist bewusst keine Funktion dieser Seite**, sondern eine
+Verwaltungsaufgabe am Server: Dort wird der Auszug ausgetauscht und beim nächsten Start der
+Dienste neu importiert — das dauert je nach Region Minuten bis Stunden (Skript
+`scripts/update-osm-extract.py`, Details im Developer Guide, Abschnitt 4.1). Zeigt die
+Statuskarte **Unavailable**, läuft gerade ein solcher Import oder der Dienst ist gestoppt; die
+Seite bleibt benutzbar, nur „Try geocoding“ und neue Routenberechnungen schlagen solange fehl.
+
 ## Rollen und Rechte
 
 Die Anmeldung erfolgt über Keycloak mit genau einer der vier Rollen `admin`,

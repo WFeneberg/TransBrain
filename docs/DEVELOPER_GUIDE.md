@@ -205,9 +205,15 @@ Weilheim → München and the locations in Landsberg, Kaufering and München use
 Bavaria, so they get map pins and a route even with the small `oberbayern` extract; the other seed
 addresses lie outside it or use invented street names.
 
-- **Other region:** stop the AppHost, replace `data/osm/region.osm.pbf`, delete both volumes
-  (`docker volume rm transbrain-ors transbrain-nominatim`), start again. Both containers take exactly one
-  file; merge extracts with `osmium merge` if you need several.
+- **Updating / other region:** `python scripts/update-osm-extract.py [--region oberbayern|bayern|germany | --url <geofabrik-url>]`
+  downloads a fresh extract to `data/osm/region.osm.pbf` and removes both volumes, so the next start
+  re-imports (run with the AppHost stopped; `--keep-volumes` only swaps the file). Manually that is: stop
+  the AppHost, replace the file, `docker volume rm transbrain-ors transbrain-nominatim`, start again. Both
+  containers take exactly one file; merge extracts with `osmium merge` if you need several.
+- **Status:** `GET /api/geodata/map-status` probes both services (Nominatim `/status`, ORS `/v2/health`)
+  and reports availability plus the OSM data date; the geodata page in both frontends shows it as a status
+  card. There is deliberately no import button — the import runs for minutes to hours inside the containers
+  and the Api has no (and should get no) Docker access.
 - **Sizing:** the ORS heap is `XMX` in `AppHost.cs` (4g; rule of thumb 2 × pbf size per profile). All of
   Germany needs a server (tens of GB of RAM, >100 GB disk, a day or more of import).
 - **Still external:** the map background tiles in both frontends load from `tile.openstreetmap.org`.

@@ -29,6 +29,7 @@ public static class DependencyInjection
                 provider.GetRequiredService<IConfiguration>()["Nominatim:BaseUrl"] ?? "http://localhost:8088/"));
         services.AddTransient<IGeocoder>(provider => provider.GetRequiredService<NominatimGeocoder>());
         services.AddTransient<IRoutePlanner>(provider => provider.GetRequiredService<OpenRouteServiceClient>());
+        services.AddTransient<IMapDataStatusProvider, MapDataStatusProvider>();
         return services;
     }
 }

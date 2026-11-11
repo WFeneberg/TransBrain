@@ -429,4 +429,11 @@ export const de: Record<MessageKey, string> = {
     'geodata.error.resolve': 'Die Adresse konnte nicht aufgelöst werden.',
     'geodata.error.resolveFailed':
         'Der Geocoder kennt diese Adresse nicht. Bitte Koordinaten manuell setzen.',
+    'geodata.mapData.geocoder': 'Geocoder (Nominatim)',
+    'geodata.mapData.routing': 'Routing (OpenRouteService)',
+    'geodata.mapData.ready': 'Bereit',
+    'geodata.mapData.unavailable': 'Nicht verfügbar',
+    'geodata.mapData.dataFrom': 'OSM-Daten vom {date}',
+    'geodata.mapData.hint':
+        'Beide Dienste lesen einen OpenStreetMap-Auszug auf dem Server. Das Aktualisieren oder Ersetzen des Kartenmaterials übernimmt die Administration — siehe Bedienungsanleitung.',
 };

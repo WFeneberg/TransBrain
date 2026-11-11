@@ -3,6 +3,7 @@ using TransBrain.Api.Common;
 using TransBrain.Application.Common.Messaging;
 using TransBrain.Application.Features.Geodata;
 using TransBrain.Application.Features.Geodata.DeleteGeodataOverride;
+using TransBrain.Application.Features.Geodata.GetMapDataStatus;
 using TransBrain.Application.Features.Geodata.ListGeodata;
 using TransBrain.Application.Features.Geodata.ResolveGeodata;
 using TransBrain.Application.Features.Geodata.SetGeodataOverride;
@@ -28,6 +29,17 @@ public sealed class GeodataEndpoints : IEndpointGroup
             .RequireAuthorization(Policies.Read)
             .WithName("ListGeodata")
             .Produces<GeodataEntryResponse[]>();
+
+        // The map extract is updated on the server (see the operator guide); this only shows
+        // whether the self-hosted services are up and how old their OSM data is.
+        group.MapGet("/map-status", async (ISender sender, CancellationToken ct) =>
+            {
+                Result<MapDataStatusResponse> result = await sender.Send(new GetMapDataStatusQuery(), ct);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.Read)
+            .WithName("GetMapDataStatus")
+            .Produces<MapDataStatusResponse>();
 
         group.MapPut("/overrides", async (SetGeodataOverrideRequest request, ISender sender, CancellationToken ct) =>
             {

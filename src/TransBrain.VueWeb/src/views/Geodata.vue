@@ -3,11 +3,13 @@ import axios from 'axios';
 import { computed, onMounted, reactive, ref } from 'vue';
 import {
     deleteGeodataOverride,
+    getMapDataStatus,
     listGeodata,
     resolveGeodata,
     setGeodataOverride,
     type GeodataEntry,
     type GeodataSource,
+    type MapDataStatus,
 } from '../api/geodata';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { vNativeTestid } from '../directives/nativeTestId';
@@ -39,7 +41,7 @@ const SOURCE_ICONS: Record<GeodataSource, string> = {
 };
 
 const auth = useAuthStore();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const canWrite = computed(() => auth.can('masterData.write'));
 
@@ -49,6 +51,8 @@ const loadFailed = ref(false);
 const errorMessage = ref<string | null>(null);
 const filterText = ref('');
 const sourceFilter = ref<'all' | GeodataSource>('all');
+/** null while loading or when the status call itself failed — the card is simply absent. */
+const mapStatus = ref<MapDataStatus | null>(null);
 /** The address key of the row whose resolve request is in flight. */
 const resolvingKey = ref<string | null>(null);
 
@@ -92,7 +96,26 @@ const filtered = computed(() => {
     });
 });
 
-onMounted(refresh);
+onMounted(() => {
+    void refresh();
+    void loadMapStatus();
+});
+
+// Loaded once per visit: the extract on the server does not change while the page is open.
+async function loadMapStatus(): Promise<void> {
+    try {
+        mapStatus.value = await getMapDataStatus();
+    } catch {
+        mapStatus.value = null;
+    }
+}
+
+function formatOsmDate(iso: string): string {
+    return new Date(iso).toLocaleString(locale.value === 'de' ? 'de-DE' : 'en-US', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+    });
+}
 
 async function refresh(): Promise<void> {
     loading.value = true;
@@ -275,6 +298,44 @@ function describe(error: unknown, fallback: string): string {
         </div>
 
         <p v-if="errorMessage" class="text-error error-line" data-testid="geodata-error">{{ errorMessage }}</p>
+
+        <v-card v-if="mapStatus" border flat class="map-status-card" data-testid="geodata-map-status">
+            <div class="map-services">
+                <span
+                    class="map-service"
+                    :class="{ down: !mapStatus.geocoder.available }"
+                    data-testid="geodata-map-geocoder"
+                >
+                    <v-icon
+                        :icon="mapStatus.geocoder.available ? 'mdi-check-circle-outline' : 'mdi-cloud-off-outline'"
+                        :color="mapStatus.geocoder.available ? 'success' : 'error'"
+                        size="18"
+                    />
+                    {{ t('geodata.mapData.geocoder') }}:
+                    {{ t(mapStatus.geocoder.available ? 'geodata.mapData.ready' : 'geodata.mapData.unavailable') }}
+                    <template v-if="mapStatus.geocoder.osmDataUpdatedAt">
+                        · {{ t('geodata.mapData.dataFrom', { date: formatOsmDate(mapStatus.geocoder.osmDataUpdatedAt) }) }}
+                    </template>
+                </span>
+                <span
+                    class="map-service"
+                    :class="{ down: !mapStatus.routing.available }"
+                    data-testid="geodata-map-routing"
+                >
+                    <v-icon
+                        :icon="mapStatus.routing.available ? 'mdi-check-circle-outline' : 'mdi-cloud-off-outline'"
+                        :color="mapStatus.routing.available ? 'success' : 'error'"
+                        size="18"
+                    />
+                    {{ t('geodata.mapData.routing') }}:
+                    {{ t(mapStatus.routing.available ? 'geodata.mapData.ready' : 'geodata.mapData.unavailable') }}
+                    <template v-if="mapStatus.routing.osmDataUpdatedAt">
+                        · {{ t('geodata.mapData.dataFrom', { date: formatOsmDate(mapStatus.routing.osmDataUpdatedAt) }) }}
+                    </template>
+                </span>
+            </div>
+            <p class="map-hint text-medium-emphasis">{{ t('geodata.mapData.hint') }}</p>
+        </v-card>
 
         <v-card border flat class="table-card">
             <div class="card-toolbar">
@@ -547,6 +608,28 @@ function describe(error: unknown, fallback: string): string {
 
 .error-line {
     margin-bottom: 16px;
+}
+
+.map-status-card {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+}
+
+.map-services {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+}
+
+.map-service {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.map-hint {
+    margin: 8px 0 0;
+    font-size: 0.875rem;
 }
 
 .card-toolbar {

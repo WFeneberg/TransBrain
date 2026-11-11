@@ -62,6 +62,18 @@ export interface GeodataPosition {
     source: GeodataSource;
 }
 
+/** One self-hosted map service: reachable or not, and the OSM data date it reports. */
+export interface MapServiceStatus {
+    available: boolean;
+    osmDataUpdatedAt: string | null;
+}
+
+/** State of the map material: geocoder (Nominatim) and route planner (OpenRouteService). */
+export interface MapDataStatus {
+    geocoder: MapServiceStatus;
+    routing: MapServiceStatus;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GeodataService {
     private readonly http = inject(HttpClient);
@@ -84,5 +96,10 @@ export class GeodataService {
     /** Resolves now (override, cache or live geocoder); a geocoder success fills the cache. */
     resolve(request: GeodataResolveRequest): Observable<GeodataPosition> {
         return this.http.post<GeodataPosition>('/api/geodata/resolve', request);
+    }
+
+    /** Whether the self-hosted map services are up and how old their map data is. */
+    mapStatus(): Observable<MapDataStatus> {
+        return this.http.get<MapDataStatus>('/api/geodata/map-status');
     }
 }

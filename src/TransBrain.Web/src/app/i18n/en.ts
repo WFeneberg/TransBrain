@@ -437,4 +437,11 @@ export const en = {
     'geodata.error.resolve': 'The address could not be resolved.',
     'geodata.error.resolveFailed':
         'The geocoder does not know this address. Set the coordinates manually.',
+    'geodata.mapData.geocoder': 'Geocoder (Nominatim)',
+    'geodata.mapData.routing': 'Routing (OpenRouteService)',
+    'geodata.mapData.ready': 'Ready',
+    'geodata.mapData.unavailable': 'Unavailable',
+    'geodata.mapData.dataFrom': 'OSM data from {date}',
+    'geodata.mapData.hint':
+        'Both services read an OpenStreetMap extract stored on the server. Updating or replacing the map material is an administrator task — see the operator guide.',
 } as const;

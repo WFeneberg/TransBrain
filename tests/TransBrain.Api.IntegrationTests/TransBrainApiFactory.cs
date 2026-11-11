@@ -59,6 +59,7 @@ public sealed class TransBrainApiFactory : WebApplicationFactory<Program>, IAsyn
             // Integration tests must not depend on the routing/geocoding containers: both answer Unavailable here.
             services.Replace(ServiceDescriptor.Singleton<IGeocoder, OfflineGeocoder>());
             services.Replace(ServiceDescriptor.Singleton<IRoutePlanner, OfflineRoutePlanner>());
+            services.Replace(ServiceDescriptor.Singleton<IMapDataStatusProvider, OfflineMapDataStatusProvider>());
         });
     }
 }

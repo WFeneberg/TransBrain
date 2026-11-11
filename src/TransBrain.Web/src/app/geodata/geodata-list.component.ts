@@ -17,7 +17,7 @@ import { I18nService, TranslationKey } from '../i18n/i18n.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import { formatDateTime } from '../vehicles/vehicle-format';
 import { GeodataDialogComponent, GeodataDialogData } from './geodata-dialog.component';
-import { GeodataEntry, GeodataService, GeodataSource } from './geodata.service';
+import { GeodataEntry, GeodataService, GeodataSource, MapDataStatus } from './geodata.service';
 
 const BASE_COLUMNS = ['address', 'coordinates', 'source', 'usage'];
 
@@ -73,6 +73,64 @@ const SOURCE_TONES: Record<GeodataSource, string> = {
                         </button>
                     }
                 </header>
+
+                @if (mapStatus(); as status) {
+                    <section class="map-status" data-testid="geodata-map-status">
+                        <div class="services">
+                            <span
+                                class="service"
+                                [class.down]="!status.geocoder.available"
+                                data-testid="geodata-map-geocoder"
+                            >
+                                <mat-icon aria-hidden="true">{{
+                                    status.geocoder.available ? 'check_circle' : 'cloud_off'
+                                }}</mat-icon>
+                                {{ i18n.t('geodata.mapData.geocoder') }}:
+                                {{
+                                    i18n.t(
+                                        status.geocoder.available
+                                            ? 'geodata.mapData.ready'
+                                            : 'geodata.mapData.unavailable'
+                                    )
+                                }}
+                                @if (status.geocoder.osmDataUpdatedAt) {
+                                    ·
+                                    {{
+                                        i18n.t('geodata.mapData.dataFrom', {
+                                            date: formatUpdated(status.geocoder.osmDataUpdatedAt)
+                                        })
+                                    }}
+                                }
+                            </span>
+                            <span
+                                class="service"
+                                [class.down]="!status.routing.available"
+                                data-testid="geodata-map-routing"
+                            >
+                                <mat-icon aria-hidden="true">{{
+                                    status.routing.available ? 'check_circle' : 'cloud_off'
+                                }}</mat-icon>
+                                {{ i18n.t('geodata.mapData.routing') }}:
+                                {{
+                                    i18n.t(
+                                        status.routing.available
+                                            ? 'geodata.mapData.ready'
+                                            : 'geodata.mapData.unavailable'
+                                    )
+                                }}
+                                @if (status.routing.osmDataUpdatedAt) {
+                                    ·
+                                    {{
+                                        i18n.t('geodata.mapData.dataFrom', {
+                                            date: formatUpdated(status.routing.osmDataUpdatedAt)
+                                        })
+                                    }}
+                                }
+                            </span>
+                        </div>
+                        <p class="hint">{{ i18n.t('geodata.mapData.hint') }}</p>
+                    </section>
+                }
 
                 <section class="table-card">
                     <div class="toolbar">
@@ -302,6 +360,43 @@ const SOURCE_TONES: Record<GeodataSource, string> = {
                 overflow: hidden;
             }
 
+            .map-status {
+                border: 1px solid var(--mat-sys-outline-variant);
+                border-radius: var(--mat-sys-corner-large);
+                background: var(--mat-sys-surface-container-lowest);
+                padding: 12px 16px;
+            }
+
+            .map-status .services {
+                display: flex;
+                gap: 24px;
+                flex-wrap: wrap;
+            }
+
+            .map-status .service {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font: var(--mat-sys-body-medium);
+            }
+
+            .map-status .service mat-icon {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+                color: #0f5223;
+            }
+
+            .map-status .service.down mat-icon {
+                color: var(--mat-sys-error);
+            }
+
+            .map-status .hint {
+                margin: 8px 0 0;
+                color: var(--mat-sys-on-surface-variant);
+                font: var(--mat-sys-body-small);
+            }
+
             .toolbar {
                 display: flex;
                 align-items: center;
@@ -444,6 +539,8 @@ export class GeodataListComponent {
     protected readonly errorMessage = signal<string | null>(null);
     protected readonly filterText = signal('');
     protected readonly sourceFilter = signal<SourceFilter>('all');
+    /** null while loading or when the status call itself failed — the card is simply absent. */
+    protected readonly mapStatus = signal<MapDataStatus | null>(null);
     /** The address key of the row whose resolve request is in flight. */
     protected readonly resolvingKey = signal<string | null>(null);
 
@@ -495,6 +592,15 @@ export class GeodataListComponent {
                 this.entries.set(entries);
                 this.loading.set(false);
             });
+
+        // Loaded once per visit: the extract on the server does not change while the page is open.
+        this.session.ready
+            .pipe(
+                filter((isAuthenticated) => isAuthenticated),
+                switchMap(() => this.service.mapStatus().pipe(catchError(() => EMPTY))),
+                takeUntilDestroyed(),
+            )
+            .subscribe((status) => this.mapStatus.set(status));
     }
 
     protected label(source: GeodataSource): TranslationKey {

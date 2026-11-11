@@ -87,4 +87,9 @@ test('viewerUser_onGeodata_seesNoWriteActions', async ({ page }) => {
     await expect(page.getByTestId('geodata-add')).toHaveCount(0);
     await expect(page.getByTestId('geodata-edit')).toHaveCount(0);
     await expect(page.getByTestId('geodata-delete')).toHaveCount(0);
+
+    // The map material status card reports both services (status text depends on the stack).
+    await expect(page.getByTestId('geodata-map-status')).toBeVisible();
+    await expect(page.getByTestId('geodata-map-geocoder')).toContainText('Geocoder (Nominatim)');
+    await expect(page.getByTestId('geodata-map-routing')).toContainText('Routing (OpenRouteService)');
 });

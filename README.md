@@ -253,7 +253,10 @@ page (`/geodata` in both frontends). `GET /api/geodata` (`Read`) lists every add
 and customer locations with its resolution status; `PUT /api/geodata/overrides` and
 `DELETE /api/geodata/overrides/{id}` (`MasterDataWrite`) maintain manual overrides, and
 `POST /api/geodata/resolve` (`Read`) probes a single address. A manual override takes precedence
-over the geocoder everywhere a position is resolved.
+over the geocoder everywhere a position is resolved. The same page shows the state of the map
+material: `GET /api/geodata/map-status` (`Read`) probes both self-hosted services and reports their
+availability and OSM data date; replacing the extract itself is a server-side task
+(`scripts/update-osm-extract.py`, see the developer guide).
 
 The timeline follows Regulation (EC) No 561/2006: a 45-minute break after 4 h 30 min of continuous
 driving, 9 h daily driving (10 h is flagged as an extension, allowed twice a week), and the 11 h
