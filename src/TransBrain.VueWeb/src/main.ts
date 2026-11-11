@@ -23,6 +23,9 @@ import OrderForm from './views/OrderForm.vue';
 import TourList from './views/TourList.vue';
 import TourForm from './views/TourForm.vue';
 import TourDetail from './views/TourDetail.vue';
+import InvoiceList from './views/InvoiceList.vue';
+import InvoiceForm from './views/InvoiceForm.vue';
+import InvoiceDetail from './views/InvoiceDetail.vue';
 import Geodata from './views/Geodata.vue';
 import AuthCallback from './views/AuthCallback.vue';
 import { useAuthStore } from './stores/auth';
@@ -58,6 +61,11 @@ const router = createRouter({
         // No capability: the fahrer must reach this to start their tour, and a viewer may look.
         // The start/complete/assign buttons inside are gated individually.
         { path: '/tours/:id', component: TourDetail },
+        { path: '/invoices', component: InvoiceList },
+        { path: '/invoices/new', component: InvoiceForm, meta: { capability: 'dispatch.write' } },
+        // No capability: a viewer may look. The issue/pay/cancel buttons inside are gated
+        // individually on dispatch.write.
+        { path: '/invoices/:id', component: InvoiceDetail },
         // Readable by every signed-in role; the write controls inside are gated on masterData.write.
         { path: '/geodata', component: Geodata },
         { path: '/callback', component: AuthCallback },

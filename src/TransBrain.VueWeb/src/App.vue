@@ -32,6 +32,7 @@ function toggleLocale(): void {
                 <v-btn v-if="auth.areas.has('customers')" to="/customers" data-testid="nav-customers">{{ t('nav.customers') }}</v-btn>
                 <v-btn v-if="auth.areas.has('orders')" to="/orders" data-testid="nav-orders">{{ t('nav.orders') }}</v-btn>
                 <v-btn v-if="auth.areas.has('tours')" to="/tours" data-testid="nav-tours">{{ t('nav.tours') }}</v-btn>
+                <v-btn v-if="auth.areas.has('invoices')" to="/invoices" data-testid="nav-invoices">{{ t('nav.invoices') }}</v-btn>
                 <v-btn v-if="auth.can('masterData.write')" to="/geodata" data-testid="nav-geodata">{{ t('nav.geodata') }}</v-btn>
             </template>
             <v-spacer />

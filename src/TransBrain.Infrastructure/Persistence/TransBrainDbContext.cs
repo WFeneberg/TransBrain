@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using TransBrain.Domain.Billing;
 using TransBrain.Domain.Customers;
 using TransBrain.Domain.Drivers;
 using TransBrain.Domain.Orders;
@@ -25,6 +26,8 @@ public sealed class TransBrainDbContext(DbContextOptions<TransBrainDbContext> op
     public DbSet<Customer> Customers => Set<Customer>();
 
     public DbSet<CustomerLocation> CustomerLocations => Set<CustomerLocation>();
+
+    public DbSet<Invoice> Invoices => Set<Invoice>();
 
     public DbSet<GeoOverride> GeoOverrides => Set<GeoOverride>();
 

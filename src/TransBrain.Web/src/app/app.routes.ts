@@ -16,6 +16,10 @@ const loadOrderForm = () => import('./orders/order-form.component').then((m) => 
 const loadTourList = () => import('./tours/tour-list.component').then((m) => m.TourListComponent);
 const loadTourForm = () => import('./tours/tour-form.component').then((m) => m.TourFormComponent);
 const loadTourDetail = () => import('./tours/tour-detail.component').then((m) => m.TourDetailComponent);
+const loadInvoiceList = () => import('./invoices/invoice-list.component').then((m) => m.InvoiceListComponent);
+const loadInvoiceForm = () => import('./invoices/invoice-form.component').then((m) => m.InvoiceFormComponent);
+const loadInvoiceDetail = () =>
+    import('./invoices/invoice-detail.component').then((m) => m.InvoiceDetailComponent);
 const loadHome = () => import('./home/home.component').then((m) => m.HomeComponent);
 const loadGeodataList = () => import('./geodata/geodata-list.component').then((m) => m.GeodataListComponent);
 
@@ -56,6 +60,11 @@ export const routes: Routes = [
     // Not guarded by a capability: the fahrer must reach this to start their tour, and a viewer
     // may look. The start/complete/assign buttons inside are gated individually.
     { path: 'tours/:id', loadComponent: loadTourDetail, canActivate: [requireAuthentication] },
+    { path: 'invoices', loadComponent: loadInvoiceList, canActivate: [requireAuthentication] },
+    { path: 'invoices/new', loadComponent: loadInvoiceForm, canActivate: [requireCapability('dispatch.write')] },
+    // Readable by every signed-in role; the issue/pay/cancel buttons inside are gated on
+    // dispatch.write individually.
+    { path: 'invoices/:id', loadComponent: loadInvoiceDetail, canActivate: [requireAuthentication] },
     // Readable by every signed-in role; the write controls inside are gated on masterData.write.
     { path: 'geodata', loadComponent: loadGeodataList, canActivate: [requireAuthentication] },
 ];

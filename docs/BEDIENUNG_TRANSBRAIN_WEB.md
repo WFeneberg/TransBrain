@@ -771,6 +771,120 @@ Fahrerdatensatz zu **niemandem, der sich anmelden kann** — dessen Touren kann 
 Fahrer starten. Das ist Absicht: Ein leeres Feld als „passt zu jedem“ zu behandeln, würde die
 Tour dem erstbesten Fahrer überlassen.
 
+## Rechnungsliste (Frachtabrechnung)
+
+Erreichbar über den Menüpunkt **Abrechnung** (`/invoices`). Der Menüpunkt erscheint für
+Administratoren, Disponenten und Betrachter; Fahrer sehen ihn nicht.
+
+Hier werden zugestellte Aufträge zu Rechnungen zusammengefasst und deren Weg bis zur Bezahlung
+verfolgt. Eine Rechnung durchläuft die Status **Draft** (Entwurf) → **Issued** (ausgestellt) →
+**Paid** (bezahlt); **Cancelled** (storniert) ist jederzeit vor der Bezahlung möglich.
+
+![Rechnungsliste](img/web/rechnungsliste.png)
+
+- **Spalten:** Rechnungsnummer (öffnet das Rechnungsdetail), Kunde, Netto, Brutto, Fällig am
+  („—“ solange die Rechnung nicht ausgestellt ist) und Status. Alle Spalten sind sortierbar.
+- Die **Rechnungsnummer** hat die Form `RE-2027-00042` — fortlaufend pro Jahr, vergeben beim
+  Anlegen. Auch eine stornierte Rechnung behält ihre Nummer; Lücken in der Zählung entstehen
+  dadurch nicht, die Nummer ist schlicht „verbraucht“.
+- **Statusfarben:** **Paid** grün, **Issued** gelb, **Cancelled** rot, **Draft** neutral.
+- Das Feld **„Rechnungssuche“** filtert die geladenen Einträge nach Rechnungsnummer, Kunde und
+  Status; das Dropdown **Status** filtert serverseitig.
+- Aktionen pro Zeile (nur `admin` und `disponent`):
+  - **Ausstellen** (Papierflieger, nur bei **Draft**): stempelt das Ausstellungsdatum und
+    errechnet die Fälligkeit aus dem Zahlungsziel des Kunden.
+  - **Als bezahlt markieren** (nur bei **Issued**).
+  - **Stornieren** (nur bei **Draft** oder **Issued**): fragt nach — „Rechnung … wirklich
+    stornieren? Die enthaltenen Aufträge werden wieder abrechenbar.“ Bestätigt wird mit
+    „Stornierung bestätigen“, abgebrochen mit „Rechnung behalten“.
+- **„Rechnung erstellen“** rechts oben (nur `admin` und `disponent`) öffnet das Formular.
+
+## Rechnungsformular (Erstellen)
+
+Nur für `admin` und `disponent`, erreichbar über **„Rechnung erstellen“** in der Rechnungsliste
+(`/invoices/new`). Eine Rechnung wird **einmalig zusammengestellt und dann nur noch durch ihre
+Statusschritte verändert** — ein Bearbeiten nach dem Anlegen gibt es bewusst nicht. Wer sich
+vertan hat, storniert die Rechnung und erstellt sie neu.
+
+![Rechnungsformular](img/web/rechnungsformular.png)
+
+Der Abschnitt **Rechnungsempfänger** erwartet:
+
+| Feld | Pflicht | Regeln |
+|---|:---:|---|
+| Kunde | ja | Auswahl aus den angelegten Kunden |
+| USt.-Satz (%) | ja | 0 bis 100, vorbelegt mit 19 |
+
+Der Abschnitt **Abrechenbare Aufträge** listet ausschließlich **zugestellte Aufträge, die noch
+auf keiner Rechnung stehen** — unabhängig vom gewählten Kunden. Je Auftrag:
+
+- **Haken** zum Aufnehmen in die Rechnung — mindestens ein Auftrag muss gewählt sein, sonst
+  meldet das Formular „Bitte mindestens einen Auftrag auswählen.“
+- **Relation** zeigt Abhol- und Lieferort des Auftrags zur Orientierung.
+- **Nettobetrag (€)** ist je gewähltem Auftrag Pflicht und muss größer null sein — den Preis
+  kennt die Disposition, nicht das System. Fehlt er, meldet das Formular „Bitte einen
+  Nettobetrag größer null für Auftrag … angeben.“
+- **Beschreibung (optional)**: der Positionstext auf der Rechnung. Leer gelassen wird daraus
+  automatisch „Transport ‹Auftragsnummer›“.
+
+Unter der Tabelle rechnet eine Vorschau das **Netto** der gewählten Aufträge live zusammen.
+Gespeichert wird mit **„Speichern“**; die neue Rechnung beginnt als **Draft** und wird
+direkt im Rechnungsdetail geöffnet.
+
+**Was beim Speichern abgelehnt wird:**
+
+- Ein Auftrag, der nicht zugestellt ist: „Order … is ‹Status› and only delivered orders can be
+  billed. (HTTP 409)“.
+- Ein Auftrag, der inzwischen schon auf einer anderen (nicht stornierten) Rechnung steht —
+  etwa weil ein Kollege schneller war: „These orders are already billed on another invoice: ….
+  (HTTP 409)“. Die Liste der abrechenbaren Aufträge neu zu laden räumt die Auswahl auf.
+
+**Wichtig zu wissen:** Beim Anlegen übernimmt die Rechnung **Name, Rechnungsadresse,
+USt-IdNr. und Zahlungsziel des Kunden als Kopie**. Spätere Änderungen am Kundenstamm wirken
+nur auf künftige Rechnungen — eine bereits geschriebene Rechnung ist ein Dokument und ändert
+sich nicht mehr rückwirkend.
+
+## Rechnungsdetail
+
+Erreichbar über die Rechnungsnummer in der Liste (`/invoices/{id}`). Zeigt den Status als
+farbigen Chip neben der Rechnungsnummer sowie — je nach Status und nur für `admin` und
+`disponent` — die Aktionen **Ausstellen**, **Als bezahlt markieren** und **Stornieren**
+(mit derselben Sicherheitsabfrage wie in der Liste).
+
+![Rechnungsdetail](img/web/rechnungsdetail.png)
+
+- Die Karte **Rechnungsempfänger** zeigt die beim Anlegen kopierten Kundendaten: Name,
+  Rechnungsadresse, USt-IdNr. (falls hinterlegt) und Zahlungsziel.
+- Die Karte **Termine** zeigt „Erstellt am“, „Ausgestellt am“, „Fällig am“ und „Bezahlt am“ —
+  jeweils „—“, solange der Schritt noch nicht erfolgt ist. Die Fälligkeit ergibt sich beim
+  Ausstellen als Ausstellungsdatum plus Zahlungsziel.
+- Die Positionstabelle zeigt je Auftrag Position, Auftragsnummer, Beschreibung und Nettobetrag;
+  darunter stehen **Netto**, **USt.** und **Brutto**. Die Umsatzsteuer wird kaufmännisch auf
+  zwei Nachkommastellen gerundet.
+
+### Rechnungsstatus: welche Schritte abgelehnt werden
+
+Erlaubt ist nur der Weg **Draft → Issued → Paid**; **Stornieren** geht aus **Draft** und
+**Issued**. Alles andere lehnt die API mit `HTTP 409` ab, die Oberfläche bietet die Schaltflächen
+erst gar nicht an:
+
+| Aktion | erlaubt aus | abgelehnt aus |
+|---|---|---|
+| Ausstellen | Draft | Issued, Paid, Cancelled |
+| Als bezahlt markieren | Issued | Draft, Paid, Cancelled |
+| Stornieren | Draft, Issued | **Paid**, Cancelled |
+
+Eine Ablehnung meldet den Zustand wörtlich, z. B. „An invoice in status 'Paid' cannot move to
+'Cancelled'. (HTTP 409)“. Dass eine **bezahlte** Rechnung nicht mehr storniert werden kann, ist
+Absicht: Das Geld ist geflossen; die Korrektur wäre eine Gutschrift — ein neues Dokument, das es
+in dieser Ausbaustufe noch nicht gibt.
+
+**Der wichtigste Zusammenhang: Stornieren gibt die Aufträge frei.** Solange ein Auftrag auf
+einer nicht stornierten Rechnung steht, taucht er im Rechnungsformular nicht mehr unter den
+abrechenbaren Aufträgen auf. Wird die Rechnung storniert, sind ihre Aufträge sofort wieder
+abrechenbar — so lässt sich eine fehlerhafte Rechnung durch Stornieren und Neuanlegen
+korrigieren, ohne dass ein Auftrag doppelt oder gar nicht abgerechnet wird.
+
 ## Geodaten-Wartung
 
 Erreichbar über den Menüpunkt **Geodata** (`/geodata`). Der Menüpunkt erscheint nur für
@@ -856,16 +970,17 @@ Seite bleibt benutzbar, nur „Try geocoding“ und neue Routenberechnungen schl
 Die Anmeldung erfolgt über Keycloak mit genau einer der vier Rollen `admin`,
 `disponent`, `fahrer` oder `viewer`.
 
-| Rolle       | Ansehen          | Fahrzeuge/Fahrer/Kunden pflegen | Aufträge pflegen | Touren planen | Tour starten/abschließen |
-|-------------|------------------|:------------------------:|:----------------:|:-------------:|:------------------------:|
-| `admin`     | alles            | ja                       | ja               | ja            | ja                       |
-| `disponent` | alles            | **nein**                 | **ja**           | **ja**        | **ja**                   |
-| `fahrer`    | **nur eigene Touren** | **nein**            | **nein**         | **nein**      | **nur eigene**           |
-| `viewer`    | alles            | **nein**                 | **nein**         | **nein**      | **nein**                 |
+| Rolle       | Ansehen          | Fahrzeuge/Fahrer/Kunden pflegen | Aufträge pflegen | Touren planen | Tour starten/abschließen | Rechnungen pflegen |
+|-------------|------------------|:------------------------:|:----------------:|:-------------:|:------------------------:|:------------------:|
+| `admin`     | alles            | ja                       | ja               | ja            | ja                       | ja                 |
+| `disponent` | alles            | **nein**                 | **ja**           | **ja**        | **ja**                   | **ja**             |
+| `fahrer`    | **nur eigene Touren** | **nein**            | **nein**         | **nein**      | **nur eigene**           | **nein**           |
+| `viewer`    | alles            | **nein**                 | **nein**         | **nein**      | **nein**                 | **nein**           |
 
-**Aufträge und Touren sind die Ausnahme von der Regel „nur `admin` darf schreiben“.** Ein
-Disponent darf beides anlegen, ändern und stornieren beziehungsweise planen — das ist genau seine
-Aufgabe. Bei Fahrzeugen, Fahrern und Kunden (Stammdaten) darf er weiterhin nur lesen.
+**Aufträge, Touren und Rechnungen sind die Ausnahme von der Regel „nur `admin` darf
+schreiben“.** Ein Disponent darf Aufträge und Rechnungen anlegen, ändern beziehungsweise deren
+Statusschritte auslösen und Touren planen — das ist genau seine Aufgabe. Bei Fahrzeugen, Fahrern
+und Kunden (Stammdaten) darf er weiterhin nur lesen.
 
 **Der Fahrer ist die zweite Ausnahme:** Er darf nichts anlegen, aber seine eigenen Touren starten
 und abschließen — siehe Abschnitt „Touren als Fahrer“.
@@ -873,7 +988,8 @@ und abschließen — siehe Abschnitt „Touren als Fahrer“.
 
 **Die Oberfläche bietet nur an, was Ihre Rolle auch darf.** Die Schaltflächen
 „Add vehicle“/„Add driver“/„Add customer“, „Edit“ und „Delete“ erscheinen ausschließlich für die Rolle
-`admin`; „New order“, „Edit“, „Cancel order“ und „Plan tour“ nur für `admin` und
+`admin`; „New order“, „Edit“, „Cancel order“ und „Plan tour“ sowie „Rechnung erstellen“,
+„Ausstellen“, „Als bezahlt markieren“ und „Stornieren“ (Abrechnung) nur für `admin` und
 `disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Der
 Menüpunkt **Geodata** und die Änderungen der Geodaten-Wartung („Add coordinates“,
 „Set coordinates“, „Remove manual coordinates“) sind ebenfalls `admin` vorbehalten. Wer
@@ -881,8 +997,9 @@ eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
 
 Das **Lesen** ist davon unberührt: alle vier Rollen dürfen alle Listen ansehen, mit der
 einen Ausnahme, dass ein Fahrer in der Tourenliste nur seine eigenen Touren sieht. Die
-Navigation blendet für einen Fahrer die Bereiche Fahrzeuge, Fahrer, Kunden und Aufträge aus, weil
-er sie für seine Arbeit nicht braucht — über die Adresszeile bleiben sie erreichbar.
+Navigation blendet für einen Fahrer die Bereiche Fahrzeuge, Fahrer, Kunden, Aufträge und
+Abrechnung aus, weil er sie für seine Arbeit nicht braucht — über die Adresszeile bleiben sie
+erreichbar.
 
 Sollten Sie dennoch eine Ablehnung mit `HTTP 403` sehen, ist das kein Bedienfehler: Es
 bedeutet, dass sich Ihre Rechte seit dem Laden der Seite geändert haben. Ein Neuladen zeigt
@@ -900,5 +1017,8 @@ dann die passende Oberfläche.
 - Eine Tour lässt sich nach dem Anlegen weder umplanen noch löschen. Eine falsch geplante Tour
   bleibt als leere Tour stehen, nachdem ihre Aufträge entfernt wurden — und belegt Fahrzeug und
   Fahrer für diesen Tag weiter.
+- Eine Rechnung lässt sich nach dem Anlegen nicht bearbeiten — der Korrekturweg ist Stornieren
+  und Neuanlegen. Eine bezahlte Rechnung lässt sich auch nicht mehr stornieren; eine Gutschrift
+  gibt es noch nicht. Ein Rechnungsdruck (PDF) ist ebenfalls noch nicht umgesetzt.
 - Die Listen zeigen bis zu 100 Einträge und haben keine Blätterfunktion; darüber hinaus sind
   ältere Einträge nicht erreichbar.
