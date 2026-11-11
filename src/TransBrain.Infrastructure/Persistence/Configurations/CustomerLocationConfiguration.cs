@@ -13,9 +13,22 @@ internal sealed class CustomerLocationConfiguration : IEntityTypeConfiguration<C
         builder.HasKey(l => l.Id);
 
         builder.Property(l => l.Name).HasMaxLength(200).IsRequired();
-        builder.Property(l => l.ContactPerson).HasMaxLength(200);
-        builder.Property(l => l.Email).HasMaxLength(320);
-        builder.Property(l => l.Phone).HasMaxLength(50);
+
+        builder.OwnsMany(l => l.Contacts, contact =>
+        {
+            contact.ToTable("customer_location_contacts");
+            contact.WithOwner().HasForeignKey("customer_location_id");
+            // Not part of the key: replacing the contacts renumbers them, and EF cannot update a
+            // primary key in place. EF's shadow key owns identity; the sequence is just the order.
+            contact.Property(c => c.Sequence).HasColumnName("sequence").ValueGeneratedNever().IsRequired();
+            contact.Property(c => c.Name).HasColumnName("name")
+                .HasMaxLength(CustomerLocationContact.MaxNameLength).IsRequired();
+            contact.Property(c => c.Phone).HasColumnName("phone").HasMaxLength(CustomerLocationContact.MaxPhoneLength);
+            contact.Property(c => c.Email).HasColumnName("email").HasMaxLength(CustomerLocationContact.MaxEmailLength);
+        });
+
+        // Through the backing field: the entity exposes its contacts read-only on purpose.
+        builder.Navigation(l => l.Contacts).HasField("_contacts").UsePropertyAccessMode(PropertyAccessMode.Field);
 
         // Cascade: deleting a customer removes its delivery locations with it.
         builder.HasOne<Customer>()

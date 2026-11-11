@@ -23,7 +23,8 @@ public class CustomerLocationHandlerTests
     }
 
     private static AddCustomerLocationCommand AddCommand(Guid customerId, string name = "Lager Süd") => new(
-        customerId, name, "Südbahnstraße 5", "1100", "Wien", "AT", "Hans Huber", "h.huber@muster.at", null);
+        customerId, name, "Südbahnstraße 5", "1100", "Wien", "AT",
+        [new CustomerLocationContactData("Hans Huber", Email: "h.huber@muster.at"), new CustomerLocationContactData("Eva Berger", "+43 1 222")]);
 
     [Fact]
     public async Task Add_KnownCustomer_PersistsLocationForThatCustomer()
@@ -37,7 +38,7 @@ public class CustomerLocationHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.CustomerId.Should().Be(customer.Id);
         result.Value.City.Should().Be("Wien");
-        result.Value.ContactPerson.Should().Be("Hans Huber");
+        result.Value.Contacts.Select(c => c.Name).Should().Equal("Hans Huber", "Eva Berger");
         repository.Locations.Should().ContainSingle();
     }
 
@@ -64,8 +65,8 @@ public class CustomerLocationHandlerTests
             null, null, null, null, 30).Value;
         repository.Seed(other);
         repository.SeedLocations(
-            CustomerLocation.Create(customer.Id, "Lager Süd", Address.Create("Lager Süd", "S 5", "1100", "Wien", "AT").Value, null, null, null).Value,
-            CustomerLocation.Create(other.Id, "Fremd", Address.Create("Fremd", "F 1", "1100", "Wien", "AT").Value, null, null, null).Value);
+            CustomerLocation.Create(customer.Id, "Lager Süd", Address.Create("Lager Süd", "S 5", "1100", "Wien", "AT").Value, []).Value,
+            CustomerLocation.Create(other.Id, "Fremd", Address.Create("Fremd", "F 1", "1100", "Wien", "AT").Value, []).Value);
 
         ListCustomerLocationsQueryHandler handler = new(repository);
 
@@ -85,7 +86,7 @@ public class CustomerLocationHandlerTests
 
         Result<CustomerLocationResponse> result = await handler.Handle(
             new UpdateCustomerLocationCommand(
-                customer.Id, Guid.CreateVersion7(), "X", "Y", "1010", "Wien", "AT", null, null, null),
+                customer.Id, Guid.CreateVersion7(), "X", "Y", "1010", "Wien", "AT"),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
@@ -93,23 +94,24 @@ public class CustomerLocationHandlerTests
     }
 
     [Fact]
-    public async Task Update_ExistingLocation_ChangesContactPerson()
+    public async Task Update_ExistingLocation_ReplacesContacts()
     {
         InMemoryCustomerRepository repository = new();
         Customer customer = SeedCustomer(repository);
         CustomerLocation location = CustomerLocation.Create(
             customer.Id, "Lager Süd", Address.Create("Lager Süd", "S 5", "1100", "Wien", "AT").Value,
-            "Alt", null, null).Value;
+            [CustomerLocationContact.Create("Alt", null, null).Value]).Value;
         repository.SeedLocations(location);
         UpdateCustomerLocationCommandHandler handler = new(repository);
 
         Result<CustomerLocationResponse> result = await handler.Handle(
             new UpdateCustomerLocationCommand(
-                customer.Id, location.Id, "Lager Süd", "S 5", "1100", "Wien", "AT", "Neu", null, null),
+                customer.Id, location.Id, "Lager Süd", "S 5", "1100", "Wien", "AT",
+                [new CustomerLocationContactData("Neu", "+43 1 333"), new CustomerLocationContactData("Zweit")]),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.ContactPerson.Should().Be("Neu");
+        result.Value.Contacts.Should().Equal(new CustomerLocationContactData("Neu", "+43 1 333"), new CustomerLocationContactData("Zweit"));
     }
 
     [Fact]
@@ -119,7 +121,7 @@ public class CustomerLocationHandlerTests
         Customer customer = SeedCustomer(repository);
         CustomerLocation location = CustomerLocation.Create(
             customer.Id, "Lager Süd", Address.Create("Lager Süd", "S 5", "1100", "Wien", "AT").Value,
-            null, null, null).Value;
+            []).Value;
         repository.SeedLocations(location);
         DeleteCustomerLocationCommandHandler handler = new(repository);
 

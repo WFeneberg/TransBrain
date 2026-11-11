@@ -12,7 +12,7 @@ public class GetCustomerLocationPositionQueryHandlerTests
         customerId,
         "Lager Süd",
         Address.Create("Lager Süd", "Südbahnstraße 5", "1100", city, "AT").Value,
-        null, null, null).Value;
+        []).Value;
 
     [Fact]
     public async Task Handle_ResolvableAddress_ReturnsPositionAndFormattedAddress()
