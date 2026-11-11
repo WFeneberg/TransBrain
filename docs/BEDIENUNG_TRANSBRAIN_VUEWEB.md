@@ -666,8 +666,8 @@ Die Route berechnet der Server neu, sobald sich die Stopps ändern. Das übernim
 eigenen Server, ohne externen Dienst oder Schlüssel; er kann nur Strecken im geladenen
 Kartenausschnitt planen. Ist der Dienst noch im Aufbau oder nicht
 erreichbar, erscheint anstelle der Route die Meldung „Der Karten- und Routingdienst ist nicht
-verfügbar …“. Schlägt die Berechnung aus einem anderen Grund fehl, wird der Grund angezeigt. Die
-übrige Tourseite bleibt in beiden Fällen nutzbar.
+verfügbar …“. Liegt die Adresse eines Stopps außerhalb des geladenen Kartenausschnitts oder ist sie unbekannt, nennt die Meldung diese Adresse: „Die Adresse „…“ wurde im geladenen Kartenausschnitt nicht gefunden. Ohne sie lässt sich die Route nicht berechnen.“ Schlägt die Berechnung aus einem
+anderen Grund fehl, wird der Grund angezeigt. Die übrige Tourseite bleibt in allen Fällen nutzbar.
 
 ### Was beim Zuordnen abgelehnt wird
 

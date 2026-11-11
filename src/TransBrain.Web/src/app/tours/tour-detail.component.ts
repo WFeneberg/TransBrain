@@ -613,10 +613,16 @@ export class TourDetailComponent {
                 },
                 error: (error: HttpErrorResponse) => {
                     this.tourRoute.set(null);
+                    const detail: string = error.error?.detail ?? '';
                     this.routeError.set(
                         error.status === 503
                             ? this.i18n.t('tours.route.error.unavailable')
-                            : this.describe(error, this.i18n.t('tours.route.error.load')),
+                            : error.error?.title === 'Geocoding.NoMatch'
+                              ? this.i18n.t('tours.route.error.addressNotFound', {
+                                    // The server quotes the address it could not place.
+                                    address: /'(.+)'/.exec(detail)?.[1] ?? detail,
+                                })
+                              : this.describe(error, this.i18n.t('tours.route.error.load')),
                     );
                 },
             });

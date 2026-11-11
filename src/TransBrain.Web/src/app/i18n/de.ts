@@ -394,6 +394,8 @@ export const de: Record<keyof typeof en, string> = {
     'tours.route.severity.Violation': 'Verstoß',
     'tours.route.severity.Warning': 'Warnung',
     'tours.route.error.load': 'Die Route konnte nicht geladen werden.',
+    'tours.route.error.addressNotFound':
+        'Die Adresse „{address}“ wurde im geladenen Kartenausschnitt nicht gefunden. Ohne sie lässt sich die Route nicht berechnen.',
     'tours.route.error.unavailable':
         'Die Routenberechnung ist derzeit nicht verfügbar. Der Routing-Dienst ist nicht konfiguriert oder nicht erreichbar.',
 };

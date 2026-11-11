@@ -681,6 +681,7 @@ Auftrags neu geladen. Sie besteht aus:
 Dienst oder Schlüssel ist nicht nötig. Er kann nur Strecken im geladenen Kartenausschnitt planen.
 Ist der Dienst nicht erreichbar oder noch im Aufbau, zeigt der Bereich die
 Meldung „Die Routenberechnung ist derzeit nicht verfügbar …“ an; die übrige Seite bleibt benutzbar.
+Liegt die Adresse eines Stopps außerhalb des geladenen Kartenausschnitts oder ist sie unbekannt, nennt die Meldung diese Adresse: „Die Adresse „…“ wurde im geladenen Kartenausschnitt nicht gefunden. Ohne sie lässt sich die Route nicht berechnen.“
 
 Kann die Route nicht berechnet werden (z. B. weil die Tour keine berechenbaren Stopps hat), zeigt
 der Bereich die Meldung des Servers mit dem HTTP-Statuscode an, statt stillschweigend leer zu

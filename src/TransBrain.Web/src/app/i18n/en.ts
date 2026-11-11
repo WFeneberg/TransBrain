@@ -389,6 +389,8 @@ export const en = {
     'tours.route.severity.Violation': 'Violation',
     'tours.route.severity.Warning': 'Warning',
     'tours.route.error.load': 'The route could not be loaded.',
+    'tours.route.error.addressNotFound':
+        'The address "{address}" was not found in the loaded map extract, so the route cannot be calculated.',
     'tours.route.error.unavailable':
         'Route planning is currently unavailable. The routing service is not configured or cannot be reached.',
 } as const;
