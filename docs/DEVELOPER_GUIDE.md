@@ -189,22 +189,25 @@ one OpenStreetMap extract, which you download once (the folder is gitignored):
 curl -L -o data/osm/region.osm.pbf https://download.geofabrik.de/europe/germany/bayern-latest.osm.pbf
 ```
 
-| Resource | Image | Purpose | First start (Bavaria, rough) | Volume |
+| Resource | Image | Purpose | First start (Upper Bavaria, 260 MB, measured on 4 cores) | Volume |
 |---|---|---|---|---|
-| `ors` | `openrouteservice/openrouteservice:v10.1.0` | truck routes, profile `driving-hgv` only | builds the graph, 10–30 min | `transbrain-ors` |
-| `nominatim` | `mediagis/nominatim:5.3` | address → position | imports the database, 1–2 h | `transbrain-nominatim` |
+| `ors` | `openrouteservice/openrouteservice:v10.1.0` | truck routes, profile `driving-hgv` only | builds the graph, about 3 min, 0.2 GB | `transbrain-ors` |
+| `nominatim` | `mediagis/nominatim:5.3` | address → position | imports the database, about 85 min, 3 GB | `transbrain-nominatim` |
+
+All of Bavaria is about three times that extract, so expect several hours for the Nominatim import. For a
+quick dev setup use `.../germany/bayern/oberbayern-latest.osm.pbf` instead.
 
 The AppHost injects both addresses into the Api (`OpenRouteService__BaseUrl`, `Nominatim__BaseUrl`). The Api
 does not wait for them: until a container is healthy, `GET /api/tours/{id}/route` and the position/location
-endpoints answer `503`. Addresses and routes outside the extract are not found — with the Bavaria extract
-that includes the Austrian addresses of `scripts/seed-testdata.py`.
+endpoints answer `503`. Addresses and routes outside the extract are not found (`404 Geocoding.NoMatch`) —
+with a Bavarian extract that includes the Austrian addresses of `scripts/seed-testdata.py`. Several seed
+addresses also use invented street names, which no geocoder finds; only real addresses get a map pin.
 
 - **Other region:** stop the AppHost, replace `data/osm/region.osm.pbf`, delete both volumes
   (`docker volume rm transbrain-ors transbrain-nominatim`), start again. Both containers take exactly one
   file; merge extracts with `osmium merge` if you need several.
-- **Sizing:** the ORS heap is `XMX` in `AppHost.cs` (4g; rule of thumb 2 × pbf size per profile). Bavaria
-  needs roughly 20–25 GB of disk for Nominatim; all of Germany needs a server (tens of GB of RAM, >100 GB
-  disk, about a day of import).
+- **Sizing:** the ORS heap is `XMX` in `AppHost.cs` (4g; rule of thumb 2 × pbf size per profile). All of
+  Germany needs a server (tens of GB of RAM, >100 GB disk, a day or more of import).
 - **Still external:** the map background tiles in both frontends load from `tile.openstreetmap.org`.
 
 ## 5. Common tasks
