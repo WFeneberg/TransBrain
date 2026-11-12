@@ -54,7 +54,7 @@ internal sealed class ListToursQueryHandler(
         int totalCount = await tours.CountAsync(
             query.TourDate, query.VehicleId, driverFilter, cancellationToken);
 
-        List<TourResponse> items = [];
+        List<TourResponse> items = [with(capacity: page.Count)];
         foreach (Tour tour in page)
         {
             Result<TourContext> context = await TourLoader.LoadAsync(

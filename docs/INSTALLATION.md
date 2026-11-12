@@ -51,7 +51,7 @@ no CORS configuration in the container setups.
 
 ## 1. Local development with Aspire
 
-Prerequisites: .NET 10 SDK, Node.js >= 26.4.0, Docker, and a trusted dev certificate:
+Prerequisites: .NET 11 SDK, Node.js >= 26.4.0, Docker, and a trusted dev certificate:
 
 ```bash
 dotnet dev-certs https --trust

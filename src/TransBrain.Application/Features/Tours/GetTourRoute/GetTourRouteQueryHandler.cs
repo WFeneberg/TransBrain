@@ -64,7 +64,7 @@ internal sealed class GetTourRouteQueryHandler(
         }
 
         // Leg i starts at stop i, so the leg is driven in the country of stop i.
-        List<PlannedLeg> legs = [];
+        List<PlannedLeg> legs = [with(capacity: road?.Segments.Count ?? 0)];
         for (int i = 0; road is not null && i < road.Segments.Count; i++)
         {
             legs.Add(new PlannedLeg(stops.Value[i].Address.Country, road.Segments[i].Duration));
@@ -100,7 +100,7 @@ internal sealed class GetTourRouteQueryHandler(
     private async Task<Result<List<PlannedStop>>> ResolveStopsAsync(TourContext tour, CancellationToken cancellationToken)
     {
         Dictionary<Guid, TransportOrder> byId = tour.AssignedOrders.ToDictionary(order => order.Id);
-        List<PlannedStop> resolved = [];
+        List<PlannedStop> resolved = [with(capacity: tour.Tour.Stops.Count)];
 
         foreach (TourStop stop in tour.Tour.Stops.OrderBy(s => s.Sequence))
         {

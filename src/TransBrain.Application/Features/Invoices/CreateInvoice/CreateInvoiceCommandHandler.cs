@@ -27,7 +27,7 @@ internal sealed class CreateInvoiceCommandHandler(
 
         // Load every order before touching anything, so a missing or unbillable one refuses the
         // whole command rather than leaving a half-built invoice.
-        List<TransportOrder> billedOrders = [];
+        List<TransportOrder> billedOrders = [with(capacity: command.Lines.Count)];
         foreach (InvoiceLinePayload line in command.Lines)
         {
             TransportOrder? order = await orders.GetByIdAsync(line.OrderId, cancellationToken);

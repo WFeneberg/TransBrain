@@ -1,5 +1,5 @@
 # Build context: repository root.  docker build -f src/TransBrain.Api/Dockerfile .
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props nuget.config ./
 COPY src/TransBrain.Domain/TransBrain.Domain.csproj src/TransBrain.Domain/
@@ -15,7 +15,7 @@ COPY src/TransBrain.ServiceDefaults src/TransBrain.ServiceDefaults
 COPY src/TransBrain.Api src/TransBrain.Api
 RUN dotnet publish src/TransBrain.Api/TransBrain.Api.csproj -c Release -o /app --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:11.0
 WORKDIR /app
 COPY --from=build /app .
 ENV ASPNETCORE_HTTP_PORTS=8080

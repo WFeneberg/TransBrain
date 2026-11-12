@@ -1,7 +1,7 @@
 # TransBrain
 
 Dispatch software for a trucking company: vehicles, drivers, transport orders and tours,
-built with .NET 10 (Clean Architecture, a hand-rolled CQRS mediator, EF Core 10 /
+built with .NET 11 (Clean Architecture, a hand-rolled CQRS mediator, EF Core 10 /
 PostgreSQL, Redis) behind Keycloak-issued OIDC tokens, with two frontends — Angular and
 Vue — talking to the same API.
 
@@ -20,7 +20,7 @@ exists today, and `.superpowers/sdd/` for the phase plans.
 
 ## Prerequisites
 
-- .NET 10 SDK
+- .NET 11 SDK
 - Node.js >= 26.4.0
 - Docker (Docker Desktop, or an equivalent engine) — required both to run the stack
   (Postgres, Redis, Keycloak all run as containers) and to run the API integration tests,

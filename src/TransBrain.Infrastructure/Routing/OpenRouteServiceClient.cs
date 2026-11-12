@@ -50,7 +50,7 @@ internal sealed class OpenRouteServiceClient(HttpClient httpClient) : IRoutePlan
                 $"OpenRouteService returned {segments.Count} segments for {waypoints.Count} waypoints.");
         }
 
-        List<GeoPoint> geometry = [];
+        List<GeoPoint> geometry = [with(capacity: feature.Geometry.Coordinates.Count)];
         foreach (double[] coordinate in feature.Geometry.Coordinates)
         {
             Result<GeoPoint> point = GeoPoint.Create(latitude: coordinate[1], longitude: coordinate[0]);

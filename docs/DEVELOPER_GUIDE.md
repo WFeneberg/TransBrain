@@ -9,7 +9,7 @@ authentication in [KEYCLOAK.md](KEYCLOAK.md). Binding conventions live in [AGENT
 
 | Area | Technology |
 |---|---|
-| Runtime | .NET 10, C# 14, nullable enabled, warnings are errors |
+| Runtime | .NET 11, C# 15, nullable enabled, warnings are errors |
 | API | ASP.NET Minimal APIs (no controllers), OpenAPI + Scalar in Development |
 | Persistence | EF Core 10, PostgreSQL (Npgsql), Redis distributed cache |
 | Application | Hand-rolled CQRS mediator (not MediatR), FluentValidation, Result pattern |

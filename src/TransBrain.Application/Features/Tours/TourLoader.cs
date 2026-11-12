@@ -49,8 +49,9 @@ internal static class TourLoader
             return Error.NotFound("Driver.NotFound", $"No driver with id '{tour.DriverId}'.");
         }
 
-        List<TransportOrder> assigned = [];
-        foreach (Guid orderId in tour.AssignedOrderIds())
+        IReadOnlyList<Guid> orderIds = tour.AssignedOrderIds();
+        List<TransportOrder> assigned = [with(capacity: orderIds.Count)];
+        foreach (Guid orderId in orderIds)
         {
             TransportOrder? order = await orders.GetByIdAsync(orderId, cancellationToken);
             if (order is not null)

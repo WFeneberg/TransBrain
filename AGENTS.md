@@ -7,7 +7,7 @@ This file provides guidance to KI Agent (claude.ai/code, Github Copilot, Jetbrai
 **TransBrain** is a .NET/C# application is a software for a trucking company
 
 ## Stack
-- .NET 10 LTS with C# 14
+- .NET 11 (STS) with C# 15
 - ASP.NET Minimal APIs (no controllers)
 - EF Core 10 with Postgresql
 - Custom, hand-rolled CQRS mediator (`TransBrain.Application/Common/Messaging/`) — not MediatR, which became commercially licensed at v13

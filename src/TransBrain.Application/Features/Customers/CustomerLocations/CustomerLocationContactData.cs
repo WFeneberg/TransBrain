@@ -16,7 +16,7 @@ public sealed record CustomerLocationContactData(string Name, string? Phone = nu
     /// </summary>
     public static Result<List<CustomerLocationContact>> ToDomain(IReadOnlyList<CustomerLocationContactData>? contacts)
     {
-        var result = new List<CustomerLocationContact>();
+        List<CustomerLocationContact> result = [with(capacity: contacts?.Count ?? 0)];
         foreach (CustomerLocationContactData data in contacts ?? [])
         {
             Result<CustomerLocationContact> contact = CustomerLocationContact.Create(data.Name, data.Phone, data.Email);
