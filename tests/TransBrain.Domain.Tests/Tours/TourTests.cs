@@ -395,4 +395,97 @@ public class TourTests
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be("Tour.InvalidTransition");
     }
+
+    [Fact]
+    public void ReorderStops_ValidPermutation_AppliesOrderAndRenumbersFromOne()
+    {
+        Tour tour = ATour();
+        Vehicle vehicle = AVehicle();
+        TransportOrder first = AnOrder();
+        TransportOrder second = AnOrder();
+        tour.AssignOrder(first, vehicle, []);
+        tour.AssignOrder(second, vehicle, [first]);
+        // P1 D1 P2 D2 -> P1 P2 D1 D2: both pickups first, both deliveries after.
+        List<TourStop> newOrder = [tour.Stops[0], tour.Stops[2], tour.Stops[1], tour.Stops[3]];
+
+        Result<Unit> result = tour.ReorderStops(newOrder);
+
+        result.IsSuccess.Should().BeTrue();
+        tour.Stops.Select(s => s.Sequence).Should().Equal(1, 2, 3, 4);
+        tour.Stops.Select(s => (s.TransportOrderId, s.StopType)).Should().Equal(
+            (first.Id, StopType.Pickup),
+            (second.Id, StopType.Pickup),
+            (first.Id, StopType.Delivery),
+            (second.Id, StopType.Delivery));
+    }
+
+    [Fact]
+    public void ReorderStops_DeliveryBeforeItsPickup_ReturnsConflict()
+    {
+        Tour tour = ATour();
+        Vehicle vehicle = AVehicle();
+        TransportOrder first = AnOrder();
+        TransportOrder second = AnOrder();
+        tour.AssignOrder(first, vehicle, []);
+        tour.AssignOrder(second, vehicle, [first]);
+        // D2 before P2.
+        List<TourStop> newOrder = [tour.Stops[0], tour.Stops[3], tour.Stops[2], tour.Stops[1]];
+
+        Result<Unit> result = tour.ReorderStops(newOrder);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Tour.DeliveryBeforePickup");
+        // Refused means untouched: the original sequence numbers still stand.
+        tour.Stops.Select(s => s.StopType).Should().Equal(
+            StopType.Pickup, StopType.Delivery, StopType.Pickup, StopType.Delivery);
+    }
+
+    [Fact]
+    public void ReorderStops_MissingAStop_ReturnsConflict()
+    {
+        Tour tour = ATour();
+        Vehicle vehicle = AVehicle();
+        TransportOrder first = AnOrder();
+        TransportOrder second = AnOrder();
+        tour.AssignOrder(first, vehicle, []);
+        tour.AssignOrder(second, vehicle, [first]);
+        List<TourStop> newOrder = [tour.Stops[0], tour.Stops[1], tour.Stops[2]];
+
+        Result<Unit> result = tour.ReorderStops(newOrder);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Tour.ReorderMismatch");
+    }
+
+    [Fact]
+    public void ReorderStops_DuplicatedStopInsteadOfMissingOne_ReturnsConflict()
+    {
+        Tour tour = ATour();
+        Vehicle vehicle = AVehicle();
+        TransportOrder first = AnOrder();
+        TransportOrder second = AnOrder();
+        tour.AssignOrder(first, vehicle, []);
+        tour.AssignOrder(second, vehicle, [first]);
+        // Same count as the tour's four stops, but one stop twice and one missing.
+        List<TourStop> newOrder = [tour.Stops[0], tour.Stops[0], tour.Stops[2], tour.Stops[3]];
+
+        Result<Unit> result = tour.ReorderStops(newOrder);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Tour.ReorderMismatch");
+    }
+
+    [Fact]
+    public void ReorderStops_TourInProgress_ReturnsConflict()
+    {
+        Tour tour = ATour();
+        tour.AssignOrder(AnOrder(), AVehicle(), []);
+        tour.Start();
+        List<TourStop> newOrder = [tour.Stops[0], tour.Stops[1]];
+
+        Result<Unit> result = tour.ReorderStops(newOrder);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Tour.NotEditable");
+    }
 }

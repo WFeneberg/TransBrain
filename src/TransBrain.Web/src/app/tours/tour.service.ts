@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { Order } from '../orders/order.service';
 
 export interface TourStop {
     sequence: number;
@@ -65,6 +66,13 @@ export interface TourRoute {
     geometry: { latitude: number; longitude: number }[];
     schedule: TourRouteScheduleEntry[];
     violations: TourRouteViolation[];
+}
+
+export interface FittingOrders {
+    tourId: string;
+    remainingWeightKg: number;
+    remainingLoadMeters: number;
+    orders: Order[];
 }
 
 export interface TourFilters {
@@ -146,6 +154,16 @@ export class TourService {
     /** 409 when the tour cannot be routed, 404 when unknown, 503 when routing is not configured or unreachable. */
     getRoute(id: string): Observable<TourRoute> {
         return this.http.get<TourRoute>(`/api/tours/${id}/route`);
+    }
+
+    /** Draft orders that still fit into the tour's remaining capacity. Empty once the tour has started. */
+    fittingOrders(id: string): Observable<FittingOrders> {
+        return this.http.get<FittingOrders>(`/api/tours/${id}/fitting-orders`);
+    }
+
+    /** Reorders the stops to the shortest found route. 409 when not editable, 503 without geodata. */
+    optimize(id: string): Observable<Tour> {
+        return this.http.post<Tour>(`/api/tours/${id}/optimize`, null);
     }
 
     start(id: string): Observable<Tour> {

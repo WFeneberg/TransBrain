@@ -416,6 +416,12 @@ export const de: Record<MessageKey, string> = {
     'tours.empty': 'Keine Touren gefunden.',
     'tours.stopsEmpty': 'Noch keine Aufträge zugeordnet.',
     'tours.capacityWeight': 'Gewicht',
+    'tours.optimize': 'Route optimieren',
+    'tours.optimizeFailed': 'Die Route konnte nicht optimiert werden.',
+    'tours.fittingTitle': 'Passende Aufträge',
+    'tours.fittingRemaining': 'Freie Kapazität: {weight} kg, {meters} Lademeter',
+    'tours.fittingEmpty': 'Keine offenen Aufträge passen in die freie Kapazität.',
+    'tours.fittingFailed': 'Die passenden Aufträge konnten nicht geladen werden.',
     'tours.section.data': 'Tourdaten',
     'tours.section.date': 'Datum',
 

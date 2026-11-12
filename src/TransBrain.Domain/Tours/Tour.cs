@@ -160,6 +160,53 @@ public sealed class Tour
         return Unit.Value;
     }
 
+    /// <summary>
+    /// Replaces the stop order with <paramref name="newOrder"/>, renumbering sequences from 1.
+    /// The new order must contain exactly the current stops, and no delivery may come before its
+    /// own pickup — goods cannot be delivered off a lorry they were never loaded onto.
+    /// </summary>
+    public Result<Unit> ReorderStops(IReadOnlyList<TourStop> newOrder)
+    {
+        if (Status != TourStatus.Planned)
+        {
+            return NotEditable();
+        }
+
+        // A stop is identified by (order, type): each order has exactly one pickup and one
+        // delivery, so set equality on those pairs is permutation equality on the stops.
+        HashSet<(Guid, StopType)> current = _stops.Select(stop => (stop.TransportOrderId, stop.StopType)).ToHashSet();
+        HashSet<(Guid, StopType)> proposed = newOrder.Select(stop => (stop.TransportOrderId, stop.StopType)).ToHashSet();
+        if (newOrder.Count != _stops.Count || !proposed.SetEquals(current))
+        {
+            return Error.Conflict(
+                "Tour.ReorderMismatch",
+                "The new stop order must contain exactly the tour's current stops.");
+        }
+
+        foreach (IGrouping<Guid, (TourStop Stop, int Position)> stopsOfOrder in newOrder
+                     .Select((stop, position) => (Stop: stop, Position: position))
+                     .GroupBy(entry => entry.Stop.TransportOrderId))
+        {
+            int pickup = stopsOfOrder.Single(entry => entry.Stop.StopType == StopType.Pickup).Position;
+            int delivery = stopsOfOrder.Single(entry => entry.Stop.StopType == StopType.Delivery).Position;
+            if (delivery < pickup)
+            {
+                return Error.Conflict(
+                    "Tour.DeliveryBeforePickup",
+                    $"The new stop order would deliver order '{stopsOfOrder.Key}' before picking it up.");
+            }
+        }
+
+        List<TourStop> renumbered = newOrder
+            .Select((stop, index) => stop.WithSequence(index + 1))
+            .ToList();
+
+        _stops.Clear();
+        _stops.AddRange(renumbered);
+
+        return Unit.Value;
+    }
+
     /// <remarks>
     /// Moves only the tour. The assigned orders are a different aggregate, so the handler
     /// transitions them — see StartTourCommandHandler for why it validates every order before

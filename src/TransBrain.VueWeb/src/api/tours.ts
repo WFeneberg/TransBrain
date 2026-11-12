@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { userManager } from '../auth/userManager';
+import type { Order } from './orders';
 
 export interface TourStop {
     sequence: number;
@@ -110,6 +111,25 @@ export async function startTour(id: string): Promise<Tour> {
 
 export async function completeTour(id: string): Promise<Tour> {
     const response = await client.post<Tour>(`/tours/${id}/complete`);
+    return response.data;
+}
+
+export interface FittingOrders {
+    tourId: string;
+    remainingWeightKg: number;
+    remainingLoadMeters: number;
+    orders: Order[];
+}
+
+/** Draft orders that still fit into the tour's remaining capacity. Empty once the tour has started. */
+export async function listFittingOrders(tourId: string): Promise<FittingOrders> {
+    const response = await client.get<FittingOrders>(`/tours/${tourId}/fitting-orders`);
+    return response.data;
+}
+
+/** Reorders the stops to the shortest found route. 409 when not editable, 503 without geodata. */
+export async function optimizeTourRoute(tourId: string): Promise<Tour> {
+    const response = await client.post<Tour>(`/tours/${tourId}/optimize`);
     return response.data;
 }
 

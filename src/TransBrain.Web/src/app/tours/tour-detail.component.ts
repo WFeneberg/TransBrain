@@ -16,7 +16,7 @@ import { I18nService, TranslationKey } from '../i18n/i18n.service';
 import { LocationMapComponent, MapMarker } from '../shared/location-map.component';
 import { Observable, of, Subscription, switchMap } from 'rxjs';
 import { Order, OrderService } from '../orders/order.service';
-import { Tour, TourRoute, TourService, tourStatusTone } from './tour.service';
+import { FittingOrders, Tour, TourRoute, TourService, tourStatusTone } from './tour.service';
 
 @Component({
     selector: 'app-tour-detail',
@@ -282,12 +282,157 @@ import { Tour, TourRoute, TourService, tourStatusTone } from './tour.service';
                         </mat-card-content>
                     </mat-card>
 
+                    <!-- Draft orders the remaining capacity still takes - the dispatcher's
+                         shopping list for this tour. Only shown while the tour can still change. -->
+                    @if (session.can('dispatch.write') && t.status === 'Planned') {
+                        <mat-card appearance="outlined" class="full-width" data-testid="tour-fitting">
+                            <mat-card-header>
+                                <mat-icon mat-card-avatar class="avatar">playlist_add_check</mat-icon>
+                                <mat-card-title>{{ i18n.t('tours.fitting.title') }}</mat-card-title>
+                            </mat-card-header>
+                            <mat-card-content>
+                                @if (fittingOrders(); as f) {
+                                    <p class="hint" data-testid="tour-fitting-remaining">
+                                        <mat-icon aria-hidden="true">scale</mat-icon>
+                                        {{
+                                            i18n.t('tours.fitting.remaining', {
+                                                weight: f.remainingWeightKg,
+                                                meters: f.remainingLoadMeters,
+                                            })
+                                        }}
+                                    </p>
+                                    <div class="table-card">
+                                        <div class="table-scroll">
+                                            <table mat-table [dataSource]="f.orders">
+                                                <ng-container matColumnDef="orderNumber">
+                                                    <th mat-header-cell *matHeaderCellDef>
+                                                        {{ i18n.t('common.order') }}
+                                                    </th>
+                                                    <td
+                                                        mat-cell
+                                                        *matCellDef="let o"
+                                                        class="strong"
+                                                        data-testid="tour-fitting-order"
+                                                    >
+                                                        {{ o.orderNumber }}
+                                                    </td>
+                                                </ng-container>
+                                                <ng-container matColumnDef="route">
+                                                    <th mat-header-cell *matHeaderCellDef>
+                                                        {{ i18n.t('tours.route.title') }}
+                                                    </th>
+                                                    <td mat-cell *matCellDef="let o">
+                                                        {{ o.consignor.city }} →
+                                                        {{ o.consignee.city }}
+                                                    </td>
+                                                </ng-container>
+                                                <ng-container matColumnDef="weight">
+                                                    <th mat-header-cell *matHeaderCellDef>
+                                                        {{ i18n.t('orders.weightKg') }}
+                                                    </th>
+                                                    <td mat-cell *matCellDef="let o">
+                                                        {{ o.cargoWeightKg }} kg
+                                                    </td>
+                                                </ng-container>
+                                                <ng-container matColumnDef="loadMeters">
+                                                    <th mat-header-cell *matHeaderCellDef>
+                                                        {{ i18n.t('tours.loadMetersUnit') }}
+                                                    </th>
+                                                    <td mat-cell *matCellDef="let o">
+                                                        {{ o.cargoLoadMeters }}
+                                                    </td>
+                                                </ng-container>
+                                                <ng-container matColumnDef="pickup">
+                                                    <th mat-header-cell *matHeaderCellDef>
+                                                        {{ i18n.t('tours.route.stopType.Pickup') }}
+                                                    </th>
+                                                    <td mat-cell *matCellDef="let o">
+                                                        {{ o.pickupFrom | date: 'short' }}
+                                                    </td>
+                                                </ng-container>
+                                                <ng-container matColumnDef="actions">
+                                                    <th
+                                                        mat-header-cell
+                                                        *matHeaderCellDef
+                                                        class="actions-cell"
+                                                    >
+                                                        <span class="cdk-visually-hidden">{{
+                                                            i18n.t('common.actions')
+                                                        }}</span>
+                                                    </th>
+                                                    <td
+                                                        mat-cell
+                                                        *matCellDef="let o"
+                                                        class="actions-cell"
+                                                    >
+                                                        <button
+                                                            mat-icon-button
+                                                            data-testid="tour-fitting-assign"
+                                                            [matTooltip]="i18n.t('tours.assign')"
+                                                            [attr.aria-label]="
+                                                                i18n.t('tours.assign') +
+                                                                ' ' +
+                                                                o.orderNumber
+                                                            "
+                                                            (click)="assignFromFitting(o.id)"
+                                                        >
+                                                            <mat-icon>playlist_add</mat-icon>
+                                                        </button>
+                                                    </td>
+                                                </ng-container>
+                                                <tr
+                                                    mat-header-row
+                                                    *matHeaderRowDef="fittingColumns"
+                                                ></tr>
+                                                <tr
+                                                    mat-row
+                                                    *matRowDef="let row; columns: fittingColumns"
+                                                ></tr>
+                                                <tr class="mat-mdc-row" *matNoDataRow>
+                                                    <td
+                                                        class="empty"
+                                                        [attr.colspan]="fittingColumns.length"
+                                                    >
+                                                        <mat-icon aria-hidden="true"
+                                                            >inventory_2</mat-icon
+                                                        >
+                                                        <span data-testid="tour-fitting-empty">{{
+                                                            i18n.t('tours.fitting.empty')
+                                                        }}</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                }
+                            </mat-card-content>
+                        </mat-card>
+                    }
+
                     <mat-card appearance="outlined" class="full-width" data-testid="tour-route">
                         <mat-card-header>
                             <mat-icon mat-card-avatar class="avatar">map</mat-icon>
                             <mat-card-title>{{ i18n.t('tours.route.title') }}</mat-card-title>
                         </mat-card-header>
                         <mat-card-content>
+                            @if (
+                                session.can('dispatch.write') &&
+                                t.status === 'Planned' &&
+                                t.stops.length > 2
+                            ) {
+                                <!-- Reordering needs at least two orders; with one the pickup
+                                     before delivery rule already fixes the sequence. -->
+                                <div class="optimize">
+                                    <button
+                                        mat-stroked-button
+                                        data-testid="tour-optimize"
+                                        (click)="optimize()"
+                                    >
+                                        <mat-icon>auto_awesome</mat-icon>
+                                        {{ i18n.t('tours.optimize') }}
+                                    </button>
+                                </div>
+                            }
                             @if (routeError(); as message) {
                                 <p class="hint" data-testid="tour-route-error">
                                     <mat-icon aria-hidden="true">info</mat-icon>{{ message }}
@@ -447,6 +592,10 @@ import { Tour, TourRoute, TourService, tourStatusTone } from './tour.service';
                 flex: 1 1 320px;
             }
 
+            .optimize {
+                margin-bottom: 16px;
+            }
+
             .route-summary {
                 margin: 0 0 8px;
             }
@@ -493,10 +642,19 @@ export class TourDetailComponent {
 
     protected readonly tourId = this.route.snapshot.paramMap.get('id')!;
     protected readonly stopColumns = ['sequence', 'orderNumber', 'stopType', 'actions'];
+    protected readonly fittingColumns = [
+        'orderNumber',
+        'route',
+        'weight',
+        'loadMeters',
+        'pickup',
+        'actions',
+    ];
     protected readonly scheduleColumns = ['kind', 'start', 'end', 'country'];
     protected readonly statusTone = tourStatusTone;
     protected readonly tour = signal<Tour | null>(null);
     protected readonly draftOrders = signal<Order[]>([]);
+    protected readonly fittingOrders = signal<FittingOrders | null>(null);
     protected readonly selectedOrderId = signal('');
     protected readonly loadError = signal<string | null>(null);
     // Separate from loadError: a refused assignment must not blank the page the way a failed
@@ -534,6 +692,16 @@ export class TourDetailComponent {
 
         this.actionError.set(null);
         this.run(this.service.assignOrder(this.tourId, orderId), this.i18n.t('tours.error.assign'));
+    }
+
+    protected assignFromFitting(orderId: string): void {
+        this.actionError.set(null);
+        this.run(this.service.assignOrder(this.tourId, orderId), this.i18n.t('tours.error.assign'));
+    }
+
+    protected optimize(): void {
+        this.actionError.set(null);
+        this.run(this.service.optimize(this.tourId), this.i18n.t('tours.error.optimize'));
     }
 
     protected removeOrder(transportOrderId: string): void {
@@ -579,6 +747,7 @@ export class TourDetailComponent {
                 this.tour.set(tour);
                 this.selectedOrderId.set('');
                 this.loadDraftOrders();
+                this.loadFittingOrders();
                 this.loadRoute();
             },
             error: (error: HttpErrorResponse) =>
@@ -591,6 +760,7 @@ export class TourDetailComponent {
             next: (tour) => {
                 this.tour.set(tour);
                 this.loadDraftOrders();
+                this.loadFittingOrders();
                 this.loadRoute();
             },
             // The load path gets its own wording: "could not be assigned" on a failed getById
@@ -598,6 +768,25 @@ export class TourDetailComponent {
             error: (error: HttpErrorResponse) =>
                 this.loadError.set(this.describe(error, this.i18n.t('tours.error.load'))),
         });
+    }
+
+    // The fitting-orders endpoint is dispatcher-only, so nobody else sends the request - the
+    // card is hidden for them anyway, and a guaranteed 403 in the console helps no one.
+    private loadFittingOrders(): void {
+        if (!this.session.can('dispatch.write') || this.tour()?.status !== 'Planned') {
+            this.fittingOrders.set(null);
+            return;
+        }
+
+        this.session.ready
+            .pipe(switchMap(() => this.service.fittingOrders(this.tourId)))
+            .subscribe({
+                next: (fitting) => this.fittingOrders.set(fitting),
+                error: (error: HttpErrorResponse) =>
+                    this.actionError.set(
+                        this.describe(error, this.i18n.t('tours.error.fitting')),
+                    ),
+            });
     }
 
     // Stops change with every assign or remove, so the route is refetched after each one. A

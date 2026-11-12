@@ -426,6 +426,12 @@ export const en = {
     'tours.section.tour': 'Tour data',
     'tours.section.crew': 'Vehicle and driver',
     'tours.stopsEmpty': 'No orders assigned yet.',
+    'tours.optimize': 'Optimize route',
+    'tours.fitting.title': 'Fitting orders',
+    'tours.fitting.remaining': 'Free capacity: {weight} kg, {meters} loading metres',
+    'tours.fitting.empty': 'No open orders fit into the free capacity.',
+    'tours.error.fitting': 'The fitting orders could not be loaded.',
+    'tours.error.optimize': 'The route could not be optimized.',
 
     'map.unavailable':
         'The map is currently unavailable. The routing service is not configured or cannot be reached.',

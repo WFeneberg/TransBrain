@@ -8,8 +8,11 @@ import {
     completeTour,
     getTour,
     getTourRoute,
+    listFittingOrders,
+    optimizeTourRoute,
     removeOrderFromTour,
     startTour,
+    type FittingOrders,
     type ScheduleEntry,
     type Tour,
     type TourRoute,
@@ -35,11 +38,21 @@ const actionError = ref<string | null>(null);
 const tourRoute = ref<TourRoute | null>(null);
 // Its own slot like actionError: a route the service cannot compute must not blank the tour.
 const routeError = ref<string | null>(null);
+const fittingOrders = ref<FittingOrders | null>(null);
 
 const stopHeaders = computed(() => [
     { title: '#', key: 'sequence' },
     { title: t('common.order'), key: 'orderNumber' },
     { title: t('common.type'), key: 'stopType' },
+    { title: t('common.actions'), key: 'actions', sortable: false },
+]);
+
+const fittingHeaders = computed(() => [
+    { title: t('common.order'), key: 'orderNumber' },
+    { title: t('common.route'), key: 'route', sortable: false },
+    { title: t('tours.capacityWeight'), key: 'cargoWeightKg' },
+    { title: t('common.loadMeters'), key: 'cargoLoadMeters' },
+    { title: t('route.stopType.Pickup'), key: 'pickupFrom' },
     { title: t('common.actions'), key: 'actions', sortable: false },
 ]);
 
@@ -83,11 +96,27 @@ async function refresh(): Promise<void> {
     try {
         tour.value = await getTour(tourId);
         await loadDraftOrders();
+        await loadFittingOrders();
         await loadRoute();
     } catch (error) {
         // The load path gets its own wording: "could not be assigned" on a failed get would be
         // plainly wrong.
         loadError.value = describe(error, t('tours.loadFailed'));
+    }
+}
+
+// The fitting-orders endpoint is dispatcher-only, so nobody else sends the request - the card
+// is hidden for them anyway, and a guaranteed 403 in the console helps no one.
+async function loadFittingOrders(): Promise<void> {
+    if (!auth.can('dispatch.write') || tour.value?.status !== 'Planned') {
+        fittingOrders.value = null;
+        return;
+    }
+
+    try {
+        fittingOrders.value = await listFittingOrders(tourId);
+    } catch (error) {
+        actionError.value = describe(error, t('tours.fittingFailed'));
     }
 }
 
@@ -158,6 +187,14 @@ async function assign(): Promise<void> {
     await run(() => assignOrderToTour(tourId, selectedOrderId.value), t('tours.assignFailed'));
 }
 
+async function assignFromFitting(orderId: string): Promise<void> {
+    await run(() => assignOrderToTour(tourId, orderId), t('tours.assignFailed'));
+}
+
+async function optimize(): Promise<void> {
+    await run(() => optimizeTourRoute(tourId), t('tours.optimizeFailed'));
+}
+
 async function remove(transportOrderId: string): Promise<void> {
     await run(() => removeOrderFromTour(tourId, transportOrderId), t('tours.removeFailed'));
 }
@@ -176,6 +213,7 @@ async function run(action: () => Promise<Tour>, fallback: string): Promise<void>
         tour.value = await action();
         selectedOrderId.value = '';
         await loadDraftOrders();
+        await loadFittingOrders();
         await loadRoute();
     } catch (error) {
         actionError.value = describe(error, fallback);
@@ -389,10 +427,80 @@ function describe(error: unknown, fallback: string): string {
                     </v-card>
                 </v-col>
 
+                <!-- Draft orders the remaining capacity still takes - the dispatcher's shopping
+                     list for this tour. Only shown while the tour can still change. -->
+                <v-col v-if="auth.can('dispatch.write') && tour.status === 'Planned' && fittingOrders" cols="12">
+                    <v-card border flat class="table-card" data-testid="tour-fitting">
+                        <v-card-item prepend-icon="mdi-playlist-check" :title="t('tours.fittingTitle')" />
+                        <v-card-text class="fitting-hint">
+                            <p class="section-hint" data-testid="tour-fitting-remaining">
+                                <v-icon icon="mdi-gauge" size="small" />
+                                {{
+                                    t('tours.fittingRemaining', {
+                                        weight: fittingOrders.remainingWeightKg,
+                                        meters: fittingOrders.remainingLoadMeters,
+                                    })
+                                }}
+                            </p>
+                        </v-card-text>
+                        <v-data-table
+                            :headers="fittingHeaders"
+                            :items="fittingOrders.orders"
+                            :items-per-page="-1"
+                            :no-data-text="t('tours.fittingEmpty')"
+                            item-value="id"
+                            hide-default-footer
+                            hover
+                            data-testid="tour-fitting-table"
+                        >
+                            <template #item.orderNumber="{ item }">
+                                <span class="font-weight-bold" data-testid="tour-fitting-order">{{ item.orderNumber }}</span>
+                            </template>
+                            <template #item.route="{ item }">{{ item.consignor.city }} → {{ item.consignee.city }}</template>
+                            <template #item.cargoWeightKg="{ item }">{{ item.cargoWeightKg }} kg</template>
+                            <template #item.cargoLoadMeters="{ item }">{{ item.cargoLoadMeters }}</template>
+                            <template #item.pickupFrom="{ item }">{{ formatDateTime(item.pickupFrom) }}</template>
+                            <template #item.actions="{ item }">
+                                <div class="row-actions">
+                                    <v-tooltip :text="t('tours.assign')" location="top">
+                                        <template #activator="{ props: tooltip }">
+                                            <v-btn
+                                                v-bind="tooltip"
+                                                icon="mdi-plus"
+                                                variant="text"
+                                                size="small"
+                                                color="primary"
+                                                :aria-label="`${t('tours.assign')} ${item.orderNumber}`"
+                                                data-testid="tour-fitting-assign"
+                                                @click="assignFromFitting(item.id)"
+                                            />
+                                        </template>
+                                    </v-tooltip>
+                                </div>
+                            </template>
+                        </v-data-table>
+                    </v-card>
+                </v-col>
+
                 <v-col cols="12">
                     <v-card border flat class="section-card" data-testid="tour-route-section">
                         <v-card-item prepend-icon="mdi-routes" :title="t('common.route')" />
                         <v-card-text>
+                            <!-- Reordering needs at least two orders; with one the pickup before
+                                 delivery rule already fixes the sequence. -->
+                            <div
+                                v-if="auth.can('dispatch.write') && tour.status === 'Planned' && tour.stops.length > 2"
+                                class="optimize-row"
+                            >
+                                <v-btn
+                                    variant="outlined"
+                                    color="primary"
+                                    prepend-icon="mdi-auto-fix"
+                                    data-testid="tour-optimize"
+                                    @click="optimize"
+                                    >{{ t('tours.optimize') }}</v-btn
+                                >
+                            </div>
                             <p v-if="routeError" class="text-error error-line" data-testid="tour-route-error">{{ routeError }}</p>
                             <template v-if="tourRoute">
                                 <dl class="route-figures">
@@ -486,6 +594,14 @@ function describe(error: unknown, fallback: string): string {
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 12px;
+}
+
+.fitting-hint {
+    padding-bottom: 0;
+}
+
+.optimize-row {
+    margin-bottom: 16px;
 }
 
 .assign-field {

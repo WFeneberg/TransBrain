@@ -429,6 +429,12 @@ export const de: Record<keyof typeof en, string> = {
     'tours.section.tour': 'Tourdaten',
     'tours.section.crew': 'Fahrzeug und Fahrer',
     'tours.stopsEmpty': 'Noch keine Aufträge zugeordnet.',
+    'tours.optimize': 'Route optimieren',
+    'tours.fitting.title': 'Passende Aufträge',
+    'tours.fitting.remaining': 'Freie Kapazität: {weight} kg, {meters} Lademeter',
+    'tours.fitting.empty': 'Keine offenen Aufträge passen in die freie Kapazität.',
+    'tours.error.fitting': 'Die passenden Aufträge konnten nicht geladen werden.',
+    'tours.error.optimize': 'Die Route konnte nicht optimiert werden.',
 
     'map.unavailable':
         'Die Karte ist derzeit nicht verfügbar. Der Routing-Dienst ist nicht konfiguriert oder nicht erreichbar.',

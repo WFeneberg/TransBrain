@@ -8,7 +8,9 @@ using TransBrain.Application.Features.Tours.CompleteTour;
 using TransBrain.Application.Features.Tours.CreateTour;
 using TransBrain.Application.Features.Tours.GetTourById;
 using TransBrain.Application.Features.Tours.GetTourRoute;
+using TransBrain.Application.Features.Tours.ListFittingOrders;
 using TransBrain.Application.Features.Tours.ListTours;
+using TransBrain.Application.Features.Tours.OptimizeTourRoute;
 using TransBrain.Application.Features.Tours.RemoveOrder;
 using TransBrain.Application.Features.Tours.StartTour;
 using TransBrain.Domain.Common;
@@ -94,6 +96,30 @@ public sealed class TourEndpoints : IEndpointGroup
             .Produces<TourResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        // DispatchWrite although it is a GET: the list exists solely to decide the next
+        // assignment, so whoever may not assign has no business shortlisting for it.
+        group.MapGet("/{id:guid}/fitting-orders", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                Result<FittingOrdersResponse> result = await sender.Send(new ListFittingOrdersQuery(id), ct);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.DispatchWrite)
+            .WithName("ListFittingOrders")
+            .Produces<FittingOrdersResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/optimize", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                Result<TourResponse> result = await sender.Send(new OptimizeTourRouteCommand(id), ct);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.DispatchWrite)
+            .WithName("OptimizeTourRoute")
+            .Produces<TourResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // DELETE, unlike cancelling an order: a stop really is removed, and the order goes back
         // to Draft as if it had never been planned. Nothing is archived, so nothing is lost.

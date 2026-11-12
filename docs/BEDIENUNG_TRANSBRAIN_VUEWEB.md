@@ -636,7 +636,7 @@ Tour; rechts daneben stehen je nach Status **„Start tour“** (nur bei `Planne
 abgelehnt würden, werden ausgeblendet — anders als beim Stornieren eines Auftrags, wo die
 Ablehnung die Regel erklärt.
 
-Darunter gliedert sich die Seite in fünf Bereiche:
+Darunter gliedert sich die Seite in sechs Bereiche:
 
 **1. Tour data** — Datum, Fahrzeug und Fahrer der Tour.
 
@@ -664,7 +664,21 @@ abgelehnt, und eine Auswahl anzubieten, die anschließend abgelehnt wird, ist sc
 gar nicht anzubieten. Ein Auftrag, der bereits auf einer anderen Tour liegt, ist deshalb nicht in
 der Liste.
 
-**5. Route (Strecke)** — eine Karte mit der Fahrstrecke (blaue Linie) und den nummerierten
+**5. Fitting orders (Passende Aufträge)** — nur sichtbar für Disponenten, solange die Tour im
+Status `Planned` ist. Die Karte zeigt zuerst die **freie Kapazität** („Free capacity: 5200 kg,
+4.2 loading metres“) und darunter alle offenen Aufträge (`Draft`), die **einzeln** noch in diese
+Lücke passen — mit Auftragsnummer, Strecke (Abhol- → Zustellort), Gewicht, Lademetern und
+Abholdatum. Die Schaltfläche **„Assign“** an jeder Zeile ordnet den Auftrag direkt zu, ohne den
+Umweg über das Auswahlfeld. Nach dem Zuordnen werden Liste und freie Kapazität neu berechnet;
+Aufträge, die durch die kleinere Lücke herausfallen, verschwinden dabei von selbst. Passt gar
+nichts mehr, steht dort „No open orders fit into the free capacity.“
+
+**Beachten Sie:** Die Liste beantwortet die Frage „Welcher **eine** Auftrag passt noch?“ Zwei
+Aufträge aus der Liste passen zusammen nur dann, wenn auch ihre **Summe** in die freie Kapazität
+passt — sonst lehnt der Server den zweiten ab, wie unter „Was beim Zuordnen abgelehnt wird“
+beschrieben.
+
+**6. Route (Strecke)** — eine Karte mit der Fahrstrecke (blaue Linie) und den nummerierten
 Stopps. Darunter stehen:
 
 - **Gesamtstrecke** in km und **Fahrzeit** im Format `h:mm`
@@ -680,6 +694,27 @@ Kartenausschnitt planen. Ist der Dienst noch im Aufbau oder nicht
 erreichbar, erscheint anstelle der Route die Meldung „Der Karten- und Routingdienst ist nicht
 verfügbar …“. Liegt die Adresse eines Stopps außerhalb des geladenen Kartenausschnitts oder ist sie unbekannt, nennt die Meldung diese Adresse: „Die Adresse „…“ wurde im geladenen Kartenausschnitt nicht gefunden. Ohne sie lässt sich die Route nicht berechnen.“ Schlägt die Berechnung aus einem
 anderen Grund fehl, wird der Grund angezeigt. Die übrige Tourseite bleibt in allen Fällen nutzbar.
+
+### Route optimieren
+
+Oben im Bereich „Route“ steht für Disponenten die Schaltfläche **„Optimize route“** — sichtbar
+nur bei Status `Planned` und erst ab **zwei zugeordneten Aufträgen**, denn bei einem einzigen
+Auftrag ist die Reihenfolge (Abholung vor Zustellung) ohnehin festgelegt.
+
+Ein Klick ordnet die Stopps der Tour so um, dass die **Gesamtstrecke kürzer** wird. Dabei gilt
+unverrückbar: Die **Abholung eines Auftrags bleibt immer vor seiner Zustellung**. Die Stopps
+werden anschließend lückenlos neu nummeriert (1, 2, …), und Stoppliste wie Route laden neu. Ist
+die aktuelle Reihenfolge bereits die kürzeste, ändert sich nichts — die Schaltfläche zu drücken
+ist also nie falsch.
+
+Die Optimierung rechnet mit **Luftlinien-Entfernungen** zwischen den Stopp-Adressen, nicht mit
+der tatsächlichen Fahrstrecke. Das genügt, um offensichtliches Hin- und Herfahren zu beseitigen;
+die angezeigte Route (Strecke, Fahrzeit) berechnet danach wie gewohnt der Routing-Dienst.
+
+| Situation                                              | Meldung (sinngemäß)                                        |
+|--------------------------------------------------------|------------------------------------------------------------|
+| Tour ist bereits gestartet oder abgeschlossen           | Hinweis, dass die Tour nicht mehr bearbeitet werden kann (HTTP 409) |
+| Eine Stopp-Adresse kann nicht geokodiert werden         | Hinweis mit der betroffenen Adresse (HTTP 503)             |
 
 ### Was beim Zuordnen abgelehnt wird
 

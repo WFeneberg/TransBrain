@@ -46,6 +46,15 @@ public sealed class InMemoryTransportOrderRepository : ITransportOrderRepository
         CancellationToken cancellationToken)
         => Task.FromResult(Filter(status, pickupFrom, pickupTo).Count());
 
+    public Task<IReadOnlyList<TransportOrder>> ListByStatusAsync(
+        OrderStatus status,
+        CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyList<TransportOrder>>(
+            _orders
+                .Where(o => o.Status == status)
+                .OrderBy(o => o.OrderNumber.Value, StringComparer.Ordinal)
+                .ToList());
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         SaveChangesCallCount++;
