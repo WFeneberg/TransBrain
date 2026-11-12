@@ -14,11 +14,14 @@ const STATUS_COLORS: Record<string, string> = {
     Delivered: 'success',
     Completed: 'success',
     Cancelled: 'error',
+    Issued: 'info',
+    Paid: 'success',
 };
 
 export const DRIVER_STATUSES = ['Available', 'Absent', 'Inactive'] as const;
 export const ORDER_STATUSES = ['Draft', 'Planned', 'InTransit', 'Delivered', 'Cancelled'] as const;
 export const TOUR_STATUSES = ['Planned', 'InProgress', 'Completed'] as const;
+export const INVOICE_STATUSES = ['Draft', 'Issued', 'Paid', 'Cancelled'] as const;
 
 export function statusColor(status: string): string {
     return STATUS_COLORS[status] ?? 'grey';

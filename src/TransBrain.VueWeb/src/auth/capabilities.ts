@@ -8,8 +8,8 @@ export type Capability = 'read' | 'masterData.write' | 'dispatch.write' | 'tourS
 /** The realm roles defined in src/TransBrain.AppHost/realms/transbrain-realm.json. */
 export type AppRole = 'admin' | 'disponent' | 'fahrer' | 'viewer';
 
-/** The four functional areas of the application. */
-export type Area = 'vehicles' | 'drivers' | 'customers' | 'orders' | 'tours';
+/** The functional areas of the application. */
+export type Area = 'vehicles' | 'drivers' | 'customers' | 'orders' | 'tours' | 'invoices';
 
 const CAPABILITIES_BY_ROLE: Record<AppRole, readonly Capability[]> = {
     admin: ['read', 'masterData.write', 'dispatch.write', 'tourStatus.write'],
@@ -25,10 +25,10 @@ const CAPABILITIES_BY_ROLE: Record<AppRole, readonly Capability[]> = {
  * still works; see the router guard in main.ts.
  */
 const AREAS_BY_ROLE: Record<AppRole, readonly Area[]> = {
-    admin: ['vehicles', 'drivers', 'customers', 'orders', 'tours'],
-    disponent: ['vehicles', 'drivers', 'customers', 'orders', 'tours'],
+    admin: ['vehicles', 'drivers', 'customers', 'orders', 'tours', 'invoices'],
+    disponent: ['vehicles', 'drivers', 'customers', 'orders', 'tours', 'invoices'],
     fahrer: ['tours'],
-    viewer: ['vehicles', 'drivers', 'customers', 'orders', 'tours'],
+    viewer: ['vehicles', 'drivers', 'customers', 'orders', 'tours', 'invoices'],
 };
 
 const ALL_ROLES = Object.keys(CAPABILITIES_BY_ROLE) as AppRole[];

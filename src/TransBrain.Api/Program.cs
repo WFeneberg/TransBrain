@@ -11,6 +11,7 @@ using TransBrain.Api.Endpoints;
 using TransBrain.Application;
 using TransBrain.Application.Abstractions;
 using TransBrain.Infrastructure;
+using TransBrain.Infrastructure.Billing;
 using TransBrain.Infrastructure.Persistence;
 using TransBrain.Infrastructure.Routing;
 using TransBrain.ServiceDefaults;
@@ -49,6 +50,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
 builder.Services.Configure<OpenRouteServiceOptions>(builder.Configuration.GetSection(OpenRouteServiceOptions.SectionName));
+builder.Services.Configure<InvoiceSellerOptions>(builder.Configuration.GetSection(InvoiceSellerOptions.SectionName));
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 builder.Services.AddOpenApi();
