@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransBrain.Domain.Drivers;
 using TransBrain.Domain.Vehicles;
+using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
 
@@ -13,6 +14,8 @@ internal sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
 
         builder.HasKey(v => v.Id);
 
+        builder.HasTenantId();
+
         // The converter round-trips through the domain factory; .Value is safe here because only
         // already-validated plates ever reach the database.
         // "C" is PostgreSQL's byte-ordering collation; it is what actually makes the database's
@@ -23,7 +26,9 @@ internal sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
             .UseCollation("C")
             .IsRequired();
 
-        builder.HasIndex(v => v.LicensePlate).IsUnique();
+        // Unique per tenant, not globally: two tenants may well both enter the same rental
+        // vehicle's plate, and neither must be told it is "already taken".
+        builder.HasIndex(TenantEntity.PropertyName, nameof(Vehicle.LicensePlate)).IsUnique();
 
         builder.Property(v => v.Type).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(v => v.Status).HasConversion<string>().HasMaxLength(20).IsRequired();

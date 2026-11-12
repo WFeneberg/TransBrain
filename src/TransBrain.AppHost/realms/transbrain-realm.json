@@ -65,6 +65,79 @@
             "access.token.claim": "true",
             "userinfo.token.claim": "true"
           }
+        },
+        {
+          "name": "tenant-id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "tenant_id",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "transbrain-mobile",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:4400/*",
+        "de.transbrain.driver://callback"
+      ],
+      "webOrigins": [
+        "http://localhost:4400"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4400/*##de.transbrain.driver://callback"
+      },
+      "protocolMappers": [
+        {
+          "name": "transbrain-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "transbrain-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles-in-id-token",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "tenant-id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "tenant_id",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
         }
       ]
     }
@@ -77,6 +150,7 @@
       "emailVerified": true,
       "firstName": "Anna",
       "lastName": "Admin",
+      "attributes": { "tenant_id": [ "0199c0de-0000-7000-8000-000000000001" ] },
       "credentials": [ { "type": "password", "value": "admin", "temporary": false } ],
       "realmRoles": [ "admin" ]
     },
@@ -87,6 +161,7 @@
       "emailVerified": true,
       "firstName": "Dirk",
       "lastName": "Disponent",
+      "attributes": { "tenant_id": [ "0199c0de-0000-7000-8000-000000000001" ] },
       "credentials": [ { "type": "password", "value": "dispo", "temporary": false } ],
       "realmRoles": [ "disponent" ]
     },
@@ -97,6 +172,7 @@
       "emailVerified": true,
       "firstName": "Frank",
       "lastName": "Fahrer",
+      "attributes": { "tenant_id": [ "0199c0de-0000-7000-8000-000000000001" ] },
       "credentials": [ { "type": "password", "value": "fahrer", "temporary": false } ],
       "realmRoles": [ "fahrer" ]
     },
@@ -107,8 +183,20 @@
       "emailVerified": true,
       "firstName": "Vera",
       "lastName": "Viewer",
+      "attributes": { "tenant_id": [ "0199c0de-0000-7000-8000-000000000001" ] },
       "credentials": [ { "type": "password", "value": "viewer", "temporary": false } ],
       "realmRoles": [ "viewer" ]
+    },
+    {
+      "username": "admin.zweite",
+      "enabled": true,
+      "email": "admin.zweite@transbrain.local",
+      "emailVerified": true,
+      "firstName": "Zoe",
+      "lastName": "Zweitfirma",
+      "attributes": { "tenant_id": [ "0199c0de-0000-7000-8000-000000000002" ] },
+      "credentials": [ { "type": "password", "value": "zweite", "temporary": false } ],
+      "realmRoles": [ "admin" ]
     }
   ]
 }

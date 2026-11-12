@@ -88,14 +88,22 @@ either sets `Database__MigrateOnStartup=true` (the Docker and Azure setups in
 
 ## Test users
 
-The imported realm defines four users, one per realm role:
+The imported realm defines five users: one per realm role in the default tenant, plus an
+admin of a second tenant (Mandant) for trying out tenant isolation:
 
-| Username      | Password | Realm role  |
-|---------------|----------|-------------|
-| `admin.user`  | `admin`  | `admin`     |
-| `dispo.user`  | `dispo`  | `disponent` |
-| `fahrer.user` | `fahrer` | `fahrer`    |
-| `viewer.user` | `viewer` | `viewer`    |
+| Username      | Password | Realm role  | Tenant         |
+|---------------|----------|-------------|----------------|
+| `admin.user`  | `admin`  | `admin`     | default tenant |
+| `dispo.user`  | `dispo`  | `disponent` | default tenant |
+| `fahrer.user` | `fahrer` | `fahrer`    | default tenant |
+| `viewer.user` | `viewer` | `viewer`    | default tenant |
+| `admin.zweite`| `zweite` | `admin`     | second tenant  |
+
+Every user carries a `tenant_id` attribute that Keycloak maps into the access token; the
+API isolates all data per tenant based on that claim (see
+[docs/KEYCLOAK.md](docs/KEYCLOAK.md)). `admin.zweite` starts with an empty database view —
+including an empty vehicle catalog — because all seed and test data belongs to the default
+tenant.
 
 **These credentials are for local development only. They must never be used in, or
 reach, a deployed environment.**

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransBrain.Domain.Vehicles;
+using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
 
@@ -11,6 +12,8 @@ internal sealed class VehicleDocumentConfiguration : IEntityTypeConfiguration<Ve
         builder.ToTable("vehicle_documents");
 
         builder.HasKey(d => d.Id);
+
+        builder.HasTenantId();
 
         builder.Property(d => d.DocumentType).HasMaxLength(VehicleCatalogEntry.MaxCodeLength).IsRequired();
         builder.Property(d => d.Remark).HasMaxLength(VehicleDocument.MaxRemarkLength);

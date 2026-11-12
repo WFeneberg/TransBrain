@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransBrain.Domain.Tours;
+using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
 
@@ -12,6 +13,8 @@ internal sealed class TourConfiguration : IEntityTypeConfiguration<Tour>
         builder.ToTable("tours");
 
         builder.HasKey(t => t.Id);
+
+        builder.HasTenantId();
 
         builder.Property(t => t.TourDate).HasColumnName("tour_date").IsRequired();
         builder.Property(t => t.VehicleId).HasColumnName("vehicle_id").IsRequired();

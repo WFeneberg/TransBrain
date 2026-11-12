@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransBrain.Domain.Customers;
+using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
 
@@ -11,6 +12,8 @@ internal sealed class CustomerLocationConfiguration : IEntityTypeConfiguration<C
         builder.ToTable("customer_locations");
 
         builder.HasKey(l => l.Id);
+
+        builder.HasTenantId();
 
         builder.Property(l => l.Name).HasMaxLength(200).IsRequired();
 
