@@ -5,6 +5,7 @@ using TransBrain.Application.Common.Pagination;
 using TransBrain.Application.Features.Drivers;
 using TransBrain.Application.Features.Orders;
 using TransBrain.Application.Features.Tours;
+using TransBrain.Application.Features.Tours.ListFittingOrders;
 using TransBrain.Application.Features.Vehicles;
 
 namespace TransBrain.Api.IntegrationTests;
@@ -384,6 +385,179 @@ public class TourEndpointsTests(TransBrainApiFactory factory) : IClassFixture<Tr
 
         HttpResponseMessage response = await factory.CreateClientAs("viewer")
             .PostAsync($"/api/tours/{tour.Id}/start", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    private async Task<OrderResponse> CreateOrderBetweenAsync(
+        (string Street, string PostalCode, string City) from,
+        (string Street, string PostalCode, string City) to)
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("disponent").PostAsJsonAsync("/api/orders", new
+        {
+            consignor = new
+            {
+                name = "Absender GmbH", street = from.Street, postalCode = from.PostalCode,
+                city = from.City, country = "DE"
+            },
+            consignee = new
+            {
+                name = "Empfaenger AG", street = to.Street, postalCode = to.PostalCode,
+                city = to.City, country = "DE"
+            },
+            cargoDescription = "Palettenware",
+            cargoWeightKg = 1_000,
+            cargoLoadMeters = 1.0m,
+            pickupFrom = "2027-03-01T08:00:00+00:00",
+            pickupTo = "2027-03-01T10:00:00+00:00",
+            deliveryFrom = "2027-03-01T12:00:00+00:00",
+            deliveryTo = "2027-03-01T16:00:00+00:00"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        return (await response.Content.ReadFromJsonAsync<OrderResponse>())!;
+    }
+
+    /// <summary>Pins an address to coordinates so optimizing works against the offline geocoder.</summary>
+    private async Task PutOverrideAsync(
+        (string Street, string PostalCode, string City) address, double latitude, double longitude)
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("admin")
+            .PutAsJsonAsync("/api/geodata/overrides", new
+            {
+                street = address.Street,
+                postalCode = address.PostalCode,
+                city = address.City,
+                country = "DE",
+                latitude,
+                longitude
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task GetFittingOrders_ListsOnlyDraftOrdersWithinTheRemainingCapacity()
+    {
+        VehicleResponse vehicle = await CreateVehicleAsync(payloadKg: 1_500, loadMeters: 2.0m);
+        DriverResponse driver = await CreateDriverAsync("Passend");
+        TourResponse tour = await CreateTourAsync(new DateOnly(2098, 6, 1), vehicle.Id, driver.Id);
+        HttpClient dispatcher = factory.CreateClientAs("disponent");
+
+        OrderResponse assigned = await CreateOrderAsync(weightKg: 800, loadMeters: 1.0m);
+        await dispatcher.PostAsJsonAsync($"/api/tours/{tour.Id}/orders", new { transportOrderId = assigned.Id });
+
+        OrderResponse fits = await CreateOrderAsync(weightKg: 700, loadMeters: 1.0m);
+        OrderResponse tooHeavy = await CreateOrderAsync(weightKg: 701, loadMeters: 0.5m);
+        OrderResponse tooLong = await CreateOrderAsync(weightKg: 100, loadMeters: 1.1m);
+
+        HttpResponseMessage response = await dispatcher.GetAsync($"/api/tours/{tour.Id}/fitting-orders");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        FittingOrdersResponse fitting = (await response.Content.ReadFromJsonAsync<FittingOrdersResponse>())!;
+        fitting.RemainingWeightKg.Should().Be(700);
+        fitting.RemainingLoadMeters.Should().Be(1.0m);
+        string[] offered = fitting.Orders.Select(order => order.OrderNumber).ToArray();
+        offered.Should().Contain(fits.OrderNumber);
+        offered.Should().NotContain(tooHeavy.OrderNumber);
+        offered.Should().NotContain(tooLong.OrderNumber);
+    }
+
+    [Fact]
+    public async Task GetFittingOrders_AsViewer_ReturnsForbidden()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("viewer")
+            .GetAsync($"/api/tours/{Guid.CreateVersion7()}/fitting-orders");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GetFittingOrders_UnknownTour_ReturnsNotFound()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("disponent")
+            .GetAsync($"/api/tours/{Guid.CreateVersion7()}/fitting-orders");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task PostOptimize_ZigZagStops_ReordersThemToTheShortestValidRoute()
+    {
+        (string, string, string) muenchen = ("Optimierweg 1", "80331", "Muenchen");
+        (string, string, string) berlin = ("Optimierweg 2", "10115", "Berlin");
+        (string, string, string) augsburg = ("Optimierweg 3", "86150", "Augsburg");
+        (string, string, string) potsdam = ("Optimierweg 4", "14467", "Potsdam");
+        await PutOverrideAsync(muenchen, 48.137, 11.575);
+        await PutOverrideAsync(berlin, 52.520, 13.405);
+        await PutOverrideAsync(augsburg, 48.371, 10.898);
+        await PutOverrideAsync(potsdam, 52.391, 13.064);
+
+        VehicleResponse vehicle = await CreateVehicleAsync();
+        DriverResponse driver = await CreateDriverAsync("Optimiert");
+        TourResponse tour = await CreateTourAsync(new DateOnly(2098, 6, 2), vehicle.Id, driver.Id);
+        HttpClient dispatcher = factory.CreateClientAs("disponent");
+
+        // Assigned as two zig-zags across the country: München -> Berlin, Augsburg -> Potsdam.
+        OrderResponse south = await CreateOrderBetweenAsync(muenchen, berlin);
+        OrderResponse north = await CreateOrderBetweenAsync(augsburg, potsdam);
+        await dispatcher.PostAsJsonAsync($"/api/tours/{tour.Id}/orders", new { transportOrderId = south.Id });
+        await dispatcher.PostAsJsonAsync($"/api/tours/{tour.Id}/orders", new { transportOrderId = north.Id });
+
+        HttpResponseMessage response = await dispatcher.PostAsync($"/api/tours/{tour.Id}/optimize", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        TourResponse optimized = (await response.Content.ReadFromJsonAsync<TourResponse>())!;
+        optimized.Stops.Select(stop => (stop.OrderNumber, stop.StopType)).Should().Equal(
+            (south.OrderNumber, "Pickup"),
+            (north.OrderNumber, "Pickup"),
+            (north.OrderNumber, "Delivery"),
+            (south.OrderNumber, "Delivery"));
+        optimized.Stops.Select(stop => stop.Sequence).Should().Equal(1, 2, 3, 4);
+
+        // The new order must have been persisted, not just answered.
+        HttpResponseMessage reread = await dispatcher.GetAsync($"/api/tours/{tour.Id}");
+        TourResponse persisted = (await reread.Content.ReadFromJsonAsync<TourResponse>())!;
+        persisted.Stops.Select(stop => (stop.OrderNumber, stop.StopType)).Should().Equal(
+            optimized.Stops.Select(stop => (stop.OrderNumber, stop.StopType)));
+    }
+
+    [Fact]
+    public async Task PostOptimize_WithoutStops_ReturnsConflict()
+    {
+        VehicleResponse vehicle = await CreateVehicleAsync();
+        DriverResponse driver = await CreateDriverAsync("OhneStopps");
+        TourResponse tour = await CreateTourAsync(new DateOnly(2098, 6, 3), vehicle.Id, driver.Id);
+
+        HttpResponseMessage response = await factory.CreateClientAs("disponent")
+            .PostAsync($"/api/tours/{tour.Id}/optimize", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Tour.NoStops");
+    }
+
+    [Fact]
+    public async Task PostOptimize_UnresolvableAddresses_ReturnsServiceUnavailable()
+    {
+        VehicleResponse vehicle = await CreateVehicleAsync();
+        DriverResponse driver = await CreateDriverAsync("OhneGeodaten");
+        TourResponse tour = await CreateTourAsync(new DateOnly(2098, 6, 4), vehicle.Id, driver.Id);
+        HttpClient dispatcher = factory.CreateClientAs("disponent");
+
+        // The default order addresses have no geodata override, and the test geocoder is offline.
+        OrderResponse order = await CreateOrderAsync(weightKg: 1_000, loadMeters: 1.0m);
+        await dispatcher.PostAsJsonAsync($"/api/tours/{tour.Id}/orders", new { transportOrderId = order.Id });
+
+        HttpResponseMessage response = await dispatcher.PostAsync($"/api/tours/{tour.Id}/optimize", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+    }
+
+    [Fact]
+    public async Task PostOptimize_AsViewer_ReturnsForbidden()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("viewer")
+            .PostAsync($"/api/tours/{Guid.CreateVersion7()}/optimize", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }

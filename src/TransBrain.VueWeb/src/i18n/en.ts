@@ -414,6 +414,12 @@ export const en = {
     'tours.empty': 'No tours found.',
     'tours.stopsEmpty': 'No orders assigned yet.',
     'tours.capacityWeight': 'Weight',
+    'tours.optimize': 'Optimize route',
+    'tours.optimizeFailed': 'The route could not be optimized.',
+    'tours.fittingTitle': 'Fitting orders',
+    'tours.fittingRemaining': 'Free capacity: {weight} kg, {meters} loading metres',
+    'tours.fittingEmpty': 'No open orders fit into the free capacity.',
+    'tours.fittingFailed': 'The fitting orders could not be loaded.',
     'tours.section.data': 'Tour data',
     'tours.section.date': 'Date',
 

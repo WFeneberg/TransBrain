@@ -38,6 +38,15 @@ internal sealed class TransportOrderRepository(TransBrainDbContext context) : IT
         CancellationToken cancellationToken)
         => Filter(status, pickupFrom, pickupTo).CountAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<TransportOrder>> ListByStatusAsync(
+        OrderStatus status,
+        CancellationToken cancellationToken)
+        => await context.TransportOrders
+            .Where(o => o.Status == status)
+            .OrderBy(o => o.OrderNumber)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
         => context.SaveChangesAsync(cancellationToken);
 

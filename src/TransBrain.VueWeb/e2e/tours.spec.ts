@@ -286,3 +286,100 @@ test('directNavigationToTheTourDetail_canStillAssign', async ({ page, browser })
     await expect(page.getByTestId('tour-stop-type').first()).toHaveText('Pickup');
     await expect(page.getByTestId('tour-action-error')).toHaveCount(0);
 });
+
+test('fittingOrders_offerOnlyWhatStillFits_andAssignFromThePanel', async ({ page, browser }) => {
+    test.setTimeout(180_000);
+
+    const tag = Date.now().toString(36).toUpperCase().slice(-5);
+    const plate = `M-VF ${tag.slice(0, 4)}`;
+    const driverName = `PassendFahrer${tag}`;
+    const fitting = `PassendKlein${tag}`;
+    const tooHeavy = `PassendGross${tag}`;
+    // Weights vary per run so a rerun against the same dev database cannot mistake a draft
+    // left behind by the previous run for this run's rows. The heavy one leaves less than
+    // 500 kg of the 18 t lorry, the small one needs at least 500 kg - so assigning the heavy
+    // one always squeezes the small one out.
+    const heavyKg = String(17_501 + (Date.now() % 490));
+    const smallKg = String(500 + (Date.now() % 400));
+
+    await asAdmin(browser, async (admin) => {
+        await createVehicle(admin, plate);
+        await createDriver(admin, driverName);
+    });
+
+    await signInAsDispatcher(page);
+    await createOrder(page, fitting, smallKg);
+    await createOrder(page, tooHeavy, heavyKg);
+
+    const draftOrders = page.waitForResponse(
+        (response) => response.url().includes('/api/orders') && response.url().includes('status=Draft'),
+    );
+    await createTour(page, uniqueTourDate(4), plate, driverName);
+    await expect(page.getByTestId('tour-detail-status')).toHaveText('Planned');
+    await draftOrders;
+
+    // Both drafts fit the empty lorry, so both weights are offered.
+    const fittingPanel = page.getByTestId('tour-fitting');
+    await expect(fittingPanel).toBeVisible();
+    await expect(page.getByTestId('tour-fitting-remaining')).toContainText('18000 kg');
+    await expect(fittingPanel.locator('tr').filter({ hasText: `${smallKg} kg` }).first()).toBeVisible();
+    await expect(fittingPanel.locator('tr').filter({ hasText: `${heavyKg} kg` }).first()).toBeVisible();
+
+    // Assign the heavy one from the panel: it leaves the list AND squeezes the small one out.
+    await fittingPanel
+        .locator('tr')
+        .filter({ hasText: `${heavyKg} kg` })
+        .getByTestId('tour-fitting-assign')
+        .click();
+
+    await expect(page.getByTestId('tour-stop-type').first()).toHaveText('Pickup');
+    await expect(page.getByTestId('tour-capacity-weight')).toHaveText(`${heavyKg} / 18000 kg`);
+    await expect(page.getByTestId('tour-fitting-remaining')).toContainText(`${18_000 - Number(heavyKg)} kg`);
+    await expect(fittingPanel.locator('tr').filter({ hasText: `${heavyKg} kg` })).toHaveCount(0);
+    await expect(fittingPanel.locator('tr').filter({ hasText: `${smallKg} kg` })).toHaveCount(0);
+});
+
+test('optimizeButton_appearsOnlyWithTwoOrMoreOrders', async ({ page, browser }) => {
+    test.setTimeout(180_000);
+
+    const tag = Date.now().toString(36).toUpperCase().slice(-5);
+    const plate = `M-VO ${tag.slice(0, 4)}`;
+    const driverName = `OptimierFahrer${tag}`;
+    const first = `OptimierEins${tag}`;
+    const second = `OptimierZwei${tag}`;
+
+    await asAdmin(browser, async (admin) => {
+        await createVehicle(admin, plate);
+        await createDriver(admin, driverName);
+    });
+
+    await signInAsDispatcher(page);
+    await createOrder(page, first, '1000');
+    await createOrder(page, second, '1000');
+
+    const draftOrders = page.waitForResponse(
+        (response) => response.url().includes('/api/orders') && response.url().includes('status=Draft'),
+    );
+    await createTour(page, uniqueTourDate(5), plate, driverName);
+    await expect(page.getByTestId('tour-detail-status')).toHaveText('Planned');
+    await draftOrders;
+
+    // One order means two stops whose sequence is already fixed by pickup-before-delivery, so
+    // there is nothing to optimize and no button to mislead anyone with.
+    await selectOrderByConsignor(page, first);
+    await page.getByTestId('tour-assign').click();
+    await expect(page.getByTestId('tour-stop-sequence')).toHaveCount(2);
+    await expect(page.getByTestId('tour-optimize')).toHaveCount(0);
+
+    await selectOrderByConsignor(page, second);
+    await page.getByTestId('tour-assign').click();
+    await expect(page.getByTestId('tour-stop-sequence')).toHaveCount(4);
+    await expect(page.getByTestId('tour-optimize')).toBeVisible();
+
+    // All four stops share one address, so the optimizer finds nothing shorter and the tour
+    // keeps its four stops - the click must simply not break the page, whatever the map
+    // services currently know.
+    await page.getByTestId('tour-optimize').click();
+    await expect(page.getByTestId('tour-stop-sequence')).toHaveCount(4);
+    await expect(page.getByTestId('tour-detail-status')).toHaveText('Planned');
+});

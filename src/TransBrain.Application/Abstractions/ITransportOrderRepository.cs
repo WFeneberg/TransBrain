@@ -17,6 +17,10 @@ public interface ITransportOrderRepository
         DateTimeOffset? pickupTo,
         CancellationToken cancellationToken);
 
+    /// <summary>All orders in the given status, sorted by order number. Unpaged: used by planning
+    /// aids that must see every candidate, not one page of them.</summary>
+    Task<IReadOnlyList<TransportOrder>> ListByStatusAsync(OrderStatus status, CancellationToken cancellationToken);
+
     Task<int> CountAsync(
         OrderStatus? status,
         DateTimeOffset? pickupFrom,

@@ -29,4 +29,24 @@ public sealed record GeoPoint
 
         return new GeoPoint(latitude, longitude);
     }
+
+    /// <summary>
+    /// Great-circle distance to <paramref name="other"/> in meters, by the haversine formula.
+    /// An air-line measure: good for comparing stop orders, not for billing driven kilometers —
+    /// those come from the road routing service.
+    /// </summary>
+    public double StraightLineMetersTo(GeoPoint other)
+    {
+        const double earthRadiusMeters = 6_371_000;
+
+        double latA = Latitude * Math.PI / 180;
+        double latB = other.Latitude * Math.PI / 180;
+        double deltaLat = (other.Latitude - Latitude) * Math.PI / 180;
+        double deltaLon = (other.Longitude - Longitude) * Math.PI / 180;
+
+        double h = Math.Sin(deltaLat / 2) * Math.Sin(deltaLat / 2)
+            + Math.Cos(latA) * Math.Cos(latB) * Math.Sin(deltaLon / 2) * Math.Sin(deltaLon / 2);
+
+        return 2 * earthRadiusMeters * Math.Asin(Math.Sqrt(Math.Min(1, h)));
+    }
 }
