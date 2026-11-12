@@ -3,7 +3,8 @@
 Dispatch software for a trucking company: vehicles, drivers, transport orders and tours,
 built with .NET 11 (Clean Architecture, a hand-rolled CQRS mediator, EF Core 10 /
 PostgreSQL, Redis) behind Keycloak-issued OIDC tokens, with two frontends — Angular and
-Vue — talking to the same API.
+Vue — talking to the same API, plus a Flutter driver app for Android, iOS and the
+browser (`src/TransBrain.DriverApp`).
 
 Phase 1 (foundation and walking skeleton) delivered a `Vehicle` aggregate with `Create`
 and `List`, wired end to end through both frontends. Phase 2 (master data completion)
@@ -17,6 +18,7 @@ exists today, and `.superpowers/sdd/` for the phase plans.
 - [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) — architecture, conventions, how to extend and test
 - [docs/INSTALLATION.md](docs/INSTALLATION.md) — local (Aspire), Docker Compose and Azure (Bicep)
 - [docs/KEYCLOAK.md](docs/KEYCLOAK.md) — authentication setup
+- [docs/BEDIENUNG_TRANSBRAIN_DRIVERAPP.md](docs/BEDIENUNG_TRANSBRAIN_DRIVERAPP.md) — the Flutter driver app (German operator guide, incl. how to run it)
 
 ## Prerequisites
 
@@ -118,6 +120,7 @@ password Aspire generates per machine), and for more on how the realm is wired, 
 |------------------|------------------------------------|
 | Angular (`Web`)  | 4200                                |
 | Vue (`VueWeb`)   | 4300                                |
+| Flutter web demo (`DriverApp`) | 4400 (when run with `--web-port 4400`) |
 | Keycloak         | 8080 (HTTPS)                       |
 | API              | dynamic — see the Aspire dashboard |
 
@@ -356,6 +359,17 @@ unoptimised default: every spec authenticates through the same Keycloak realm/co
 and concurrent logins against that one container time out intermittently under the
 default parallel workers — observed directly during development, and the failure looks
 like a broken test rather than contention, which is worse than the slower serialised run.
+
+The Flutter driver app has its own analyzer and test suite (unit + widget tests, no
+backend needed — the widget tests run against the bundled demo data):
+
+```bash
+flutter analyze
+flutter test
+```
+
+run from `src/TransBrain.DriverApp`. Like the Playwright suites, they are not part of
+the .NET CI workflow.
 
 ## Application-layer coverage gate
 

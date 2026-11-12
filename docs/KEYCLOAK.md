@@ -9,8 +9,8 @@ warnings at the end.
 Keycloak runs as a container started by the AppHost (`src/TransBrain.AppHost/AppHost.cs`,
 `builder.AddKeycloak("keycloak", 8080).WithRealmImport("./realms")`). On every start it
 imports `src/TransBrain.AppHost/realms/transbrain-realm.json`, which is the authoritative
-definition of the `transbrain` realm — its roles, its two clients (`transbrain-api`,
-`transbrain-spa`) and its users.
+definition of the `transbrain` realm — its roles, its three clients (`transbrain-api`,
+`transbrain-spa`, `transbrain-mobile`) and its users.
 
 There is **no data volume** attached to the container (removed deliberately, see the
 comment in `AppHost.cs`). Consequences:
@@ -86,8 +86,9 @@ access token**, never out of anything a caller can set freely:
 
 - Each realm user carries a `tenant_id` **user attribute** holding the tenant's GUID.
 - A `tenant-id` **protocol mapper** (`oidc-usermodel-attribute-mapper`) on the
-  `transbrain-spa` client copies that attribute into a `tenant_id` claim in the access,
-  ID and userinfo tokens. The mapper exists in both realm files
+  `transbrain-spa` and `transbrain-mobile` clients copies that attribute into a
+  `tenant_id` claim in the access, ID and userinfo tokens. The mapper exists in both
+  realm files
   (`src/TransBrain.AppHost/realms/transbrain-realm.json` and
   `deploy/keycloak/transbrain-realm.json`).
 - The API resolves the claim per request (`HttpContextTenantContext`) and fails closed:
@@ -121,6 +122,7 @@ the same seller letterhead.
 | Client ID        | Type       | Notes                                                              |
 |------------------|------------|-------------------------------------------------------------------|
 | `transbrain-spa` | public     | Authorization code + PKCE (S256); redirect/web-origin URIs for ports 4200 and 4300; adds a `transbrain-api` audience mapper to the access token |
+| `transbrain-mobile` | public  | Same flow and mappers as `transbrain-spa`, for the Flutter driver app (`src/TransBrain.DriverApp`); redirect URIs `http://localhost:4400/*` (web demo) and `de.transbrain.driver://callback` (Android/iOS deep link) |
 | `transbrain-api` | bearer-only | The API validates tokens; it never initiates a login             |
 
 ## This is development-only configuration
