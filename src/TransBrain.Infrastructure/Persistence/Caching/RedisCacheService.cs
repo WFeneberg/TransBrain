@@ -11,7 +11,10 @@ namespace TransBrain.Infrastructure.Persistence.Caching;
 // provider requires every reference-type constructor parameter to resolve to a registered
 // service and throws at activation time; a bare nullable annotation is a compile-time-only
 // hint that the container does not consult.
-internal sealed class RedisCacheService(IDistributedCache cache, IConnectionMultiplexer? connection = null)
+internal sealed class RedisCacheService(
+    IDistributedCache cache,
+    ITenantContext tenantContext,
+    IConnectionMultiplexer? connection = null)
     : ICacheService
 {
     private static readonly DistributedCacheEntryOptions Options = new()
@@ -21,7 +24,7 @@ internal sealed class RedisCacheService(IDistributedCache cache, IConnectionMult
 
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken) where T : class
     {
-        byte[]? bytes = await cache.GetAsync(key, cancellationToken);
+        byte[]? bytes = await cache.GetAsync(Scope(key), cancellationToken);
         return bytes is null ? null : JsonSerializer.Deserialize<T>(bytes);
     }
 
@@ -38,8 +41,11 @@ internal sealed class RedisCacheService(IDistributedCache cache, IConnectionMult
             return;
         }
 
-        await cache.SetAsync(key, JsonSerializer.SerializeToUtf8Bytes(value), Options, cancellationToken);
-        await connection.GetDatabase().SetAddAsync(IndexKey(Prefix(key)), key);
+        string scopedKey = Scope(key);
+        await cache.SetAsync(scopedKey, JsonSerializer.SerializeToUtf8Bytes(value), Options, cancellationToken);
+        // Prefix() runs on the unscoped key so it agrees with the unscoped prefix handlers pass
+        // to RemoveByPrefixAsync; both are then scoped to the same tenant here.
+        await connection.GetDatabase().SetAddAsync(IndexKey(Scope(Prefix(key))), scopedKey);
     }
 
     public async Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken)
@@ -49,6 +55,7 @@ internal sealed class RedisCacheService(IDistributedCache cache, IConnectionMult
             return;
         }
 
+        string scopedPrefix = Scope(prefix);
         IDatabase database = connection.GetDatabase();
 
         // Bumped first, and unconditionally - even when there is nothing to delete below. A
@@ -59,9 +66,9 @@ internal sealed class RedisCacheService(IDistributedCache cache, IConnectionMult
         // full race this closes. Deleting entries below is still worth doing so stale-generation
         // values do not linger in Redis for their full TTL, but the deletion alone was never
         // enough to close the race - only the counter is.
-        await database.StringIncrementAsync(GenerationKey(prefix));
+        await database.StringIncrementAsync(GenerationKey(scopedPrefix));
 
-        RedisValue[] keys = await database.SetMembersAsync(IndexKey(prefix));
+        RedisValue[] keys = await database.SetMembersAsync(IndexKey(scopedPrefix));
 
         if (keys.Length == 0)
         {
@@ -80,7 +87,7 @@ internal sealed class RedisCacheService(IDistributedCache cache, IConnectionMult
         // short window below. This does not close the window entirely: a value written
         // concurrently with this very invalidation can still be briefly stale until the next
         // write invalidates it again.
-        await database.SetRemoveAsync(IndexKey(prefix), keys);
+        await database.SetRemoveAsync(IndexKey(scopedPrefix), keys);
     }
 
     public async Task<long> GetGenerationAsync(string prefix, CancellationToken cancellationToken)
@@ -90,9 +97,15 @@ internal sealed class RedisCacheService(IDistributedCache cache, IConnectionMult
             return 0;
         }
 
-        RedisValue value = await connection.GetDatabase().StringGetAsync(GenerationKey(prefix));
+        RedisValue value = await connection.GetDatabase().StringGetAsync(GenerationKey(Scope(prefix)));
         return value.IsNullOrEmpty ? 0 : (long)value;
     }
+
+    // Every key, index and generation counter lives under a per-tenant namespace: cached
+    // entries are query results of tenant-filtered data, so a tenant must never be served
+    // (or allowed to invalidate) another tenant's entries. "N" format keeps the tenant part
+    // free of dashes but, more importantly, free of ':', which the prefix logic relies on.
+    private string Scope(string keyOrPrefix) => $"t_{tenantContext.TenantId:N}:{keyOrPrefix}";
 
     // Guarded against a key with no ':' at all: key.IndexOf(':') would then be -1, and
     // key[..(-1 + 1)] is key[..0] - the empty string. Every such key would share one "" prefix,

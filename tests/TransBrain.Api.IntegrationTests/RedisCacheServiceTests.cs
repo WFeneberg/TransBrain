@@ -29,8 +29,16 @@ public sealed class RedisCacheServiceTests(RedisContainerFixture fixture) : ICla
     // shared index bucket.
     private static string NewPrefix() => $"redistest{Guid.NewGuid():N}:";
 
-    private ICacheService CreateService(IConnectionMultiplexer? connection)
-        => new RedisCacheService(CreateDistributedCache(), connection);
+    private ICacheService CreateService(IConnectionMultiplexer? connection, Guid? tenantId = null)
+        => new RedisCacheService(
+            CreateDistributedCache(),
+            new FixedTenantContext(tenantId ?? TenantDefaults.DefaultTenantId),
+            connection);
+
+    private sealed class FixedTenantContext(Guid tenantId) : ITenantContext
+    {
+        public Guid TenantId { get; } = tenantId;
+    }
 
     private IDistributedCache CreateDistributedCache()
         => new RedisCache(Options.Create(new RedisCacheOptions { ConnectionMultiplexerFactory = () => Task.FromResult(fixture.Connection) }));
@@ -106,6 +114,30 @@ public sealed class RedisCacheServiceTests(RedisContainerFixture fixture) : ICla
         // deleted. This is the "becomes unreachable instead of authoritative" guarantee.
         (await cache.GetAsync<PagedResult<VehicleResponse>>(readerKey, CancellationToken.None))
             .Should().BeEquivalentTo(staleValue);
+    }
+
+    // The cache rides on a shared Redis, so tenant isolation must come from key scoping: the
+    // same logical key written by tenant A must be invisible to tenant B, and B invalidating a
+    // prefix must not evict A's entries.
+    [Fact]
+    public async Task Cache_SameKeyInTwoTenants_IsIsolatedPerTenant()
+    {
+        Guid otherTenant = Guid.CreateVersion7();
+        ICacheService tenantA = CreateService(fixture.Connection);
+        ICacheService tenantB = CreateService(fixture.Connection, otherTenant);
+        string prefix = NewPrefix();
+        string key = $"{prefix}list:0:1:20:none:none";
+
+        PagedResult<VehicleResponse> valueOfA = new([], 1, 20, 0);
+        await tenantA.SetAsync(key, valueOfA, CancellationToken.None);
+
+        // B never sees A's entry under the identical logical key...
+        (await tenantB.GetAsync<PagedResult<VehicleResponse>>(key, CancellationToken.None)).Should().BeNull();
+
+        // ...and B invalidating "its" prefix leaves A's entry untouched.
+        await tenantB.RemoveByPrefixAsync(prefix, CancellationToken.None);
+        (await tenantA.GetAsync<PagedResult<VehicleResponse>>(key, CancellationToken.None))
+            .Should().BeEquivalentTo(valueOfA);
     }
 
     [Fact]

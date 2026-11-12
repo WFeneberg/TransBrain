@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransBrain.Domain.Customers;
 using TransBrain.Domain.Orders;
+using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
 
@@ -13,6 +14,8 @@ internal sealed class TransportOrderConfiguration : IEntityTypeConfiguration<Tra
 
         builder.HasKey(o => o.Id);
 
+        builder.HasTenantId();
+
         // Ordered ordinally so this repository and InMemoryTransportOrderRepository, which uses
         // StringComparer.Ordinal, cannot disagree about what "sorted by order number" means.
         builder.Property(o => o.OrderNumber)
@@ -22,7 +25,9 @@ internal sealed class TransportOrderConfiguration : IEntityTypeConfiguration<Tra
             .UseCollation("C")
             .IsRequired();
 
-        builder.HasIndex(o => o.OrderNumber).IsUnique();
+        // Unique per tenant: each tenant draws numbers from its own sequence, so "TB-2026-00001"
+        // legitimately exists once per tenant.
+        builder.HasIndex(TenantEntity.PropertyName, nameof(TransportOrder.OrderNumber)).IsUnique();
 
         builder.OwnsOne(o => o.Consignor, ConfigureAddress("consignor"));
         builder.OwnsOne(o => o.Consignee, ConfigureAddress("consignee"));

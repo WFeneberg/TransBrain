@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransBrain.Domain.Vehicles;
+using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
 
@@ -12,17 +13,23 @@ internal sealed class VehicleCatalogEntryConfiguration : IEntityTypeConfiguratio
 
         builder.HasKey(e => e.Id);
 
+        builder.HasTenantId();
+
         builder.Property(e => e.Kind).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(e => e.Code).HasMaxLength(VehicleCatalogEntry.MaxCodeLength).IsRequired();
         builder.Property(e => e.Name).HasMaxLength(VehicleCatalogEntry.MaxNameLength).IsRequired();
         builder.Property(e => e.IsActive).IsRequired();
 
-        builder.HasIndex(e => new { e.Kind, e.Code }).IsUnique();
+        // Per tenant: the catalog is tenant-managed master data (carrier groups in particular
+        // name tenant-specific companies), so codes only need to be unique within one tenant.
+        builder.HasIndex(TenantEntity.PropertyName, nameof(VehicleCatalogEntry.Kind), nameof(VehicleCatalogEntry.Code))
+            .IsUnique();
 
         // The common special document types are seeded as a starting point and can be edited like any entry.
         // The vehicle classes are those of the legacy vehicle screen; their codes are the former enum
         // names where one existed, so vehicles saved before the catalog existed keep resolving. The
-        // carrier groups are those of the legacy vehicle screen too.
+        // carrier groups are those of the legacy vehicle screen too. Seeded for the default tenant
+        // only: a newly onboarded tenant starts with an empty catalog and fills it via the admin UI.
         builder.HasData(
             Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-00000000000b", "Other", "Sonstige"),
             Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000004", "Tank", "Tank"),
@@ -49,6 +56,7 @@ internal sealed class VehicleCatalogEntryConfiguration : IEntityTypeConfiguratio
     private static object Seed(VehicleCatalogKind kind, string id, string code, string name) => new
     {
         Id = Guid.Parse(id),
+        TenantId = Application.Abstractions.TenantDefaults.DefaultTenantId,
         Kind = kind,
         Code = code,
         Name = name,

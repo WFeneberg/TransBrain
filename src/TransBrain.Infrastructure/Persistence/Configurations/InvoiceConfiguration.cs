@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransBrain.Domain.Billing;
 using TransBrain.Domain.Customers;
 using TransBrain.Domain.Orders;
+using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
 
@@ -15,6 +16,8 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
 
         builder.HasKey(i => i.Id);
 
+        builder.HasTenantId();
+
         // Ordered ordinally so this repository and InMemoryInvoiceRepository, which uses
         // StringComparer.Ordinal, cannot disagree about what "sorted by invoice number" means.
         builder.Property(i => i.InvoiceNumber)
@@ -24,7 +27,9 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
             .UseCollation("C")
             .IsRequired();
 
-        builder.HasIndex(i => i.InvoiceNumber).IsUnique();
+        // Unique per tenant: each tenant draws numbers from its own sequence, so "RE-2026-00001"
+        // legitimately exists once per tenant.
+        builder.HasIndex(TenantEntity.PropertyName, nameof(Invoice.InvoiceNumber)).IsUnique();
 
         builder.Property(i => i.CustomerId).HasColumnName("customer_id").IsRequired();
         builder.HasIndex(i => i.CustomerId);

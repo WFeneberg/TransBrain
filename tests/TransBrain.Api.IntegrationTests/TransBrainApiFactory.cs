@@ -43,6 +43,17 @@ public sealed class TransBrainApiFactory : WebApplicationFactory<Program>, IAsyn
         return client;
     }
 
+    /// <summary>
+    /// A client acting for a specific tenant (Mandant). Without this header every test client
+    /// belongs to the default tenant, so only cross-tenant tests need it.
+    /// </summary>
+    public HttpClient CreateClientForTenant(Guid tenantId, params string[] roles)
+    {
+        HttpClient client = CreateClientAs(roles);
+        client.DefaultRequestHeaders.Add(TestAuthHandler.TenantHeader, tenantId.ToString());
+        return client;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Environments.Development);
@@ -60,6 +71,10 @@ public sealed class TransBrainApiFactory : WebApplicationFactory<Program>, IAsyn
             services.Replace(ServiceDescriptor.Singleton<IGeocoder, OfflineGeocoder>());
             services.Replace(ServiceDescriptor.Singleton<IRoutePlanner, OfflineRoutePlanner>());
             services.Replace(ServiceDescriptor.Singleton<IMapDataStatusProvider, OfflineMapDataStatusProvider>());
+
+            // Like production, but with a default-tenant fallback for scopes without an
+            // HttpContext (the number-generator tests resolve services from a bare scope).
+            services.Replace(ServiceDescriptor.Scoped<ITenantContext, TestTenantContext>());
         });
     }
 }

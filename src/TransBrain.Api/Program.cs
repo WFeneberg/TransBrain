@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using TransBrain.Api.Authorization;
 using TransBrain.Api.Endpoints;
+using TransBrain.Api.Tenancy;
 using TransBrain.Application;
 using TransBrain.Application.Abstractions;
 using TransBrain.Infrastructure;
@@ -31,7 +32,13 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.AddNpgsqlDbContext<TransBrainDbContext>("transbraindb");
+// Deliberately NOT Aspire's AddNpgsqlDbContext: that registers a pooled DbContext, and a
+// pooled context is constructed by a singleton pool that cannot take the scoped ITenantContext
+// the tenant query filters and stamping need. EnrichNpgsqlDbContext layers the same Aspire
+// telemetry, health check and retry behaviour on top of this plain scoped registration.
+string? transbrainDbConnectionString = builder.Configuration.GetConnectionString("transbraindb");
+builder.Services.AddDbContext<TransBrainDbContext>(options => options.UseNpgsql(transbrainDbConnectionString));
+builder.EnrichNpgsqlDbContext<TransBrainDbContext>();
 
 // Redis is registered only when Aspire supplied a connection string. The integration
 // tests run without a Redis container and fall through to the in-memory cache.
@@ -48,6 +55,10 @@ else
 // which spec §9's "a driver only touches their own tours" rule needs.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
+
+// The tenant (Mandant) everything below scopes to: resolved from the token's "tenant_id"
+// claim, consumed by the DbContext's query filters, the number generators and the cache.
+builder.Services.AddScoped<ITenantContext, HttpContextTenantContext>();
 
 builder.Services.Configure<OpenRouteServiceOptions>(builder.Configuration.GetSection(OpenRouteServiceOptions.SectionName));
 builder.Services.Configure<NominatimOptions>(builder.Configuration.GetSection(NominatimOptions.SectionName));
@@ -148,6 +159,7 @@ app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<TenantRequirementMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

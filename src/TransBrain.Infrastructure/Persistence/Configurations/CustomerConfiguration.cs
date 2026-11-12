@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransBrain.Domain.Customers;
 using TransBrain.Domain.Vehicles;
+using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
 
@@ -12,6 +13,8 @@ internal sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.ToTable("customers");
 
         builder.HasKey(c => c.Id);
+
+        builder.HasTenantId();
 
         // Ordered ordinally so this repository and InMemoryCustomerRepository cannot disagree
         // about what "sorted by name" means.

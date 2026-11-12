@@ -14,10 +14,16 @@ namespace TransBrain.Infrastructure.Persistence.OrderNumbering;
 /// statement, taking a row lock for its duration, so concurrent callers serialise and receive
 /// different numbers. OrderNumberGeneratorTests proves this with twenty concurrent callers.
 /// </remarks>
-internal sealed class SequentialOrderNumberGenerator(TransBrainDbContext context) : IOrderNumberGenerator
+internal sealed class SequentialOrderNumberGenerator(
+    TransBrainDbContext context,
+    ITenantContext tenantContext) : IOrderNumberGenerator
 {
     public async Task<OrderNumber> NextAsync(int year, CancellationToken cancellationToken)
     {
+        // Each tenant owns an independent sequence per year: order numbers are a tenant's
+        // business numbering, and one tenant's volume must not create gaps in another's.
+        Guid tenantId = tenantContext.TenantId;
+
         // Two details here are load-bearing rather than stylistic:
         //
         // The `AS "Value"` alias, because Database.SqlQuery<T> for a scalar type binds a single
@@ -29,9 +35,9 @@ internal sealed class SequentialOrderNumberGenerator(TransBrainDbContext context
         // operator on top runs the statement as the root query, which is what we want.
         List<int> sequences = await context.Database
             .SqlQuery<int>($"""
-                INSERT INTO order_number_sequences (year, last_number)
-                VALUES ({year}, 1)
-                ON CONFLICT (year) DO UPDATE
+                INSERT INTO order_number_sequences (tenant_id, year, last_number)
+                VALUES ({tenantId}, {year}, 1)
+                ON CONFLICT (tenant_id, year) DO UPDATE
                     SET last_number = order_number_sequences.last_number + 1
                 RETURNING last_number AS "Value"
                 """)

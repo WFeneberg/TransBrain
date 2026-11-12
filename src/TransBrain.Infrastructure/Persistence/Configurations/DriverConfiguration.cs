@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransBrain.Domain.Drivers;
+using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
 
@@ -11,6 +12,8 @@ internal sealed class DriverConfiguration : IEntityTypeConfiguration<Driver>
         builder.ToTable("drivers");
 
         builder.HasKey(d => d.Id);
+
+        builder.HasTenantId();
 
         // Ordered ordinally so this repository and InMemoryDriverRepository, which uses
         // StringComparer.Ordinal, cannot disagree about what "sorted by name" means.
@@ -24,8 +27,10 @@ internal sealed class DriverConfiguration : IEntityTypeConfiguration<Driver>
         // Filtered so multiple NULLs remain allowed - most drivers have no Keycloak login yet.
         // Phase 3 will use this column to bind a login (Keycloak's "sub" claim) to exactly one
         // driver, so two drivers silently sharing the same ExternalUserId must be impossible at
-        // the database level, not merely discouraged by application code.
-        builder.HasIndex(d => d.ExternalUserId)
+        // the database level, not merely discouraged by application code. Scoped per tenant:
+        // globally unique would surface a cross-tenant duplicate as an unhandleable 500, because
+        // the tenant-filtered duplicate check can never see the other tenant's row.
+        builder.HasIndex(TenantEntity.PropertyName, nameof(Driver.ExternalUserId))
             .IsUnique()
             .HasFilter("\"ExternalUserId\" IS NOT NULL");
 

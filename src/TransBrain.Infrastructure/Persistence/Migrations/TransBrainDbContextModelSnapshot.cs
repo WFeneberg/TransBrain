@@ -17,7 +17,7 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.14")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -75,6 +75,10 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<decimal>("VatRatePercent")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)")
@@ -84,7 +88,9 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.HasIndex("InvoiceNumber")
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "InvoiceNumber")
                         .IsUnique();
 
                     b.ToTable("invoices", (string)null);
@@ -117,6 +123,10 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("VatId")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -124,6 +134,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Name");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("customers", (string)null);
                 });
@@ -142,9 +154,15 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("customer_locations", (string)null);
                 });
@@ -185,13 +203,19 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ExternalUserId")
-                        .IsUnique()
-                        .HasFilter("\"ExternalUserId\" IS NOT NULL");
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("LastName", "FirstName");
+
+                    b.HasIndex("TenantId", "ExternalUserId")
+                        .IsUnique()
+                        .HasFilter("\"ExternalUserId\" IS NOT NULL");
 
                     b.ToTable("drivers", (string)null);
                 });
@@ -220,11 +244,17 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ConsigneeLocationId");
 
-                    b.HasIndex("OrderNumber")
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "OrderNumber")
                         .IsUnique();
 
                     b.ToTable("transport_orders", (string)null);
@@ -266,13 +296,19 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("street");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AddressKey")
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "AddressKey")
                         .IsUnique();
 
                     b.ToTable("geo_overrides", (string)null);
@@ -293,6 +329,10 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateOnly>("TourDate")
                         .HasColumnType("date")
                         .HasColumnName("tour_date");
@@ -302,6 +342,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasColumnName("vehicle_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("TourDate", "DriverId")
                         .IsUnique()
@@ -351,6 +393,10 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -360,7 +406,9 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("DefaultDriverId");
 
-                    b.HasIndex("LicensePlate")
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "LicensePlate")
                         .IsUnique();
 
                     b.ToTable("vehicles", (string)null);
@@ -390,9 +438,15 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Kind", "Code")
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "Kind", "Code")
                         .IsUnique();
 
                     b.ToTable("vehicle_catalog_entries", (string)null);
@@ -404,7 +458,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Other",
                             IsActive = true,
                             Kind = "VehicleClass",
-                            Name = "Sonstige"
+                            Name = "Sonstige",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -412,7 +467,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Tank",
                             IsActive = true,
                             Kind = "VehicleClass",
-                            Name = "Tank"
+                            Name = "Tank",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -420,7 +476,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Refrigerated",
                             IsActive = true,
                             Kind = "VehicleClass",
-                            Name = "Kühler"
+                            Name = "Kühler",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -428,7 +485,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Tarpaulin",
                             IsActive = true,
                             Kind = "VehicleClass",
-                            Name = "Plane"
+                            Name = "Plane",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -436,7 +494,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Tipper",
                             IsActive = true,
                             Kind = "VehicleClass",
-                            Name = "Kipper"
+                            Name = "Kipper",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -444,7 +503,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Rental",
                             IsActive = true,
                             Kind = "VehicleClass",
-                            Name = "Leihfahrzeug"
+                            Name = "Leihfahrzeug",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -452,7 +512,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Other",
                             IsActive = true,
                             Kind = "CarrierGroup",
-                            Name = "Sonstige"
+                            Name = "Sonstige",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -460,7 +521,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "HuterVils",
                             IsActive = true,
                             Kind = "CarrierGroup",
-                            Name = "Huter Vils"
+                            Name = "Huter Vils",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -468,7 +530,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "HuterFuessen",
                             IsActive = true,
                             Kind = "CarrierGroup",
-                            Name = "Huter Füssen"
+                            Name = "Huter Füssen",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -476,7 +539,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Fixed",
                             IsActive = true,
                             Kind = "CarrierGroup",
-                            Name = "Fixe Frächter"
+                            Name = "Fixe Frächter",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -484,7 +548,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Regular",
                             IsActive = true,
                             Kind = "CarrierGroup",
-                            Name = "Regelmäßig beschäftigte Frächter"
+                            Name = "Regelmäßig beschäftigte Frächter",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -492,7 +557,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Rental",
                             IsActive = true,
                             Kind = "CarrierGroup",
-                            Name = "Leihfahrzeuge"
+                            Name = "Leihfahrzeuge",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -500,7 +566,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "ADR",
                             IsActive = true,
                             Kind = "DocumentType",
-                            Name = "ADR-Zulassungsbescheinigung"
+                            Name = "ADR-Zulassungsbescheinigung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -508,7 +575,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "ATP",
                             IsActive = true,
                             Kind = "DocumentType",
-                            Name = "ATP-Bescheinigung"
+                            Name = "ATP-Bescheinigung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -516,7 +584,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "CEMT",
                             IsActive = true,
                             Kind = "DocumentType",
-                            Name = "CEMT-Genehmigung"
+                            Name = "CEMT-Genehmigung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -524,7 +593,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Tachograph",
                             IsActive = true,
                             Kind = "DocumentType",
-                            Name = "Tachographenprüfung"
+                            Name = "Tachographenprüfung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -532,7 +602,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "UVV",
                             IsActive = true,
                             Kind = "DocumentType",
-                            Name = "UVV-Prüfung"
+                            Name = "UVV-Prüfung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -540,7 +611,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "Crane",
                             IsActive = true,
                             Kind = "DocumentType",
-                            Name = "Kranprüfung"
+                            Name = "Kranprüfung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -548,7 +620,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "TailLift",
                             IsActive = true,
                             Kind = "DocumentType",
-                            Name = "Ladebordwandprüfung"
+                            Name = "Ladebordwandprüfung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         },
                         new
                         {
@@ -556,7 +629,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Code = "HuterVilsAll",
                             IsActive = true,
                             Kind = "CustomerClass",
-                            Name = "Huter Vils alle Gattungen"
+                            Name = "Huter Vils alle Gattungen",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         });
                 });
 
@@ -585,6 +659,10 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateOnly?>("ValidUntil")
                         .HasColumnType("date");
 
@@ -592,6 +670,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("VehicleId", "DocumentType")
                         .IsUnique();

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TransBrain.Domain.Routing;
+using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence.Configurations;
 
@@ -12,6 +13,8 @@ internal sealed class GeoOverrideConfiguration : IEntityTypeConfiguration<GeoOve
 
         builder.HasKey(o => o.Id);
 
+        builder.HasTenantId();
+
         // Lengths match the address columns elsewhere; the key is their joined lower-case form.
         builder.Property(o => o.Street).HasColumnName("street").HasMaxLength(200).IsRequired();
         builder.Property(o => o.PostalCode).HasColumnName("postal_code").HasMaxLength(20).IsRequired();
@@ -20,7 +23,9 @@ internal sealed class GeoOverrideConfiguration : IEntityTypeConfiguration<GeoOve
         builder.Property(o => o.AddressKey).HasColumnName("address_key").HasMaxLength(450).IsRequired();
         builder.Property(o => o.UpdatedAt).HasColumnName("updated_at").IsRequired();
 
-        builder.HasIndex(o => o.AddressKey).IsUnique();
+        // Per tenant: one tenant's manual pin correction is their own view of the address,
+        // another tenant may override the same address differently (or not at all).
+        builder.HasIndex(TenantEntity.PropertyName, nameof(GeoOverride.AddressKey)).IsUnique();
 
         builder.OwnsOne(o => o.Position, position =>
         {

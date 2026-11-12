@@ -61,8 +61,9 @@ at the top of the left-hand nav to see this project's users and clients.
 
 ## Test users (the `transbrain` realm)
 
-Defined in `transbrain-realm.json`, one per realm role. These are what you log into the
-Angular (`http://localhost:4200`) and Vue (`http://localhost:4300`) frontends with.
+Defined in `transbrain-realm.json`, one per realm role plus a second-tenant admin. These
+are what you log into the Angular (`http://localhost:4200`) and Vue
+(`http://localhost:4300`) frontends with.
 
 | Username      | Password | Realm role  | Can do                                                    |
 |---------------|----------|-------------|----------------------------------------------------------|
@@ -70,11 +71,50 @@ Angular (`http://localhost:4200`) and Vue (`http://localhost:4300`) frontends wi
 | `dispo.user`  | `dispo`  | `disponent` | Read everything; create/edit orders and tours (`DispatchWrite`) |
 | `fahrer.user` | `fahrer` | `fahrer`    | Read; start/complete **their own** tours (`TourStatusWrite`) |
 | `viewer.user` | `viewer` | `viewer`    | Read only                                                  |
+| `admin.zweite`| `zweite` | `admin`     | Everything — but only inside the **second tenant** (see below) |
 
 A `fahrer` is tied to a `Driver` record through `externalUserId`, which stores the
 Keycloak `sub` claim. A driver row with no `externalUserId` belongs to nobody who can
 sign in, and cannot start its tours. See the README's "API endpoints" section for the
 full policy-to-role mapping.
+
+## Tenants (Mandanten): the `tenant_id` attribute and claim
+
+TransBrain is multi-tenant: every business row belongs to exactly one tenant, and the API
+only ever reads and writes the caller's tenant. The tenant comes out of the **signed
+access token**, never out of anything a caller can set freely:
+
+- Each realm user carries a `tenant_id` **user attribute** holding the tenant's GUID.
+- A `tenant-id` **protocol mapper** (`oidc-usermodel-attribute-mapper`) on the
+  `transbrain-spa` client copies that attribute into a `tenant_id` claim in the access,
+  ID and userinfo tokens. The mapper exists in both realm files
+  (`src/TransBrain.AppHost/realms/transbrain-realm.json` and
+  `deploy/keycloak/transbrain-realm.json`).
+- The API resolves the claim per request (`HttpContextTenantContext`) and fails closed:
+  an authenticated request **without** a valid `tenant_id` claim is answered `403` before
+  any handler runs (`TenantRequirementMiddleware`).
+
+The dev realm ships two tenants:
+
+| Tenant         | GUID                                   | Users                               |
+|----------------|----------------------------------------|-------------------------------------|
+| default tenant | `0199c0de-0000-7000-8000-000000000001` | `admin.user`, `dispo.user`, `fahrer.user`, `viewer.user` |
+| second tenant  | `0199c0de-0000-7000-8000-000000000002` | `admin.zweite`                      |
+
+All pre-tenancy data, every seeded catalog entry and the test users' data belong to the
+default tenant; `admin.zweite` sees an empty system and builds its own master data.
+
+To give a **new** user a tenant in the admin console: user → **Attributes** tab → add key
+`tenant_id` with the tenant GUID as value. On Keycloak 24+ the attributes tab may hide
+"unmanaged" attributes depending on the realm's user-profile settings; if `tenant_id` is
+not offered, enable unmanaged attributes (Realm settings → General → Unmanaged
+attributes → `Enabled`) or declare it in the user profile. Remember that console edits do
+not survive a restart (no data volume) — put permanent users into
+`transbrain-realm.json` instead.
+
+Known limitation: the invoice seller identity (`InvoiceSeller` configuration section) is
+global application configuration, not per-tenant — all tenants' invoices currently carry
+the same seller letterhead.
 
 ## Clients
 
