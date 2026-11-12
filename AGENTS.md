@@ -30,6 +30,14 @@ This file provides guidance to KI Agent (claude.ai/code, Github Copilot, Jetbrai
 - Same functionality as TransBrain.Web, against the same TransBrain.Api
 - Node.js >=26.4.0 required
 
+## Mobile Stack Driver App (TransBrain.DriverApp)
+- Flutter (stable, >=3.50 / Dart 3.14) for Android, iOS and web (the web build is the test demo, dev port 4400 — allowed by the Api's CORS config and the `transbrain-mobile` Keycloak client; the AppHost starts it as the `driverapp` executable resource via `flutter run -d web-server`, needs `flutter` on PATH or the `FlutterCommand` config value)
+- German-only UI aimed at drivers: own tours, start/complete, route map (flutter_map/OSM), profile
+- Pure-Dart OIDC PKCE sign-in (no platform auth plugin): system browser + `de.transbrain.driver://callback` deep link (app_links) on mobile, same-tab redirect on web; plus a backend-free demo mode with bundled sample data
+- Note: Flutter >=3.50 deprecates `package:flutter/material.dart` — import `package:material_ui/material_ui.dart` instead
+- Tests: `flutter analyze` + `flutter test` (unit + widget tests, run against the demo data — no backend needed); not part of the .NET CI workflow
+- UI changes here must update `docs/BEDIENUNG_TRANSBRAIN_DRIVERAPP.md` and, if visible, its screenshot under `docs/img/driverapp/`
+
 ## Code Conventions
 - Use records for DTOs and Value Objects
 - English naming for code, English for docs

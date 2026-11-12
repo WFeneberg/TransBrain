@@ -3,7 +3,8 @@
 Dispatch software for a trucking company: vehicles, drivers, transport orders and tours,
 built with .NET 11 (Clean Architecture, a hand-rolled CQRS mediator, EF Core 10 /
 PostgreSQL, Redis) behind Keycloak-issued OIDC tokens, with two frontends — Angular and
-Vue — talking to the same API.
+Vue — talking to the same API, plus a Flutter driver app for Android, iOS and the
+browser (`src/TransBrain.DriverApp`).
 
 Phase 1 (foundation and walking skeleton) delivered a `Vehicle` aggregate with `Create`
 and `List`, wired end to end through both frontends. Phase 2 (master data completion)
@@ -17,6 +18,7 @@ exists today, and `.superpowers/sdd/` for the phase plans.
 - [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) — architecture, conventions, how to extend and test
 - [docs/INSTALLATION.md](docs/INSTALLATION.md) — local (Aspire), Docker Compose and Azure (Bicep)
 - [docs/KEYCLOAK.md](docs/KEYCLOAK.md) — authentication setup
+- [docs/BEDIENUNG_TRANSBRAIN_DRIVERAPP.md](docs/BEDIENUNG_TRANSBRAIN_DRIVERAPP.md) — the Flutter driver app (German operator guide, incl. how to run it)
 
 ## Prerequisites
 
@@ -25,6 +27,10 @@ exists today, and `.superpowers/sdd/` for the phase plans.
 - Docker (Docker Desktop, or an equivalent engine) — required both to run the stack
   (Postgres, Redis, Keycloak all run as containers) and to run the API integration tests,
   which are backed by Testcontainers
+- Flutter SDK (stable, >= 3.50) on `PATH` — only for the driver-app web demo, which the
+  AppHost starts as the `driverapp` resource. Without Flutter that one resource fails to
+  start while the rest of the stack runs normally; a different binary can be configured
+  via `FlutterCommand` (AppHost user secrets or environment variable)
 - A trusted local HTTPS development certificate — see below, this is not optional
 
 ### Trust the development HTTPS certificate (one-time)
@@ -50,9 +56,10 @@ dotnet run --project src/TransBrain.AppHost
 ```
 
 This is the reliable way to start everything (API, Postgres, Redis, Keycloak with the
-realm imported, and both frontends) via .NET Aspire, and every successful verification
-during this project's development used this command. It prints a link to the Aspire
-dashboard, which lists the actual ports each resource bound to.
+realm imported, both frontends and the Flutter driver-app web demo) via .NET Aspire,
+and every successful verification during this project's development used this command.
+It prints a link to the Aspire dashboard, which lists the actual ports each resource
+bound to.
 
 **Known issue — `aspire run` is unreliable in this environment.** The Aspire CLI's
 `aspire run` timed out twice during this project ("Timed out waiting for AppHost to
@@ -118,6 +125,7 @@ password Aspire generates per machine), and for more on how the realm is wired, 
 |------------------|------------------------------------|
 | Angular (`Web`)  | 4200                                |
 | Vue (`VueWeb`)   | 4300                                |
+| Flutter web demo (`DriverApp`) | 4400 |
 | Keycloak         | 8080 (HTTPS)                       |
 | API              | dynamic — see the Aspire dashboard |
 
@@ -356,6 +364,17 @@ unoptimised default: every spec authenticates through the same Keycloak realm/co
 and concurrent logins against that one container time out intermittently under the
 default parallel workers — observed directly during development, and the failure looks
 like a broken test rather than contention, which is worse than the slower serialised run.
+
+The Flutter driver app has its own analyzer and test suite (unit + widget tests, no
+backend needed — the widget tests run against the bundled demo data):
+
+```bash
+flutter analyze
+flutter test
+```
+
+run from `src/TransBrain.DriverApp`. Like the Playwright suites, they are not part of
+the .NET CI workflow.
 
 ## Application-layer coverage gate
 
