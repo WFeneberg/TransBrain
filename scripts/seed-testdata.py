@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Seeds a running TransBrain dev stack with test data through the API.
 
-Creates catalog entries, 5 drivers, 5 vehicles (with documents), 5 customers (with delivery
-locations), 5 orders and 5 tours. All dates are relative to today, so "expires soon" and
-"expired" cases stay meaningful. Refuses to run when vehicles already exist.
+Seeds both dev tenants with their own data: the default tenant (admin.user) gets 5 drivers,
+5 vehicles (with documents), 5 customers (with delivery locations), 5 orders and 5 tours, the
+second tenant (admin.zweite) 3 drivers, 4 vehicles, 4 customers, 4 orders and 3 tours, each with
+the catalog entries it uses. Every address is a real one in Upper Bavaria. All dates are relative
+to today, so "expires soon" and "expired" cases stay meaningful. Refuses to run when a tenant
+already holds vehicles.
 
 Usage (AppHost running): python3 scripts/seed-testdata.py [--api URL] [--keycloak URL]
 """
@@ -110,7 +113,7 @@ CATALOG = [
     ("CustomerClass", "Occasional", "Gelegenheitskunde"),
 ]
 
-# key: (first name, last name, classes, licence valid until, linked to fahrer.user)
+# key: (first name, last name, classes, licence valid until, linked to the tenant's driver login)
 DRIVERS = {
     "huber": ("Franz", "Huber", ["B", "C1", "C", "CE"], day(1663), True),
     "mayr": ("Josef", "Mayr", ["B", "C", "CE"], day(1055), False),
@@ -199,6 +202,8 @@ VEHICLES = [
          documents=[("UVV", day(-405), day(-40), "Abgelaufen – Testfall")]),
 ]
 
+# All addresses below exist in OpenStreetMap inside Upper Bavaria, so they geocode and route even
+# with the small self-hosted `oberbayern` extract. The company names are invented.
 # key: (customer body, delivery locations)
 CUSTOMERS = {
     "becker": (dict(
@@ -224,45 +229,46 @@ CUSTOMERS = {
         [location("Kühlhaus München-Nord", "Maria-Probst-Str. 20", "80939", "München", "DE", "Rampenleitung",
                   "rampe@frischelogistik-sued.example", "+49 89 3216-55")]),
     "tanklager": (dict(
-        name="Tanklager Hall GmbH", street="Innufer 22", postalCode="6060", city="Hall in Tirol", country="AT",
-        contactPerson="Ing. Markus Pfurtscheller", email="betrieb@tanklager-hall.example", phone="+43 5223 4567",
-        vatId="ATU12345678", paymentTermDays=45,
+        name="Tanklager Ingolstadt GmbH", street="Manchinger Str. 84", postalCode="85053", city="Ingolstadt",
+        country="DE", contactPerson="Ing. Markus Pfurtscheller", email="betrieb@tanklager-ingolstadt.example",
+        phone="+49 841 4567-0", vatId="DE135792468", paymentTermDays=45,
         additional=dict(foundedOn="1965-01-01", workerCount=12, salariedEmployeeCount=6, reimburseToll=True,
                         customerClass="Key", comment="ADR-Einweisung beim Pförtner. Anmeldung 24 h vorher.")),
-        [location("Tanklager Hall – Tor 2", "Innufer 22", "6060", "Hall in Tirol", "AT", "Schichtleiter",
-                  "schicht@tanklager-hall.example", "+43 5223 4567-2")]),
+        [location("Tanklager Ingolstadt – Tor 2", "Manchinger Str. 84", "85053", "Ingolstadt", "DE", "Schichtleiter",
+                  "schicht@tanklager-ingolstadt.example", "+49 841 4567-2")]),
     "holzbau": (dict(
-        name="Holzbau Füssen GmbH & Co. KG", street="Ziegelwies 5", postalCode="87629", city="Füssen", country="DE",
-        contactPerson="Andreas Schweiger", email="info@holzbau-fuessen.example", phone="+49 8362 9876",
-        vatId="DE246813579", paymentTermDays=21,
-        additional=dict(secondaryName="Holzbau Füssen Zweigniederlassung Tirol", secondaryStreet="Hauptstr. 3",
-                        secondaryPostalCode="6600", secondaryCity="Reutte", secondaryCountry="AT",
-                        foundedOn="1992-06-10", workerCount=65, salariedEmployeeCount=9, customerClass="Occasional",
+        name="Holzbau Werdenfels GmbH & Co. KG", street="Zugspitzstr. 20", postalCode="82467",
+        city="Garmisch-Partenkirchen", country="DE", contactPerson="Andreas Schweiger",
+        email="info@holzbau-werdenfels.example", phone="+49 8821 9876", vatId="DE246813579", paymentTermDays=21,
+        additional=dict(secondaryName="Holzbau Werdenfels Zweigniederlassung Mittenwald",
+                        secondaryStreet="Bahnhofstr. 5", secondaryPostalCode="82481", secondaryCity="Mittenwald",
+                        secondaryCountry="DE", foundedOn="1992-06-10", workerCount=65, salariedEmployeeCount=9,
+                        customerClass="Occasional",
                         comment="Lieferungen an wechselnde Baustellen. Kranentladung vor Ort.")),
-        [location("Baustelle Wohnanlage Lermoos", "Unterdorf 18", "6631", "Lermoos", "AT", "Polier Hr. Falger", None,
-                  "+43 664 1234567"),
-         location("Abbundhalle Füssen", "Ziegelwies 5", "87629", "Füssen", "DE", "Halle",
-                  "halle@holzbau-fuessen.example", "+49 8362 9876-14")]),
+        [location("Baustelle Wohnanlage Murnau", "Kemmelallee 1", "82418", "Murnau am Staffelsee", "DE",
+                  "Polier Hr. Falger", None, "+49 171 1234567"),
+         location("Abbundhalle Garmisch", "Zugspitzstr. 20", "82467", "Garmisch-Partenkirchen", "DE", "Halle",
+                  "halle@holzbau-werdenfels.example", "+49 8821 9876-14")]),
     "wagner": (dict(
-        name="Druckerei Wagner GmbH", street="Raiffeisenstr. 9", postalCode="89231", city="Neu-Ulm", country="DE",
+        name="Druckerei Wagner GmbH", street="Kufsteiner Str. 50", postalCode="83022", city="Rosenheim", country="DE",
         contactPerson=None, email=None, phone=None, vatId=None, paymentTermDays=0), []),
 }
 
 # key: (consignor, consignee customer (delivered to its first location), cargo, kg, ldm, pickup, delivery, cancelled)
 ORDERS = {
-    "marble": (address("Marmorwerk Untersberg GmbH", "Fürstenbrunner Str. 12", "5082", "Grödig", "AT"), "becker",
+    "marble": (address("Marmorwerk Kiefersfelden GmbH", "Kufsteiner Str. 20", "83088", "Kiefersfelden", "DE"), "becker",
                "Marmorplatten auf Stahlgestellen, 4 Gestelle", 24000, 13.6,
                (at(2, "07:00"), at(2, "10:00")), (at(2, "14:00"), at(2, "17:00")), False),
     "dairy": (address("Alpenmilch Weilheim eG", "Münchener Str. 20", "82362", "Weilheim in Oberbayern", "DE"), "frische",
               "Molkereiprodukte gekühlt +2 bis +6 °C, 33 EUR-Paletten", 18500, 13.2,
               (at(3, "05:00"), at(3, "06:30")), (at(3, "09:00"), at(3, "11:00")), False),
-    "fuel": (address("Chemiepark Kempten AG", "Ursulasrieder Str. 90", "87437", "Kempten", "DE"), "tanklager",
-             "Heizöl EL, UN 1202, Klasse 3 (ADR) – Tankzug", 22000, 13.6,
+    "fuel": (address("Chemiepark Gendorf AG", "Industrieparkstr. 1", "84508", "Burgkirchen an der Alz", "DE"),
+             "tanklager", "Heizöl EL, UN 1202, Klasse 3 (ADR) – Tankzug", 22000, 13.6,
              (at(6, "08:00"), at(6, "12:00")), (at(7, "07:00"), at(7, "12:00")), False),
-    "timber": (address("Holzbau Füssen GmbH & Co. KG", "Ziegelwies 5", "87629", "Füssen", "DE"), "holzbau",
-               "Brettschichtholz-Träger, Überlänge, 12 Pakete", 9500, 8.4,
+    "timber": (address("Holzbau Werdenfels GmbH & Co. KG", "Zugspitzstr. 20", "82467", "Garmisch-Partenkirchen", "DE"),
+               "holzbau", "Brettschichtholz-Träger, Überlänge, 12 Pakete", 9500, 8.4,
                (at(8, "06:00"), at(8, "09:00")), (at(8, "11:00"), at(8, "15:00")), False),
-    "paper": (address("Papierfabrik Vils GmbH", "Fabrikstr. 1", "6682", "Vils", "AT"), "wagner",
+    "paper": (address("Papierfabrik Schongau GmbH", "Friedrich-Haindl-Str. 10", "86956", "Schongau", "DE"), "wagner",
               "Papierrollen, 18 Stück stehend", 21000, 12.0,
               (at(1, "13:00"), at(1, "15:00")), (at(1, "18:00"), at(2, "08:00")), True),
 }
@@ -276,25 +282,162 @@ TOURS = [
     (9, "RE-TB 102", "gruber", [], "Planned"),
 ]
 
+# Second tenant (admin.zweite): a separate haulier in Ingolstadt. A new tenant starts with an empty
+# catalog, so every list entry its vehicles and customers refer to is created here.
+CATALOG_2 = [
+    ("VehicleClass", "Tarpaulin", "Plane"),
+    ("VehicleClass", "Refrigerated", "Kühler"),
+    ("CarrierGroup", "Own", "Eigener Fuhrpark"),
+    ("CarrierGroup", "Subcontractor", "Subunternehmer"),
+    ("InsuranceCompany", "HDI", "HDI Versicherung AG"),
+    ("DocumentType", "UVV", "UVV-Prüfung"),
+    ("DocumentType", "Tachograph", "Tachographenprüfung"),
+    ("DocumentType", "ATP", "ATP-Bescheinigung"),
+    ("CustomerClass", "A", "A-Kunde"),
+    ("CustomerClass", "B", "B-Kunde"),
+]
 
-def seed(api, driver_subject):
+DRIVERS_2 = {
+    "bauer": ("Stefan", "Bauer", ["B", "C", "CE"], day(900), True),
+    "kovac": ("Ivana", "Kovač", ["B", "C1", "C", "CE"], day(45), False),
+    "hofmann": ("Peter", "Hofmann", ["B", "C"], day(1500), False),
+}
+
+VEHICLES_2 = [
+    dict(licensePlate="IN-ZF 201", type="Tractor", payloadKg=25000, loadMeters=13.6, nextInspectionDue=day(200),
+         make="DAF", model="XG 480 FT", manufacturedOn="2024-03-11", powerKw=355,
+         vehicleClass="Tarpaulin", carrierGroup="Own", driver="bauer",
+         chassisNumber="XLRTEH4300G201201", engineNumber="MX13-355-0201", lengthMm=6200, widthMm=2550,
+         heightMm=3980, curbWeightKg=8100, grossWeightKg=19500, maxFifthWheelLoadKg=11500,
+         notes="Nahverkehr Oberbayern, Baustoffe und Stahl.",
+         dataSheet="Getriebe: TraXon 12-Gang\nTank: 430 l Diesel + 85 l AdBlue",
+         equipment=equipment(hasPalletBasket=True, tankVolumeLiters=430, lashingStrapCount=16,
+                             chainTensionerCount=6),
+         commercial=dict(purchasePrice=119000.00, purchasedOn="2024-04-02", purchaseOdometerKm=80,
+                         firstRegisteredOn="2024-04-05", usefulLifeYears=6, usefulLifeKm=800000,
+                         costCenter="ZF-100", vehicleInsurer="HDI", vehicleInsurancePolicyNumbers="HDI-KFZ-20417"),
+         documents=[("Tachograph", day(-300), day(430), None),
+                    ("UVV", day(-340), day(25), "Bald fällig – Testfall Ablauf")]),
+    dict(licensePlate="IN-ZF 202", type="Tractor", payloadKg=24000, loadMeters=13.6, nextInspectionDue=day(28),
+         make="Volvo", model="FH 460 4x2", manufacturedOn="2021-10-05", powerKw=338,
+         vehicleClass="Refrigerated", carrierGroup="Own", driver="kovac",
+         chassisNumber="YV2RT40A5MB202202", engineNumber="D13K460-0202", lengthMm=6000, widthMm=2550,
+         heightMm=3900, curbWeightKg=7800, grossWeightKg=19000, maxFifthWheelLoadKg=11000,
+         notes="Getränke- und Frischetouren Chiemgau.",
+         dataSheet="Getriebe: I-Shift\nStandklima",
+         equipment=equipment(hasSmallLadder=True, tankVolumeLiters=405),
+         commercial=dict(purchasePrice=98500.00, purchasedOn="2021-11-01", purchaseOdometerKm=40,
+                         firstRegisteredOn="2021-11-03", usefulLifeYears=7, usefulLifeKm=900000,
+                         costCenter="ZF-200", vehicleInsurer="HDI", vehicleInsurancePolicyNumbers="HDI-KFZ-18802"),
+         documents=[("Tachograph", day(-710), day(-5), "Abgelaufen – Testfall")]),
+    dict(licensePlate="IN-ZF 901", type="SemiTrailer", payloadKg=27500, loadMeters=13.6, nextInspectionDue=day(120),
+         make="Kögel", model="Cargo SN24", manufacturedOn="2022-05-17",
+         vehicleClass="Tarpaulin", carrierGroup="Own",
+         chassisNumber="WK0S0002400901901", lengthMm=13900, widthMm=2550, heightMm=4000,
+         curbWeightKg=6200, grossWeightKg=35000,
+         notes="Planenauflieger mit Coilmulde.",
+         dataSheet="Coilmulde 7,2 m\nCode XL Aufbau",
+         equipment=equipment(hasPalletBasket=True, hasLiftAxle=True, interiorLengthMm=13620, interiorWidthMm=2480,
+                             interiorHeightMm=2700, loadBarCount=4, lashingStrapCount=20, palletCount=33),
+         commercial=dict(purchasePrice=31900.00, purchasedOn="2022-06-01", purchaseOdometerKm=0,
+                         firstRegisteredOn="2022-06-03", usefulLifeYears=10, usefulLifeKm=1000000,
+                         costCenter="ZF-100", vehicleInsurer="HDI", vehicleInsurancePolicyNumbers="HDI-KFZ-20418"),
+         documents=[("UVV", day(-100), day(265), None)]),
+    dict(licensePlate="IN-ZF 902", type="SemiTrailer", payloadKg=26000, loadMeters=13.6, nextInspectionDue=day(60),
+         make="Krone", model="Cool Liner Duoplex", manufacturedOn="2020-02-24",
+         vehicleClass="Refrigerated", carrierGroup="Subcontractor", status="InWorkshop",
+         chassisNumber="WKESD000000902902", lengthMm=13600, widthMm=2600, heightMm=4000,
+         curbWeightKg=8700, grossWeightKg=36000,
+         notes="Kühlauflieger, Kühlaggregat in Reparatur.",
+         dataSheet="Kühlaggregat: Carrier Vector 1550",
+         equipment=equipment(hasPartitionWall=True, hasDoubleDeck=True, tankVolumeLiters=240,
+                             interiorLengthMm=13310, interiorWidthMm=2460, interiorHeightMm=2650, palletCount=66),
+         commercial=dict(purchasePrice=0, costCenter="ZF-900", vehicleInsurer="HDI",
+                         vehicleInsurancePolicyNumbers="HDI-KFZ-15533"),
+         documents=[("ATP", day(-400), day(695), "FRC-Klasse")]),
+]
+
+CUSTOMERS_2 = {
+    "baustoffe": (dict(
+        name="Baustoffe Inntal GmbH", street="Äußere Münchener Str. 100", postalCode="83026", city="Rosenheim",
+        country="DE", contactPerson="Georg Stadler", email="einkauf@baustoffe-inntal.example",
+        phone="+49 8031 5500-0", vatId="DE811223344", paymentTermDays=30,
+        additional=dict(secondaryName="Baustoffe Inntal Lager Kolbermoor", secondaryStreet="Carl-Jordan-Str. 10",
+                        secondaryPostalCode="83059", secondaryCity="Kolbermoor", secondaryCountry="DE",
+                        foundedOn="1986-03-01", workerCount=58, salariedEmployeeCount=14, reimburseToll=True,
+                        customerClass="A", comment="Anlieferung 6–15 Uhr, Staplerentladung.")),
+        [location("Lager Kolbermoor", "Carl-Jordan-Str. 10", "83059", "Kolbermoor", "DE", "Herr Obermaier",
+                  "lager@baustoffe-inntal.example", "+49 8031 5500-31")]),
+    "getraenke": (dict(
+        name="Getränke Chiemgau GmbH", street="Wasserburger Str. 66", postalCode="83278", city="Traunstein",
+        country="DE", contactPerson="Monika Aigner", email="dispo@getraenke-chiemgau.example",
+        phone="+49 861 7788-0", vatId="DE822334455", paymentTermDays=14,
+        additional=dict(foundedOn="1999-07-01", workerCount=34, salariedEmployeeCount=8, requiresPalletCheck=True,
+                        customerClass="A", comment="Leergut wird im Tausch mitgenommen.")),
+        [location("Auslieferungslager Traunreut", "Werner-von-Siemens-Str. 10", "83301", "Traunreut", "DE",
+                  "Lagerleitung", "lager@getraenke-chiemgau.example", "+49 8669 4455")]),
+    "zulieferer": (dict(
+        name="Donau Fahrzeugteile AG", street="Ettinger Str. 60", postalCode="85057", city="Ingolstadt",
+        country="DE", contactPerson="Dr. Claudia Reiter", email="logistik@donau-fahrzeugteile.example",
+        phone="+49 841 9900-0", vatId="DE833445566", paymentTermDays=60,
+        additional=dict(foundedOn="1971-11-15", workerCount=420, salariedEmployeeCount=130,
+                        excludeTollFromInvoice=True, customerClass="A",
+                        comment="Just-in-time: Zeitfenster ±30 min, Avis per EDI.")),
+        [location("Wareneingang GVZ Halle H", "Pascalstr. 4", "85057", "Ingolstadt", "DE", "Wareneingang",
+                  "we@donau-fahrzeugteile.example", "+49 841 9900-412")]),
+    "garten": (dict(
+        name="Gartencenter Erding e.K.", street="Dachauer Str. 20", postalCode="85435", city="Erding", country="DE",
+        contactPerson="Josef Lechner", email=None, phone="+49 8122 3344", vatId=None, paymentTermDays=7,
+        additional=dict(customerClass="B")), []),
+}
+
+ORDERS_2 = {
+    "cement": (address("Zementwerk Rohrdorf GmbH", "Sinning 1", "83101", "Rohrdorf", "DE"), "baustoffe",
+               "Sackzement auf EUR-Paletten, 30 Paletten", 24000, 12.0,
+               (at(1, "06:00"), at(1, "08:00")), (at(1, "09:00"), at(1, "12:00")), False),
+    "drinks": (address("Brauerei Weihenstephan Logistik GmbH", "Alte Akademie 2", "85354", "Freising", "DE"),
+               "getraenke", "Getränke in Kisten, 33 EUR-Paletten", 19000, 13.2,
+               (at(2, "07:00"), at(2, "09:00")), (at(2, "12:00"), at(2, "15:00")), False),
+    "steel": (address("Stahlhandel München-Nord GmbH", "Frankfurter Ring 105", "80807", "München", "DE"),
+              "zulieferer", "Stahlcoils, 6 Stück in Coilmulde", 22000, 9.0,
+              (at(4, "06:00"), at(4, "08:00")), (at(4, "10:00"), at(4, "10:30")), False),
+    "plants": (address("Blumengroßmarkt München eG", "Schäftlarnstr. 10", "81371", "München", "DE"), "garten",
+               "Pflanzen auf CC-Containern, 28 Stück", 6000, 11.0,
+               (at(5, "05:00"), at(5, "06:00")), (at(5, "08:00"), at(5, "10:00")), False),
+}
+
+TOURS_2 = [
+    (1, "IN-ZF 201", "bauer", ["cement"], "Completed"),
+    (2, "IN-ZF 202", "kovac", ["drinks"], "InProgress"),
+    (4, "IN-ZF 201", "bauer", ["steel"], "Planned"),
+]
+
+# (admin login, driver login, catalog, drivers, vehicles, customers, orders, tours)
+TENANTS = [
+    (("admin.user", "admin"), ("fahrer.user", "fahrer"), CATALOG, DRIVERS, VEHICLES, CUSTOMERS, ORDERS, TOURS),
+    (("admin.zweite", "zweite"), ("fahrer.zweite", "fahrer2"),
+     CATALOG_2, DRIVERS_2, VEHICLES_2, CUSTOMERS_2, ORDERS_2, TOURS_2),
+]
+
+
+def seed(api, driver_subject, catalog, driver_specs, vehicle_specs, customer_specs, order_specs, tour_specs):
     if api("GET", "/vehicles?pageSize=1")["totalCount"] > 0:
         sys.exit("The database already holds vehicles; seeding twice would duplicate drivers, customers and orders.")
 
-    existing = {(kind, entry["code"]) for kind in {k for k, _, _ in CATALOG}
+    existing = {(kind, entry["code"]) for kind in {k for k, _, _ in catalog}
                 for entry in api("GET", f"/vehicle-catalog/{kind}")}
-    for kind, code, name in CATALOG:
+    for kind, code, name in catalog:
         if (kind, code) not in existing:
             api("POST", f"/vehicle-catalog/{kind}", dict(code=code, name=name))
 
     drivers = {}
-    for key, (first, last, classes, valid_until, linked) in DRIVERS.items():
+    for key, (first, last, classes, valid_until, linked) in driver_specs.items():
         drivers[key] = api("POST", "/drivers", dict(
             firstName=first, lastName=last, licenseClasses=classes, licenseValidUntil=valid_until,
             externalUserId=driver_subject if linked else None))["id"]
 
     vehicles = {}
-    for spec in VEHICLES:
+    for spec in vehicle_specs:
         body = dict(spec)
         documents, status, driver = body.pop("documents"), body.pop("status", None), body.pop("driver", None)
         body["defaultDriverId"] = drivers[driver] if driver else None
@@ -307,15 +450,15 @@ def seed(api, driver_subject):
             api("POST", f"/vehicles/{vehicle['id']}/status", dict(status=status))
 
     customers = {}
-    for key, (body, locations) in CUSTOMERS.items():
+    for key, (body, locations) in customer_specs.items():
         customer = api("POST", "/customers", body)
         location_ids = [api("POST", f"/customers/{customer['id']}/locations", item)["id"] for item in locations]
         customers[key] = (body, location_ids)
 
     orders = {}
-    for key, (consignor, customer, cargo, kg, ldm, pickup, delivery, cancelled) in ORDERS.items():
+    for key, (consignor, customer, cargo, kg, ldm, pickup, delivery, cancelled) in order_specs.items():
         body, location_ids = customers[customer]
-        target = CUSTOMERS[customer][1][0] if location_ids else body
+        target = customer_specs[customer][1][0] if location_ids else body
         consignee = address(target["name"], target["street"], target["postalCode"], target["city"], target["country"])
         order = api("POST", "/orders", dict(
             consignor=consignor, consignee=consignee, cargoDescription=cargo, cargoWeightKg=kg,
@@ -325,7 +468,7 @@ def seed(api, driver_subject):
             api("POST", f"/orders/{order['id']}/cancel")
         orders[key] = order["id"]
 
-    for offset, plate, driver, order_keys, status in TOURS:
+    for offset, plate, driver, order_keys, status in tour_specs:
         tour = api("POST", "/tours", dict(tourDate=day(offset), vehicleId=vehicles[plate], driverId=drivers[driver]))
         for key in order_keys:
             api("POST", f"/tours/{tour['id']}/orders", dict(transportOrderId=orders[key]))
@@ -334,8 +477,8 @@ def seed(api, driver_subject):
         if status == "Completed":
             api("POST", f"/tours/{tour['id']}/complete")
 
-    print(f"Seeded {len(DRIVERS)} drivers, {len(VEHICLES)} vehicles, {len(CUSTOMERS)} customers, "
-          f"{len(ORDERS)} orders and {len(TOURS)} tours.")
+    return (f"{len(driver_specs)} drivers, {len(vehicle_specs)} vehicles, {len(customer_specs)} customers, "
+            f"{len(order_specs)} orders and {len(tour_specs)} tours")
 
 
 def main():
@@ -343,8 +486,9 @@ def main():
     parser.add_argument("--api", default="http://localhost:5265")
     parser.add_argument("--keycloak", default="https://localhost:8080")
     args = parser.parse_args()
-    api = Api(args.api, login(args.keycloak, "admin.user", "admin"))
-    seed(api, subject(login(args.keycloak, "fahrer.user", "fahrer")))
+    for admin, driver, *data in TENANTS:
+        api = Api(args.api, login(args.keycloak, *admin))
+        print(f"{admin[0]}: seeded {seed(api, subject(login(args.keycloak, *driver)), *data)}.")
 
 
 if __name__ == "__main__":

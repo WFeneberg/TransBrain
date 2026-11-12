@@ -172,12 +172,14 @@ Test data: with the AppHost running and an empty database, run
 python3 scripts/seed-testdata.py   # --api / --keycloak to override http://localhost:5265 / https://localhost:8080
 ```
 
-It signs in as `admin.user` and creates, through the API (so every validation applies), 5 drivers, 5 vehicles
-with special documents, 5 customers with delivery locations, 5 orders and 5 tours, plus the insurer and
-customer-class catalog entries they use. Dates are relative to today, so the "expires soon" / "expired"
-cases (licence, ADR document, UVV, inspection) stay meaningful. The driver Franz Huber is linked to
-`fahrer.user` by its Keycloak id, which changes on every Keycloak start — re-link it in the driver form
-after a restart. The script refuses to run when vehicles already exist; to reseed, delete the Postgres
+It creates, through the API (so every validation applies), separate data for both dev tenants: signed in
+as `admin.user` 5 drivers, 5 vehicles with special documents, 5 customers with delivery locations, 5 orders
+and 5 tours, plus the insurer and customer-class catalog entries they use; signed in as `admin.zweite`
+3 drivers, 4 vehicles, 4 customers, 4 orders and 3 tours of a second haulier, plus every catalog entry they
+use (a new tenant's catalog starts empty). Dates are relative to today, so the "expires soon" / "expired"
+cases (licence, ADR document, UVV, inspection) stay meaningful. The drivers Franz Huber (default
+tenant) and Stefan Bauer (second tenant) are linked to `fahrer.user` and `fahrer.zweite` by their Keycloak
+ids; the realm file gives every test user a fixed `id`, so these links survive Keycloak restarts. The script refuses to run when a tenant already holds vehicles; to reseed, delete the Postgres
 volume with the AppHost stopped (`docker volume ls | grep postgres`, then `docker volume rm <name>`).
 
 ### 4.1 Routing and geocoding (self-hosted by default)
@@ -199,11 +201,9 @@ quick dev setup use `.../germany/bayern/oberbayern-latest.osm.pbf` instead.
 
 The AppHost injects both addresses into the Api (`OpenRouteService__BaseUrl`, `Nominatim__BaseUrl`). The Api
 does not wait for them: until a container is healthy, `GET /api/tours/{id}/route` and the position/location
-endpoints answer `503`. Addresses and routes outside the extract are not found (`404 Geocoding.NoMatch`) —
-with a Bavarian extract that includes the Austrian addresses of `scripts/seed-testdata.py`. The seed tour
-Weilheim → München and the locations in Landsberg, Kaufering and München use real addresses in Upper
-Bavaria, so they get map pins and a route even with the small `oberbayern` extract; the other seed
-addresses lie outside it or use invented street names.
+endpoints answer `503`. Addresses and routes outside the extract are not found (`404 Geocoding.NoMatch`).
+Every address of `scripts/seed-testdata.py` (both tenants) is a real one in Upper Bavaria, so all seed
+locations get map pins and all seed tours a route even with the small `oberbayern` extract.
 
 - **Updating / other region:** `python scripts/update-osm-extract.py [--region oberbayern|bayern|germany | --url <geofabrik-url>]`
   downloads a fresh extract to `data/osm/region.osm.pbf` and removes both volumes, so the next start

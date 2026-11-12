@@ -144,6 +144,7 @@
   ],
   "users": [
     {
+      "id": "0199c0de-0000-7000-9000-000000000001",
       "username": "admin.user",
       "enabled": true,
       "email": "admin.user@transbrain.local",
@@ -155,6 +156,7 @@
       "realmRoles": [ "admin" ]
     },
     {
+      "id": "0199c0de-0000-7000-9000-000000000002",
       "username": "dispo.user",
       "enabled": true,
       "email": "dispo.user@transbrain.local",
@@ -166,6 +168,7 @@
       "realmRoles": [ "disponent" ]
     },
     {
+      "id": "0199c0de-0000-7000-9000-000000000003",
       "username": "fahrer.user",
       "enabled": true,
       "email": "fahrer.user@transbrain.local",
@@ -177,6 +180,7 @@
       "realmRoles": [ "fahrer" ]
     },
     {
+      "id": "0199c0de-0000-7000-9000-000000000004",
       "username": "viewer.user",
       "enabled": true,
       "email": "viewer.user@transbrain.local",
@@ -188,6 +192,7 @@
       "realmRoles": [ "viewer" ]
     },
     {
+      "id": "0199c0de-0000-7000-9000-000000000005",
       "username": "admin.zweite",
       "enabled": true,
       "email": "admin.zweite@transbrain.local",
@@ -197,6 +202,18 @@
       "attributes": { "tenant_id": [ "0199c0de-0000-7000-8000-000000000002" ] },
       "credentials": [ { "type": "password", "value": "zweite", "temporary": false } ],
       "realmRoles": [ "admin" ]
+    },
+    {
+      "id": "0199c0de-0000-7000-9000-000000000006",
+      "username": "fahrer.zweite",
+      "enabled": true,
+      "email": "fahrer.zweite@transbrain.local",
+      "emailVerified": true,
+      "firstName": "Stefan",
+      "lastName": "Bauer",
+      "attributes": { "tenant_id": [ "0199c0de-0000-7000-8000-000000000002" ] },
+      "credentials": [ { "type": "password", "value": "fahrer2", "temporary": false } ],
+      "realmRoles": [ "fahrer" ]
     }
   ]
 }

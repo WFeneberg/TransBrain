@@ -23,7 +23,7 @@ Die App kennt zwei Betriebsarten, wählbar auf dem Anmeldebildschirm:
    des angemeldeten Fahrers aus der TransBrain-API. Voraussetzung: Der Stack läuft
    (`dotnet run --project src/TransBrain.AppHost`) und der Fahrer-Stammsatz ist über
    die **External user ID** mit dem Keycloak-Konto verknüpft (siehe
-   `docs/KEYCLOAK.md`). Testbenutzer: `fahrer.user` / `fahrer`.
+   `docs/KEYCLOAK.md`). Testbenutzer: `fahrer.user` / `fahrer` (zweiter Mandant: `fahrer.zweite` / `fahrer2`).
 2. **Demo-Modus (ohne Anmeldung)** — zum Ausprobieren. Die App zeigt mitgelieferte
    Beispieldaten (drei Touren rund um Oberbayern) und benötigt **weder Backend noch
    Keycloak**. Alle Funktionen sind bedienbar; Statuswechsel wirken bis zum Beenden
@@ -114,9 +114,11 @@ dotnet run --project src/TransBrain.AppHost
 erste Compile abgeschlossen ist). Voraussetzung: Flutter SDK im `PATH` — ein
 abweichender Aufruf lässt sich per Konfiguration `FlutterCommand` setzen, z. B.
 `dotnet user-secrets set FlutterCommand C:\pfad\zu\flutter.bat --project src/TransBrain.AppHost`.
-Da echte Anmeldung und API direkt über die festen Ports 8080/7049 laufen, braucht
-die Ressource kein `WaitFor` — der Demo-Modus ist schon nutzbar, während der
-restliche Stack noch hochfährt.
+Die Anmeldung läuft über den festen Keycloak-Port 8080; die API-Adresse übergibt der
+AppHost beim Start selbst (`--dart-define=TB_API_BASE_URL=http://localhost:5265`), damit
+die App die API auch erreicht, wenn der AppHost im `http`-Profil läuft und es den
+HTTPS-Port 7049 nicht gibt. Die Ressource wartet per `WaitFor` auf die API und
+startet erst, wenn diese „Healthy" ist — auch der Demo-Modus steht damit erst danach bereit.
 
 Ohne Aspire startet die Demo auch einzeln:
 

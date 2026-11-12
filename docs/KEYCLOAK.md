@@ -61,7 +61,7 @@ at the top of the left-hand nav to see this project's users and clients.
 
 ## Test users (the `transbrain` realm)
 
-Defined in `transbrain-realm.json`, one per realm role plus a second-tenant admin. These
+Defined in `transbrain-realm.json`, one per realm role plus a second-tenant admin and driver. These
 are what you log into the Angular (`http://localhost:4200`) and Vue
 (`http://localhost:4300`) frontends with.
 
@@ -72,10 +72,13 @@ are what you log into the Angular (`http://localhost:4200`) and Vue
 | `fahrer.user` | `fahrer` | `fahrer`    | Read; start/complete **their own** tours (`TourStatusWrite`) |
 | `viewer.user` | `viewer` | `viewer`    | Read only                                                  |
 | `admin.zweite`| `zweite` | `admin`     | Everything — but only inside the **second tenant** (see below) |
+| `fahrer.zweite`| `fahrer2`| `fahrer`    | Like `fahrer.user` — but only inside the **second tenant** |
 
 A `fahrer` is tied to a `Driver` record through `externalUserId`, which stores the
 Keycloak `sub` claim. A driver row with no `externalUserId` belongs to nobody who can
-sign in, and cannot start its tours. See the README's "API endpoints" section for the
+sign in, and cannot start its tours. The test users have a fixed `id` in
+`transbrain-realm.json`, so their `sub` — and with it such a link — stays the same across
+Keycloak restarts. See the README's "API endpoints" section for the
 full policy-to-role mapping.
 
 ## Tenants (Mandanten): the `tenant_id` attribute and claim
@@ -100,10 +103,13 @@ The dev realm ships two tenants:
 | Tenant         | GUID                                   | Users                               |
 |----------------|----------------------------------------|-------------------------------------|
 | default tenant | `0199c0de-0000-7000-8000-000000000001` | `admin.user`, `dispo.user`, `fahrer.user`, `viewer.user` |
-| second tenant  | `0199c0de-0000-7000-8000-000000000002` | `admin.zweite`                      |
+| second tenant  | `0199c0de-0000-7000-8000-000000000002` | `admin.zweite`, `fahrer.zweite`     |
 
-All pre-tenancy data, every seeded catalog entry and the test users' data belong to the
-default tenant; `admin.zweite` sees an empty system and builds its own master data.
+All pre-tenancy data and every migration-seeded catalog entry belong to the default
+tenant; `admin.zweite` sees an empty system and builds its own master data.
+`scripts/seed-testdata.py` fills both tenants with separate test data (the second tenant
+gets its own catalog entries, a haulier in Ingolstadt with its own drivers, vehicles,
+customers, orders and tours).
 
 To give a **new** user a tenant in the admin console: user → **Attributes** tab → add key
 `tenant_id` with the tenant GUID as value. On Keycloak 24+ the attributes tab may hide
