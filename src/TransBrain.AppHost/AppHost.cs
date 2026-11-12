@@ -133,4 +133,20 @@ builder.AddViteApp("vueweb", "../TransBrain.VueWeb")
     .WithHttpEndpoint(port: 4300, targetPort: 4300, isProxied: false)
     .WithExternalHttpEndpoints();
 
+// Flutter web demo of the driver app (docs/BEDIENUNG_TRANSBRAIN_DRIVERAPP.md). `flutter run` in
+// web-server mode serves the debug build on the fixed port 4400 — the transbrain-mobile client's
+// redirect URIs and the Api's CORS list both pin that origin. The app's compiled-in defaults
+// already point at the fixed api (7049) and keycloak (8080) ports above, so no --dart-define is
+// needed, and its demo mode works entirely without the backend, hence no WaitFor: the demo is
+// usable while the rest of the stack is still starting. The health check only turns Running
+// into Healthy once the first compile has finished and the dev server actually responds.
+// Requires the Flutter SDK on PATH; set FlutterCommand (user secrets or environment variable)
+// to point at another binary, e.g. a full path to flutter.bat.
+var flutterCommand = builder.Configuration["FlutterCommand"] ?? "flutter";
+builder.AddExecutable("driverapp", flutterCommand, "../TransBrain.DriverApp",
+        "run", "-d", "web-server", "--web-port", "4400")
+    .WithHttpEndpoint(port: 4400, targetPort: 4400, isProxied: false)
+    .WithHttpHealthCheck("/")
+    .WithExternalHttpEndpoints();
+
 builder.Build().Run();

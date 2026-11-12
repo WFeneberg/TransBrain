@@ -103,6 +103,23 @@ Voraussetzung: Flutter SDK (stabiler Kanal, ≥ 3.50). Alle Befehle im Verzeichn
 
 ### Web-Demo
 
+Die Web-Demo ist als Ressource `driverapp` in den Aspire-AppHost eingebunden und
+startet mit dem übrigen Stack:
+
+```bash
+dotnet run --project src/TransBrain.AppHost
+```
+
+→ <http://localhost:4400> (im Dashboard als `driverapp`; „Healthy", sobald der
+erste Compile abgeschlossen ist). Voraussetzung: Flutter SDK im `PATH` — ein
+abweichender Aufruf lässt sich per Konfiguration `FlutterCommand` setzen, z. B.
+`dotnet user-secrets set FlutterCommand C:\pfad\zu\flutter.bat --project src/TransBrain.AppHost`.
+Da echte Anmeldung und API direkt über die festen Ports 8080/7049 laufen, braucht
+die Ressource kein `WaitFor` — der Demo-Modus ist schon nutzbar, während der
+restliche Stack noch hochfährt.
+
+Ohne Aspire startet die Demo auch einzeln:
+
 ```bash
 flutter run -d chrome --web-port 4400
 ```
