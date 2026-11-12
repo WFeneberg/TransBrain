@@ -50,6 +50,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
 builder.Services.Configure<OpenRouteServiceOptions>(builder.Configuration.GetSection(OpenRouteServiceOptions.SectionName));
+builder.Services.Configure<NominatimOptions>(builder.Configuration.GetSection(NominatimOptions.SectionName));
 builder.Services.Configure<InvoiceSellerOptions>(builder.Configuration.GetSection(InvoiceSellerOptions.SectionName));
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();

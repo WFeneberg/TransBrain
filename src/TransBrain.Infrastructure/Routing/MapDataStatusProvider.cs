@@ -1,18 +1,25 @@
+using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using TransBrain.Application.Abstractions;
 
 namespace TransBrain.Infrastructure.Routing;
 
 /// <remarks>
-/// Probes the same self-hosted containers the geocoder and route planner talk to, through the
-/// HttpClient configurations registered for <see cref="NominatimGeocoder"/> and
-/// <see cref="OpenRouteServiceClient"/>. Every probe is bounded by a short timeout and never
-/// throws: "unavailable" is the answer the maintenance page exists to show, not an exception.
+/// Probes the same services the geocoder and route planner talk to, through the HttpClient
+/// configurations registered for <see cref="NominatimGeocoder"/> and
+/// <see cref="OpenRouteServiceClient"/> — the self-hosted containers by default, the public
+/// services when the respective <see cref="MapServiceMode"/> says so. Nominatim answers the
+/// same status endpoint in both modes; only the routing probe differs. Every probe is bounded
+/// by a short timeout and never throws: "unavailable" is the answer the maintenance page exists
+/// to show, not an exception.
 /// </remarks>
 internal sealed class MapDataStatusProvider(
     IHttpClientFactory httpClientFactory,
-    IConfiguration configuration) : IMapDataStatusProvider
+    IConfiguration configuration,
+    IOptions<OpenRouteServiceOptions> routingOptions) : IMapDataStatusProvider
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(5);
 
@@ -45,6 +52,11 @@ internal sealed class MapDataStatusProvider(
     public async Task<MapServiceStatus> GetRoutingStatusAsync(CancellationToken cancellationToken)
     {
         HttpClient client = httpClientFactory.CreateClient(nameof(OpenRouteServiceClient));
+        if (routingOptions.Value.UsesOnlineService)
+        {
+            return await GetOnlineRoutingStatusAsync(client, routingOptions.Value, cancellationToken);
+        }
+
         using JsonDocument? health = await ProbeAsync(client, "v2/health", cancellationToken);
 
         bool ready = health is not null
@@ -63,6 +75,42 @@ internal sealed class MapDataStatusProvider(
         return new MapServiceStatus(
             Available: true,
             OsmDataUpdatedAt: detail is null ? null : FindOsmDate(detail.RootElement));
+    }
+
+    // The public API has no health endpoint (its /v2/health answers 404) and keeps its own OSM
+    // data current, so there is no data date to report. A deliberately empty directions request
+    // is the cheapest probe that still proves what matters: HTTP 400 means the service parsed
+    // and rejected the body — reachable, and the key passed the gateway; 401/403 means the key
+    // is missing or wrong; anything else counts as unavailable. No route is computed, so the
+    // probe costs no routing quota.
+    private static async Task<MapServiceStatus> GetOnlineRoutingStatusAsync(
+        HttpClient client,
+        OpenRouteServiceOptions options,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(options.ApiKey))
+        {
+            return new MapServiceStatus(Available: false, OsmDataUpdatedAt: null);
+        }
+
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(ProbeTimeout);
+
+        try
+        {
+            using HttpRequestMessage request = new(HttpMethod.Post, "v2/directions/driving-hgv/geojson")
+            {
+                Content = JsonContent.Create(new { })
+            };
+            using HttpResponseMessage response = await client.SendAsync(request, timeout.Token);
+            bool available = response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.BadRequest;
+            return new MapServiceStatus(Available: available, OsmDataUpdatedAt: null);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new MapServiceStatus(Available: false, OsmDataUpdatedAt: null);
+        }
     }
 
     // The extract file (OsmExtract:Path, injected by the AppHost) lives beside the containers'

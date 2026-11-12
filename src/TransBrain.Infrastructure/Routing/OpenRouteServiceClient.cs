@@ -6,11 +6,14 @@ using TransBrain.Domain.Routing;
 namespace TransBrain.Infrastructure.Routing;
 
 /// <remarks>
-/// Talks to the self-hosted OpenRouteService container the AppHost starts; no API key and no
-/// external service. Routing uses the driving-hgv profile, so the road network excludes roads
-/// closed to heavy goods vehicles. While the container is down or still building its graph every
-/// call answers Unavailable instead of guessing, so the map shows an honest error rather than a
-/// route that ignores truck restrictions. Geocoding is handled by NominatimGeocoder instead.
+/// Talks to OpenRouteService — either the self-hosted container the AppHost starts (default,
+/// no API key, no external service) or the public api.openrouteservice.org, chosen by
+/// <see cref="OpenRouteServiceOptions.Mode"/>; the registration in DependencyInjection points
+/// the HttpClient accordingly. Routing uses the driving-hgv profile, so the road network
+/// excludes roads closed to heavy goods vehicles. While the service is unreachable (container
+/// down or still building its graph, key missing or quota spent online) every call answers
+/// Unavailable instead of guessing, so the map shows an honest error rather than a route that
+/// ignores truck restrictions. Geocoding is handled by NominatimGeocoder instead.
 /// </remarks>
 internal sealed class OpenRouteServiceClient(HttpClient httpClient) : IRoutePlanner
 {
@@ -110,10 +113,30 @@ internal sealed class OpenRouteServiceClient(HttpClient httpClient) : IRoutePlan
     private sealed record SegmentSummary(double Distance, double Duration);
 }
 
-/// <summary>Settings for the OpenRouteService adapter. The AppHost injects the container's address.</summary>
+/// <summary>
+/// Settings for the OpenRouteService adapter. <see cref="Mode"/> picks between the self-hosted
+/// container (default; the AppHost injects <see cref="BaseUrl"/>) and the public API
+/// (<see cref="OnlineBaseUrl"/> plus <see cref="ApiKey"/>).
+/// </summary>
 public sealed class OpenRouteServiceOptions
 {
     public const string SectionName = "OpenRouteService";
 
+    public MapServiceMode Mode { get; set; } = MapServiceMode.SelfHosted;
+
+    /// <summary>Address of the self-hosted container, used when <see cref="Mode"/> is SelfHosted.</summary>
     public string BaseUrl { get; set; } = "http://localhost:8082/ors/";
+
+    /// <summary>Address of the public API, used when <see cref="Mode"/> is Online.</summary>
+    public string OnlineBaseUrl { get; set; } = "https://api.openrouteservice.org/";
+
+    /// <summary>
+    /// API key for the public API, required when <see cref="Mode"/> is Online (free account at
+    /// openrouteservice.org). Sent as the bare Authorization header the public gateway expects.
+    /// </summary>
+    public string? ApiKey { get; set; }
+
+    public bool UsesOnlineService => Mode == MapServiceMode.Online;
+
+    public string EffectiveBaseUrl => UsesOnlineService ? OnlineBaseUrl : BaseUrl;
 }

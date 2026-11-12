@@ -41,41 +41,55 @@ var keycloak = builder.AddKeycloak("keycloak", 8080)
     .WithEnvironment("KC_HOSTNAME", "https://localhost:8080")
     .WithRealmImport("./realms");
 
-// Self-hosted routing and geocoding, so no external service is called at runtime. Both read the
-// same OpenStreetMap extract, downloaded once by hand to data/osm/region.osm.pbf (see README).
-// The first start builds the routing graph (minutes) and imports the geocoding database (hours
-// for a German state); the results live in the named volumes. To switch the region, replace the
-// file and delete both volumes. The api deliberately does not WaitFor these: until they are
-// ready its map endpoints answer 503.
+// Self-hosted routing and geocoding by default, so no external service is called at runtime.
+// Both containers read the same OpenStreetMap extract, downloaded once by hand to
+// data/osm/region.osm.pbf (see README). The first start builds the routing graph (minutes) and
+// imports the geocoding database (hours for a German state); the results live in the named
+// volumes. To switch the region, replace the file and delete both volumes. The api deliberately
+// does not WaitFor these: until they are ready its map endpoints answer 503.
 const string osmDirectory = "../../data/osm";
+
+// Routing and geocoding can instead use the public services (worldwide data, no graph build or
+// import, but external calls under the providers' usage limits). Choose per machine in the
+// AppHost configuration — user secrets or environment variables, default SelfHosted:
+//   dotnet user-secrets set OpenRouteService:Mode Online --project src/TransBrain.AppHost
+//   dotnet user-secrets set Parameters:ors-api-key <key> --project src/TransBrain.AppHost
+// Geocoding follows the routing choice, so the one switch above flips both; set Nominatim:Mode
+// (Online or SelfHosted) to decide it separately. An online service's container is not started.
+string routingMode = builder.Configuration["OpenRouteService:Mode"] ?? "SelfHosted";
+string geocodingMode = builder.Configuration["Nominatim:Mode"] ?? routingMode;
+bool useOnlineRouting = string.Equals(routingMode, "Online", StringComparison.OrdinalIgnoreCase);
+bool useOnlineGeocoding = string.Equals(geocodingMode, "Online", StringComparison.OrdinalIgnoreCase);
 
 // Elevation is off because building it downloads height data from external servers.
 // XMX is the knob for larger extracts: roughly <pbf size> * 2 for the one enabled profile.
-var ors = builder.AddContainer("ors", "openrouteservice/openrouteservice", "v10.1.0")
-    .WithHttpEndpoint(targetPort: 8082)
-    .WithVolume("transbrain-ors", "/home/ors")
-    .WithBindMount(osmDirectory, "/home/ors/files", isReadOnly: true)
-    .WithEnvironment("XMX", "4g")
-    .WithEnvironment("ors.engine.profile_default.build.source_file", "/home/ors/files/region.osm.pbf")
-    .WithEnvironment("ors.engine.profile_default.build.elevation", "false")
-    .WithEnvironment("ors.engine.profiles.driving-car.enabled", "false")
-    .WithEnvironment("ors.engine.profiles.driving-hgv.enabled", "true")
-    .WithHttpHealthCheck("/ors/v2/health");
+IResourceBuilder<ContainerResource>? ors = useOnlineRouting
+    ? null
+    : builder.AddContainer("ors", "openrouteservice/openrouteservice", "v10.1.0")
+        .WithHttpEndpoint(targetPort: 8082)
+        .WithVolume("transbrain-ors", "/home/ors")
+        .WithBindMount(osmDirectory, "/home/ors/files", isReadOnly: true)
+        .WithEnvironment("XMX", "4g")
+        .WithEnvironment("ors.engine.profile_default.build.source_file", "/home/ors/files/region.osm.pbf")
+        .WithEnvironment("ors.engine.profile_default.build.elevation", "false")
+        .WithEnvironment("ors.engine.profiles.driving-car.enabled", "false")
+        .WithEnvironment("ors.engine.profiles.driving-hgv.enabled", "true")
+        .WithHttpHealthCheck("/ors/v2/health");
 
 // The extract is mounted outside /nominatim: the image chowns that folder recursively on start,
 // which fails on a read-only mount.
-var nominatim = builder.AddContainer("nominatim", "mediagis/nominatim", "5.3")
-    .WithHttpEndpoint(targetPort: 8080)
-    .WithVolume("transbrain-nominatim", "/var/lib/postgresql/16/main")
-    .WithBindMount(osmDirectory, "/osm", isReadOnly: true)
-    .WithContainerRuntimeArgs("--shm-size=1g")
-    .WithEnvironment("PBF_PATH", "/osm/region.osm.pbf")
-    .WithEnvironment("FREEZE", "true")
-    .WithHttpHealthCheck("/status");
+IResourceBuilder<ContainerResource>? nominatim = useOnlineGeocoding
+    ? null
+    : builder.AddContainer("nominatim", "mediagis/nominatim", "5.3")
+        .WithHttpEndpoint(targetPort: 8080)
+        .WithVolume("transbrain-nominatim", "/var/lib/postgresql/16/main")
+        .WithBindMount(osmDirectory, "/osm", isReadOnly: true)
+        .WithContainerRuntimeArgs("--shm-size=1g")
+        .WithEnvironment("PBF_PATH", "/osm/region.osm.pbf")
+        .WithEnvironment("FREEZE", "true")
+        .WithHttpHealthCheck("/status");
 
 var api = builder.AddProject<Projects.TransBrain_Api>("api")
-    .WithEnvironment("OpenRouteService__BaseUrl", ReferenceExpression.Create($"{ors.GetEndpoint("http")}/ors/"))
-    .WithEnvironment("Nominatim__BaseUrl", ReferenceExpression.Create($"{nominatim.GetEndpoint("http")}/"))
     // The Api reads only the extract's PBF header, to show region and data age on the geodata page.
     .WithEnvironment(
         "OsmExtract__Path",
@@ -85,6 +99,27 @@ var api = builder.AddProject<Projects.TransBrain_Api>("api")
     .WithReference(keycloak).WaitFor(keycloak)
     .WithHttpHealthCheck("/health")
     .WithExternalHttpEndpoints();
+
+if (ors is not null)
+{
+    api.WithEnvironment("OpenRouteService__BaseUrl", ReferenceExpression.Create($"{ors.GetEndpoint("http")}/ors/"));
+}
+else
+{
+    // The key lives in the AppHost user secrets (Parameters:ors-api-key); without a value the
+    // Aspire dashboard prompts for it on start.
+    api.WithEnvironment("OpenRouteService__Mode", "Online")
+        .WithEnvironment("OpenRouteService__ApiKey", builder.AddParameter("ors-api-key", secret: true));
+}
+
+if (nominatim is not null)
+{
+    api.WithEnvironment("Nominatim__BaseUrl", ReferenceExpression.Create($"{nominatim.GetEndpoint("http")}/"));
+}
+else
+{
+    api.WithEnvironment("Nominatim__Mode", "Online");
+}
 
 builder.AddViteApp("web", "../TransBrain.Web", "start")
     .WithNpm()

@@ -234,9 +234,9 @@ informative `404`.
 
 `GET /api/tours/{id}/route` plans the truck route through the tour's stops in sequence and lays the
 driver's day on a timeline. `GET /api/orders/{id}/locations` places the consignor and consignee on a
-map. Neither calls an external service: the AppHost starts a self-hosted OpenRouteService container
-(profile `driving-hgv`, so trucks avoid roads closed to them) and a self-hosted Nominatim container for
-geocoding. Both read one OpenStreetMap extract that you download once before the first start:
+map. By default neither calls an external service: the AppHost starts a self-hosted OpenRouteService
+container (profile `driving-hgv`, so trucks avoid roads closed to them) and a self-hosted Nominatim
+container for geocoding. Both read one OpenStreetMap extract that you download once before the first start:
 
 ```bash
 curl -L -o data/osm/region.osm.pbf https://download.geofabrik.de/europe/germany/bayern-latest.osm.pbf
@@ -248,13 +248,22 @@ Until the containers are ready, and for addresses outside the extract, the endpo
 `404`. A route is never estimated from straight-line distances, because that would ignore truck
 restrictions.
 
+Both services can instead use their public counterparts — routing `api.openrouteservice.org`
+(needs a free API key, rate-limited quota), geocoding `nominatim.openstreetmap.org` (no key,
+strict fair-use policy) — with worldwide coverage and no local import: set
+`OpenRouteService:Mode` to `Online` in the AppHost user secrets together with an API key in
+`Parameters:ors-api-key`. Geocoding follows the routing choice unless `Nominatim:Mode` pins it
+separately, and the AppHost does not start the container of an online service. Details in the
+developer guide, section 4.1; step-by-step setup including the registration (German) in
+[docs/ONLINE_KARTENDIENSTE.md](docs/ONLINE_KARTENDIENSTE.md).
+
 Addresses the geocoder does not know can be given coordinates by hand on the geodata maintenance
 page (`/geodata` in both frontends). `GET /api/geodata` (`Read`) lists every address used by orders
 and customer locations with its resolution status; `PUT /api/geodata/overrides` and
 `DELETE /api/geodata/overrides/{id}` (`MasterDataWrite`) maintain manual overrides, and
 `POST /api/geodata/resolve` (`Read`) probes a single address. A manual override takes precedence
 over the geocoder everywhere a position is resolved. The same page shows the state of the map
-material: `GET /api/geodata/map-status` (`Read`) probes both self-hosted services and reports their
+material: `GET /api/geodata/map-status` (`Read`) probes both map services and reports their
 availability and OSM data date, plus the installed extract (region, file date, size — parsed from
 the PBF header); replacing the extract itself is a server-side task
 (`scripts/update-osm-extract.py`, see the developer guide).

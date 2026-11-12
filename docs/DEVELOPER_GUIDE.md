@@ -180,10 +180,10 @@ cases (licence, ADR document, UVV, inspection) stay meaningful. The driver Franz
 after a restart. The script refuses to run when vehicles already exist; to reseed, delete the Postgres
 volume with the AppHost stopped (`docker volume ls | grep postgres`, then `docker volume rm <name>`).
 
-### 4.1 Routing and geocoding (self-hosted)
+### 4.1 Routing and geocoding (self-hosted by default)
 
-Route planning and address lookup call no external service. The AppHost starts two containers that read
-one OpenStreetMap extract, which you download once (the folder is gitignored):
+Route planning and address lookup call no external service by default. The AppHost starts two containers
+that read one OpenStreetMap extract, which you download once (the folder is gitignored):
 
 ```bash
 curl -L -o data/osm/region.osm.pbf https://download.geofabrik.de/europe/germany/bayern-latest.osm.pbf
@@ -210,9 +210,33 @@ addresses lie outside it or use invented street names.
   re-imports (run with the AppHost stopped; `--keep-volumes` only swaps the file). Manually that is: stop
   the AppHost, replace the file, `docker volume rm transbrain-ors transbrain-nominatim`, start again. Both
   containers take exactly one file; merge extracts with `osmium merge` if you need several.
+- **Online services instead of the containers:** `OpenRouteService:Mode = Online` in the AppHost
+  configuration sends tour routing to the public `api.openrouteservice.org` and skips the `ors`
+  container (and its graph build) entirely:
+  ```bash
+  dotnet user-secrets set OpenRouteService:Mode Online --project src/TransBrain.AppHost
+  dotnet user-secrets set Parameters:ors-api-key <key> --project src/TransBrain.AppHost
+  ```
+  The key comes with a free account at openrouteservice.org. Geocoding follows the routing choice —
+  the one switch above also sends it to the public `nominatim.openstreetmap.org` and skips the
+  `nominatim` container and its import (both online = no extract needed at all); set
+  `Nominatim:Mode` to `SelfHosted` or `Online` to decide it separately. The public Nominatim needs
+  no key but has a strict fair-use policy (about one request per second; the required identifying
+  User-Agent is sent automatically — replace `Nominatim:UserAgent` with your own contact for
+  serious use); the resolver's cache and the manual overrides keep the request volume low. You
+  trade "no external call" for worldwide coverage and no local import, within the public rate
+  limits. Without the AppHost the Api takes the same choice directly (`OpenRouteService__Mode`,
+  `OpenRouteService__ApiKey`, `Nominatim__Mode`, see INSTALLATION.md) — this is also how the
+  Compose and Azure setups, which ship no map containers, can get maps. A step-by-step guide
+  including the registration (German): [ONLINE_KARTENDIENSTE.md](ONLINE_KARTENDIENSTE.md).
 - **Status:** `GET /api/geodata/map-status` probes both services (Nominatim `/status`, ORS `/v2/health`)
   and reports availability plus the OSM data date; the geodata page in both frontends shows it as a status
-  card. The response also names the installed extract: the Api parses the PBF header of the file at
+  card. In online routing mode the probe is an empty directions request instead (`/v2/health` exists only
+  on the self-hosted container): HTTP 400 proves the service is up and the key accepted, 401/403 a key
+  problem — no route is computed, so it costs no quota — and no OSM data date is reported, because the
+  public service keeps its own data current. The public Nominatim answers the same `/status` probe as the
+  container. The response also names the installed extract: the Api
+  parses the PBF header of the file at
   `OsmExtract:Path` (the AppHost sets `OsmExtract__Path` to `data/osm/region.osm.pbf`) and reports the
   Geofabrik region path (from `osmosis_replication_base_url`), file date, size and bounding box — merged
   files without replication info fall back to the bounding box. A file date newer than the service dates

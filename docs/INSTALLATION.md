@@ -37,6 +37,9 @@ no CORS configuration in the container setups.
 | `ASPNETCORE_ENVIRONMENT` | API | `Development` enables OpenAPI/Scalar, `/health`, plain-HTTP OIDC metadata and auto-migration |
 | `Database__MigrateOnStartup` | API | `true` applies EF migrations at start in **non-Development** environments |
 | `Cors__AllowedOrigins__0…` | API | Only needed when a SPA calls the API cross-origin (Aspire dev servers use the Vite/Angular proxy) |
+| `OpenRouteService__Mode` | API | `SelfHosted` (default) plans tour routes against an own OpenRouteService container at `OpenRouteService__BaseUrl`; `Online` uses the public `api.openrouteservice.org` instead — the only routing option in the Compose and Azure setups, which ship no map containers |
+| `OpenRouteService__ApiKey` | API | API key for `Online` mode (free account at openrouteservice.org; setup guide incl. registration: [ONLINE_KARTENDIENSTE.md](ONLINE_KARTENDIENSTE.md)). Missing or wrong = routing answers `503` |
+| `Nominatim__Mode` | API | `SelfHosted` (default) geocodes against an own Nominatim container at `Nominatim__BaseUrl`; `Online` uses the public `nominatim.openstreetmap.org` — no key, but a strict fair-use policy (the required identifying User-Agent is sent automatically; replace `Nominatim__UserAgent` with your own contact) |
 | `API_URL` | web, vueweb | Upstream the nginx `/api/` location proxies to |
 | `OIDC_AUTHORITY` | web, vueweb | Realm URL as the **browser** sees it; written to `/config.js` at container start |
 

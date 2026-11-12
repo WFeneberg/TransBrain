@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TransBrain.Application.Abstractions;
@@ -29,10 +28,25 @@ public static class DependencyInjection
         services.AddScoped<IGeoOverrideRepository, GeoOverrideRepository>();
         services.AddScoped<ICacheService, RedisCacheService>();
         services.AddHttpClient<OpenRouteServiceClient>((provider, client) =>
-            client.BaseAddress = new Uri(provider.GetRequiredService<IOptions<OpenRouteServiceOptions>>().Value.BaseUrl));
+        {
+            OpenRouteServiceOptions options = provider.GetRequiredService<IOptions<OpenRouteServiceOptions>>().Value;
+            client.BaseAddress = new Uri(options.EffectiveBaseUrl);
+            if (options.UsesOnlineService && !string.IsNullOrWhiteSpace(options.ApiKey))
+            {
+                // The public gateway expects the bare key, without an auth scheme prefix.
+                client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", options.ApiKey);
+            }
+        });
         services.AddHttpClient<NominatimGeocoder>((provider, client) =>
-            client.BaseAddress = new Uri(
-                provider.GetRequiredService<IConfiguration>()["Nominatim:BaseUrl"] ?? "http://localhost:8088/"));
+        {
+            NominatimOptions options = provider.GetRequiredService<IOptions<NominatimOptions>>().Value;
+            client.BaseAddress = new Uri(options.EffectiveBaseUrl);
+            if (options.UsesOnlineService)
+            {
+                // The public instance's usage policy requires an identifying User-Agent.
+                client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", options.UserAgent);
+            }
+        });
         services.AddTransient<IGeocoder>(provider => provider.GetRequiredService<NominatimGeocoder>());
         services.AddTransient<IRoutePlanner>(provider => provider.GetRequiredService<OpenRouteServiceClient>());
         services.AddTransient<IMapDataStatusProvider, MapDataStatusProvider>();
