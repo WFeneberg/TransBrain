@@ -168,6 +168,17 @@ class _SummaryBar extends StatelessWidget {
   }
 }
 
+/// Web Mercator without the endlessly repeated world copies. With repetition on,
+/// flutter_map 8.3.2 throws while painting the route line ("Infinite loop going
+/// beyond 30 for world width"), which drops the line and breaks pointer input
+/// for the whole screen. A tour map never spans the antimeridian anyway.
+class _SingleWorldMercator extends Epsg3857 {
+  const _SingleWorldMercator();
+
+  @override
+  bool get replicatesWorldLongitude => false;
+}
+
 class _RouteMap extends StatelessWidget {
   const _RouteMap({required this.route});
 
@@ -188,6 +199,7 @@ class _RouteMap extends StatelessWidget {
     }
     return FlutterMap(
       options: MapOptions(
+        crs: const _SingleWorldMercator(),
         initialCameraFit: CameraFit.bounds(
           bounds: LatLngBounds.fromPoints(boundsSource),
           padding: const EdgeInsets.all(48),

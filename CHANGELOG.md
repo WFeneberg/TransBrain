@@ -84,6 +84,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Playwright `home.spec.ts` in both frontends: all four realm roles, sign-out, and the route guards — 30 tests per frontend in total
 
 ### Fixed
+- Driver app route map: the route line was missing (only the stop markers showed) and the screen stopped reacting to the mouse, so the back arrow no longer worked. flutter_map 8.3.2 threw "Infinite loop going beyond 30 for world width" on every frame while painting the polyline across its repeated world copies; the route map now uses Web Mercator without world repetition, which a tour map does not need.
 - The driver-app web demo started by the AppHost could not reach the API when the AppHost ran under its `http` launch profile (e.g. started from an IDE): the app's compiled-in API address is the HTTPS port 7049, which exists only under the `https` profile, so every sign-in ended with an empty tour list. The AppHost now passes the API's http endpoint to `flutter run` (`--dart-define=TB_API_BASE_URL=…`), which works under both profiles, and starts the app only after the API is healthy (`WaitFor`).
 - Unticking "License plate confidential" on an existing vehicle now persists. EF Core treated `false` as "not set" on the model-level column default and left the old `true` in the database; the default is now only applied by the migration
 
