@@ -558,6 +558,29 @@ export const en = {
     'callback.error': 'Sign-in could not be completed. Please try again.',
 
     'nav.geodata': 'Geodata',
+    'nav.maintenance': 'Maintenance',
+    'maintenance.title': 'Maintenance',
+    'maintenance.subtitle':
+        'Data safety for this tenant: download a backup file or restore an earlier state.',
+    'maintenance.backup.title': 'Create backup',
+    'maintenance.backup.description':
+        'Downloads all data of this tenant as a JSON file – master data, orders, tours, invoices and number sequences. The file is tied to this tenant and the current database version.',
+    'maintenance.backup.download': 'Download backup',
+    'maintenance.backup.error': 'The backup could not be created.',
+    'maintenance.restore.title': 'Restore backup',
+    'maintenance.restore.description':
+        'Replaces all current data of this tenant with the state from a backup file. The restore happens completely or not at all.',
+    'maintenance.restore.selectFile': 'Choose backup file',
+    'maintenance.restore.fileInfo': 'Created {createdAt} · {tables} tables',
+    'maintenance.restore.warning':
+        'Warning: all current data of this tenant will be irrevocably replaced by the state from the file.',
+    'maintenance.restore.confirm': 'I understand that the current data will be replaced.',
+    'maintenance.restore.start': 'Restore now',
+    'maintenance.restore.success': 'Restore finished: {rows} rows written.',
+    'maintenance.restore.table': 'Table',
+    'maintenance.restore.rows': 'Rows',
+    'maintenance.restore.invalidFile': 'The file is not a TransBrain backup.',
+    'maintenance.restore.error': 'The restore failed. No data has been changed.',
     'geodata.title': 'Geodata maintenance',
     'geodata.subtitle':
         'Coordinates for every known address - fix wrong positions or add missing ones manually',

@@ -1217,6 +1217,55 @@ Dienste neu importiert — das dauert je nach Region Minuten bis Stunden (Skript
 Statuskarte **Unavailable**, läuft gerade ein solcher Import oder der Dienst ist gestoppt; die
 Seite bleibt benutzbar, nur „Try geocoding“ und neue Routenberechnungen schlagen solange fehl.
 
+## Wartung (Datensicherung)
+
+Erreichbar über den Menüpunkt **Maintenance** (`/maintenance`). Menüpunkt und Seite stehen
+ausschließlich Administratoren zur Verfügung — anders als bei der Geodaten-Wartung ist hier
+auch das Ansehen auf die Rolle `admin` beschränkt; andere Rollen werden zur Startseite
+umgeleitet, und die API lehnt ihre Anfragen ab.
+
+Die Seite sichert und wiederherstellt die Daten **des eigenen Mandanten**: Fahrzeuge samt
+Katalogen und Dokumenten, Fahrer, Kunden mit Standorten, Aufträge, Touren, Rechnungen,
+manuelle Geo-Koordinaten sowie die Nummernkreise für Auftrags- und Rechnungsnummern. Daten
+anderer Mandanten sind in der Sicherung nicht enthalten und werden bei einer Wiederherstellung
+nicht berührt.
+
+### Sicherung erstellen
+
+Die Karte **„Create backup"** lädt mit **„Download backup"** den kompletten Datenbestand des
+Mandanten als eine JSON-Datei herunter (`transbrain-backup-<Datum>-<Uhrzeit>.json`). Die Datei
+ist an den Mandanten und an den Datenbankstand gebunden, unter dem sie erstellt wurde.
+Bewahren Sie sie an einem sicheren Ort auf — sie enthält alle Geschäftsdaten.
+
+### Sicherung wiederherstellen
+
+Die Karte **„Restore backup"** spielt eine zuvor erstellte Sicherungsdatei zurück:
+
+1. Über **„Choose backup file"** die JSON-Datei auswählen. Die Seite zeigt dann, wann die
+   Sicherung erstellt wurde und wie viele Tabellen sie enthält. Eine Datei, die keine
+   TransBrain-Sicherung ist, wird bereits hier abgelehnt („The file is not a TransBrain
+   backup.").
+2. Den Warnhinweis lesen und das Bestätigungsfeld **„I understand that the current data will
+   be replaced."** ankreuzen — ohne Haken bleibt die Schaltfläche gesperrt.
+3. **„Restore now"** startet die Wiederherstellung.
+
+**Die Wiederherstellung ersetzt alle aktuellen Daten des Mandanten unwiderruflich** durch den
+Stand aus der Datei. Sie läuft vollständig oder gar nicht: Schlägt ein Schritt fehl, bleibt
+der bisherige Datenbestand unverändert erhalten („The restore failed. No data has been
+changed."). Nach Erfolg zeigt eine Tabelle je Datenbanktabelle die Zahl der geschriebenen
+Zeilen. Auftrags- und Rechnungsnummern zählen anschließend dort weiter, wo die Sicherung
+aufgehört hat — es entstehen keine doppelten Nummern.
+
+Zwei Dateien werden mit einer Fehlermeldung abgewiesen:
+
+- Eine Sicherung **eines anderen Mandanten** („The backup belongs to a different
+  tenant …"). Eine Sicherung lässt sich nur in den Mandanten zurückspielen, aus dem sie
+  stammt.
+- Eine Sicherung, die unter einem **anderen Datenbankstand** erstellt wurde („The backup was
+  taken on database schema …"), etwa vor einem Software-Update. Spielen Sie
+  solche Sicherungen in eine Installation mit passendem Stand zurück und erstellen Sie nach
+  jedem Update eine frische Sicherung.
+
 ## Rollen und Rechte
 
 Die Anmeldung erfolgt über Keycloak mit genau einer der vier Rollen `admin`,
@@ -1244,8 +1293,9 @@ und abschließen — siehe Abschnitt „Touren als Fahrer“.
 „Ausstellen“, „Als bezahlt markieren“ und „Stornieren“ (Abrechnung) nur für `admin` und
 `disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Der
 Menüpunkt **Geodata** und die Änderungen der Geodaten-Wartung („Add coordinates“,
-„Set coordinates“, „Remove manual coordinates“) sind ebenfalls `admin` vorbehalten. Wer
-eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
+„Set coordinates“, „Remove manual coordinates“) sind ebenfalls `admin` vorbehalten. Der
+Menüpunkt **Maintenance** (Datensicherung) ist zur Gänze — einschließlich des Ansehens —
+`admin` vorbehalten. Wer eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
 
 Das **Lesen** ist davon unberührt: alle vier Rollen dürfen alle Listen ansehen, mit der
 einen Ausnahme, dass ein Fahrer in der Tourenliste nur seine eigenen Touren sieht. Die

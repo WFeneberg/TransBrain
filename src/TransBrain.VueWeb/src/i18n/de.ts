@@ -560,6 +560,29 @@ export const de: Record<MessageKey, string> = {
     'callback.error': 'Die Anmeldung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.',
 
     'nav.geodata': 'Geodaten',
+    'nav.maintenance': 'Wartung',
+    'maintenance.title': 'Wartung',
+    'maintenance.subtitle':
+        'Datensicherung für diesen Mandanten: Backup als Datei herunterladen oder einen früheren Stand wiederherstellen.',
+    'maintenance.backup.title': 'Backup erstellen',
+    'maintenance.backup.description':
+        'Lädt alle Daten dieses Mandanten als JSON-Datei herunter – Stammdaten, Aufträge, Touren, Rechnungen und Nummernkreise. Die Datei ist an diesen Mandanten und den aktuellen Datenbankstand gebunden.',
+    'maintenance.backup.download': 'Backup herunterladen',
+    'maintenance.backup.error': 'Das Backup konnte nicht erstellt werden.',
+    'maintenance.restore.title': 'Backup wiederherstellen',
+    'maintenance.restore.description':
+        'Ersetzt alle aktuellen Daten dieses Mandanten durch den Stand aus einer Backup-Datei. Die Wiederherstellung erfolgt vollständig oder gar nicht.',
+    'maintenance.restore.selectFile': 'Backup-Datei auswählen',
+    'maintenance.restore.fileInfo': 'Erstellt am {createdAt} · {tables} Tabellen',
+    'maintenance.restore.warning':
+        'Achtung: Alle aktuellen Daten dieses Mandanten werden unwiderruflich durch den Stand aus der Datei ersetzt.',
+    'maintenance.restore.confirm': 'Ich verstehe, dass die aktuellen Daten ersetzt werden.',
+    'maintenance.restore.start': 'Jetzt wiederherstellen',
+    'maintenance.restore.success': 'Wiederherstellung abgeschlossen: {rows} Zeilen eingespielt.',
+    'maintenance.restore.table': 'Tabelle',
+    'maintenance.restore.rows': 'Zeilen',
+    'maintenance.restore.invalidFile': 'Die Datei ist kein TransBrain-Backup.',
+    'maintenance.restore.error': 'Die Wiederherstellung ist fehlgeschlagen. Es wurden keine Daten verändert.',
     'geodata.title': 'Geodaten-Wartung',
     'geodata.subtitle':
         'Koordinaten aller bekannten Adressen – falsche Positionen korrigieren oder fehlende manuell ergänzen',

@@ -3,7 +3,12 @@
  * TransBrain.Api/Program.cs:134-137 - if the two ever disagree, this table is the wrong one:
  * the API decides, this only decides what is worth offering.
  */
-export type Capability = 'read' | 'masterData.write' | 'dispatch.write' | 'tourStatus.write';
+export type Capability =
+    | 'read'
+    | 'masterData.write'
+    | 'dispatch.write'
+    | 'tourStatus.write'
+    | 'maintenance';
 
 /** The realm roles defined in src/TransBrain.AppHost/realms/transbrain-realm.json. */
 export type AppRole = 'admin' | 'disponent' | 'fahrer' | 'viewer';
@@ -12,7 +17,7 @@ export type AppRole = 'admin' | 'disponent' | 'fahrer' | 'viewer';
 export type Area = 'vehicles' | 'drivers' | 'customers' | 'orders' | 'tours' | 'invoices';
 
 const CAPABILITIES_BY_ROLE: Record<AppRole, readonly Capability[]> = {
-    admin: ['read', 'masterData.write', 'dispatch.write', 'tourStatus.write'],
+    admin: ['read', 'masterData.write', 'dispatch.write', 'tourStatus.write', 'maintenance'],
     disponent: ['read', 'dispatch.write', 'tourStatus.write'],
     fahrer: ['read', 'tourStatus.write'],
     viewer: ['read'],

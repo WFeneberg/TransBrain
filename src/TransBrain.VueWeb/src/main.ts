@@ -28,6 +28,7 @@ import InvoiceList from './views/InvoiceList.vue';
 import InvoiceForm from './views/InvoiceForm.vue';
 import InvoiceDetail from './views/InvoiceDetail.vue';
 import Geodata from './views/Geodata.vue';
+import Maintenance from './views/Maintenance.vue';
 import AuthCallback from './views/AuthCallback.vue';
 import { useAuthStore } from './stores/auth';
 import { useI18n } from './i18n';
@@ -71,6 +72,9 @@ const router = createRouter({
         { path: '/invoices/:id', component: InvoiceDetail },
         // Readable by every signed-in role; the write controls inside are gated on masterData.write.
         { path: '/geodata', component: Geodata },
+        // Backup and restore of the tenant's data; the API's Maintenance policy admits only
+        // admins, so this route carries the matching capability.
+        { path: '/maintenance', component: Maintenance, meta: { capability: 'maintenance' } },
         { path: '/callback', component: AuthCallback },
     ],
 });

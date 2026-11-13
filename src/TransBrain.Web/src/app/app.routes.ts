@@ -36,6 +36,8 @@ const loadInvoiceDetail = () =>
 const loadHome = () => import('./home/home.component').then((m) => m.HomeComponent);
 const loadGeodataList = () =>
     import('./geodata/geodata-list.component').then((m) => m.GeodataListComponent);
+const loadMaintenance = () =>
+    import('./maintenance/maintenance.component').then((m) => m.MaintenanceComponent);
 
 export const routes: Routes = [
     // angular-auth-oidc-client's checkAuth() detects the OIDC callback by comparing the
@@ -149,4 +151,11 @@ export const routes: Routes = [
     },
     // Readable by every signed-in role; the write controls inside are gated on masterData.write.
     { path: 'geodata', loadComponent: loadGeodataList, canActivate: [requireAuthentication] },
+    // Backup and restore of the tenant's data; the API's Maintenance policy admits only admins,
+    // so the route is capability-guarded instead of merely authenticated.
+    {
+        path: 'maintenance',
+        loadComponent: loadMaintenance,
+        canActivate: [requireCapability('maintenance')],
+    },
 ];
