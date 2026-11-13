@@ -6,4 +6,7 @@ public static class Policies
     public const string DispatchWrite = "DispatchWrite";
     public const string TourStatusWrite = "TourStatusWrite";
     public const string Read = "Read";
+
+    /// <summary>Backup and restore of a tenant's data — strictly the admin's business.</summary>
+    public const string Maintenance = "Maintenance";
 }

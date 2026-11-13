@@ -9,12 +9,15 @@ namespace TransBrain.Application.Features.Routing;
 /// </summary>
 internal static class GeocodeCache
 {
+    /// <summary>Shared with the tenant restore, which must drop every cached resolution.</summary>
+    public const string Prefix = "geocode:";
+
     public static string Key(Address address) => Key(GeoOverride.BuildKey(address));
 
     public static string Key(string street, string postalCode, string city, string country)
         => Key(GeoOverride.BuildKey(street, postalCode, city, country));
 
-    private static string Key(string addressKey) => $"geocode:{addressKey}";
+    private static string Key(string addressKey) => $"{Prefix}{addressKey}";
 
     // GeoPoint keeps its constructor private, so the cache stores this plain shape instead.
     internal sealed record CachedPoint(double Latitude, double Longitude);

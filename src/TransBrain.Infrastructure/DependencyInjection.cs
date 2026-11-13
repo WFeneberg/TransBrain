@@ -4,6 +4,7 @@ using TransBrain.Application.Abstractions;
 using TransBrain.Infrastructure.Billing;
 using TransBrain.Infrastructure.Persistence.Caching;
 using TransBrain.Infrastructure.Persistence.InvoiceNumbering;
+using TransBrain.Infrastructure.Persistence.Maintenance;
 using TransBrain.Infrastructure.Persistence.OrderNumbering;
 using TransBrain.Infrastructure.Persistence.Repositories;
 using TransBrain.Infrastructure.Routing;
@@ -26,6 +27,7 @@ public static class DependencyInjection
         services.AddSingleton<IInvoicePdfRenderer, MigraDocInvoicePdfRenderer>();
         services.AddSingleton<IXRechnungWriter, UblXRechnungWriter>();
         services.AddScoped<IGeoOverrideRepository, GeoOverrideRepository>();
+        services.AddScoped<ITenantDataMaintenance, PostgresTenantDataMaintenance>();
         services.AddScoped<ICacheService, RedisCacheService>();
         services.AddHttpClient<OpenRouteServiceClient>((provider, client) =>
         {
