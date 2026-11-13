@@ -1162,6 +1162,8 @@ Programmen nach TransBrain: Kunden, Fahrer oder Fahrzeuge. Ein Assistent führt 
 Schritten von der Quelle bis zum Ergebnis; zusätzlich gibt es einen Verlauf aller bisherigen
 Import-Sitzungen.
 
+![Import-Assistent, Schritt Quelle](img/web/import-quelle.png)
+
 ### Schritt 1: Quelle
 
 Zwei Arten von Quellen stehen zur Wahl:
@@ -1205,7 +1207,11 @@ Datenbanken bieten meist mehrere an). Zu jeder Tabelle zeigt der Assistent die Z
 die ersten fünf Zeilen als Kostprobe. Rechts wird das Ziel gewählt: **Kunden**, **Fahrer**
 oder **Fahrzeuge**.
 
+![Schritt Tabelle und Ziel mit Beispieldaten](img/web/import-tabelle-ziel.png)
+
 ### Schritt 3: Zuordnung (Mapping)
+
+![Schritt Zuordnung: Quellspalten auf Zielfelder](img/web/import-zuordnung.png)
 
 Das Herzstück: eine Zeile je Zielfeld. Pflichtfelder sind mit `*` markiert. Für jedes
 Zielfeld wird entweder
@@ -1234,6 +1240,8 @@ sind rot markiert und nennen die Fehler im Klartext (z. B. „Name ist erforderl
 unbekanntes Land). Zum Nachbessern einfach zu Schritt 3 zurückgehen — die Sitzung bleibt
 erhalten.
 
+![Vorschau mit einer fehlerhaften Zeile](img/web/import-vorschau.png)
+
 ### Schritt 5: Ausführen und Ergebnis
 
 **Importieren** legt die Datensätze zeilenweise an — über dieselbe Logik wie das manuelle
@@ -1246,12 +1254,16 @@ Ausführen derselben Sitzung — etwa mit nachgebesserter Zuordnung oder anderem
 möglich. Dabei schützt nur die Duplikatprüfung des Ziels vor Doppelanlagen — bei Fahrzeugen
 das Kennzeichen; Kunden und Fahrer haben kein solches Merkmal und würden erneut angelegt.
 
+![Ergebnis mit Fehlerliste](img/web/import-ergebnis.png)
+
 ### Verlauf
 
 Der Reiter **Verlauf** listet alle Import-Sitzungen des Mandanten, neueste zuerst: Quelle,
 Status, Ziel, Anzahl importiert/fehlerhaft, wer sie wann angelegt hat. **Löschen** entfernt
 eine Sitzung samt der eingelesenen Daten endgültig (mit Sicherheitsabfrage); die bereits
 importierten Datensätze bleiben selbstverständlich bestehen.
+
+![Verlauf der Import-Sitzungen](img/web/import-verlauf.png)
 
 ### Grenzen
 
