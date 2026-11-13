@@ -34,5 +34,19 @@ public enum VehicleCatalogKind
     /// <see cref="DocumentType"/>): it lives in this catalog so drivers share its maintenance,
     /// deactivation and usage counting.
     /// </summary>
-    DriverDocumentType
+    DriverDocumentType,
+
+    /// <summary>
+    /// Toll category ("Maut-Art") of an order's toll records, for example the Austrian or German
+    /// per-kilometre rate. Not a vehicle list: it lives in this catalog so orders share its
+    /// maintenance, deactivation and usage counting.
+    /// </summary>
+    TollCategory,
+
+    /// <summary>
+    /// Measurement unit ("Einheit") of an order's additional charge positions, for example hours,
+    /// pallets or litres. Not a vehicle list: it lives in this catalog so orders share its
+    /// maintenance, deactivation and usage counting.
+    /// </summary>
+    Unit
 }

@@ -11,8 +11,11 @@ import {
     type OrderLocations,
     type OrderWriteRequest,
 } from '../api/orders';
+import { listVehicleCatalog, type VehicleCatalogEntry } from '../api/vehicleCatalog';
 import LocationMap from '../components/LocationMap.vue';
 import CountrySelect from '../components/CountrySelect.vue';
+import OrderCharges from '../components/OrderCharges.vue';
+import OrderTolls from '../components/OrderTolls.vue';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useI18n, type MessageKey } from '../i18n';
 
@@ -32,6 +35,8 @@ const isEditMode = computed(() => orderId !== undefined);
 
 const parties = ['consignor', 'consignee'] as const;
 type Party = (typeof parties)[number];
+
+const NOTES_MAX_LENGTH = 2000;
 
 const partyLabels: Record<Party, MessageKey> = { consignor: 'orders.consignor', consignee: 'orders.consignee' };
 const partyPinLabels: Record<Party, string> = { consignor: 'A', consignee: 'B' };
@@ -76,6 +81,10 @@ const form = reactive({
     deliveryFrom: '',
     deliveryTo: '',
     consigneeLocationId: '',
+    notes: '',
+    confirmationNotes: '',
+    requiresPartitionWall: false,
+    requiresDoubleDeck: false,
 });
 
 // Keyed by the same dotted path the API's nested validator rules produce ("Consignor.Name"
@@ -98,6 +107,8 @@ const fieldErrors = reactive<Record<string, string | null>>({
     pickupTo: null,
     deliveryFrom: null,
     deliveryTo: null,
+    notes: null,
+    confirmationNotes: null,
 });
 
 // Gates field error rendering the same way Angular Material's default ErrorStateMatcher does
@@ -109,6 +120,9 @@ const locations = ref<OrderLocations | null>(null);
 const locationsError = ref<string | null>(null);
 const locationOptions = ref<CustomerLocationOption[]>([]);
 const locationPickerError = ref<string | null>(null);
+const tollCategories = ref<VehicleCatalogEntry[]>([]);
+const units = ref<VehicleCatalogEntry[]>([]);
+const catalogsError = ref<string | null>(null);
 
 const unlocatedParties = computed(() => parties.filter((party) => locations.value?.[party] === null));
 
@@ -139,6 +153,7 @@ const mapMarkers = computed(() =>
 onMounted(async () => {
     await loadLocationOptions();
     if (isEditMode.value) {
+        await loadCatalogs();
         try {
             const order = await getOrder(orderId!);
             form.consignor = { ...order.consignor };
@@ -151,6 +166,10 @@ onMounted(async () => {
             form.deliveryFrom = toLocalInput(order.deliveryFrom);
             form.deliveryTo = toLocalInput(order.deliveryTo);
             form.consigneeLocationId = order.consigneeLocationId ?? '';
+            form.notes = order.notes ?? '';
+            form.confirmationNotes = order.confirmationNotes ?? '';
+            form.requiresPartitionWall = order.requiresPartitionWall;
+            form.requiresDoubleDeck = order.requiresDoubleDeck;
         } catch (error) {
             // A failed load is not a failed save - give it its own wording so a dispatcher
             // opening a deleted order isn't told a save just failed.
@@ -171,6 +190,21 @@ async function loadLocations(): Promise<void> {
             axios.isAxiosError(error) && error.response?.status === 503
                 ? t('map.unavailable')
                 : describeFailure(error, t('map.loadFailed'));
+    }
+}
+
+// The catalogs only label the toll/charge tables; raw codes still work, so a failure here
+// must not block editing the order itself.
+async function loadCatalogs(): Promise<void> {
+    try {
+        const [tollCategoryEntries, unitEntries] = await Promise.all([
+            listVehicleCatalog('TollCategory'),
+            listVehicleCatalog('Unit'),
+        ]);
+        tollCategories.value = tollCategoryEntries;
+        units.value = unitEntries;
+    } catch (error) {
+        catalogsError.value = t('orders.catalogsLoadFailed');
     }
 }
 
@@ -237,6 +271,10 @@ async function save(): Promise<void> {
         deliveryFrom: toIso(form.deliveryFrom),
         deliveryTo: toIso(form.deliveryTo),
         consigneeLocationId: form.consigneeLocationId || null,
+        notes: form.notes.trim() || null,
+        confirmationNotes: form.confirmationNotes.trim() || null,
+        requiresPartitionWall: form.requiresPartitionWall,
+        requiresDoubleDeck: form.requiresDoubleDeck,
     };
 
     try {
@@ -494,6 +532,66 @@ function describeFailure(error: unknown, fallback: string): string {
                     </v-card>
                 </v-col>
 
+                <v-col cols="12">
+                    <v-card border flat class="section-card">
+                        <v-card-item prepend-icon="mdi-note-text-outline" :title="t('orders.special')" />
+                        <v-card-text>
+                            <v-row dense>
+                                <v-col cols="12" md="6">
+                                    <v-textarea
+                                        v-model="form.notes"
+                                        v-native-testid="'order-notes'"
+                                        :label="t('orders.notes')"
+                                        rows="3"
+                                        :counter="NOTES_MAX_LENGTH"
+                                        :maxlength="NOTES_MAX_LENGTH"
+                                        :error-messages="errorsFor('notes')"
+                                        variant="outlined"
+                                        density="comfortable"
+                                    >
+                                        <template #message="{ message }">
+                                            <span data-testid="order-notes-error">{{ message }}</span>
+                                        </template>
+                                    </v-textarea>
+                                </v-col>
+                                <v-col cols="12" md="6">
+                                    <v-textarea
+                                        v-model="form.confirmationNotes"
+                                        v-native-testid="'order-confirmationNotes'"
+                                        :label="t('orders.confirmationNotes')"
+                                        rows="3"
+                                        :counter="NOTES_MAX_LENGTH"
+                                        :maxlength="NOTES_MAX_LENGTH"
+                                        :error-messages="errorsFor('confirmationNotes')"
+                                        variant="outlined"
+                                        density="comfortable"
+                                    >
+                                        <template #message="{ message }">
+                                            <span data-testid="order-confirmationNotes-error">{{ message }}</span>
+                                        </template>
+                                    </v-textarea>
+                                </v-col>
+                            </v-row>
+                            <div class="flags-row">
+                                <v-checkbox
+                                    v-model="form.requiresPartitionWall"
+                                    :label="t('orders.requiresPartitionWall')"
+                                    density="comfortable"
+                                    hide-details
+                                    data-testid="order-requiresPartitionWall"
+                                />
+                                <v-checkbox
+                                    v-model="form.requiresDoubleDeck"
+                                    :label="t('orders.requiresDoubleDeck')"
+                                    density="comfortable"
+                                    hide-details
+                                    data-testid="order-requiresDoubleDeck"
+                                />
+                            </div>
+                        </v-card-text>
+                    </v-card>
+                </v-col>
+
                 <v-col v-if="isEditMode" cols="12">
                     <v-card border flat class="section-card" data-testid="order-map-section">
                         <v-card-item prepend-icon="mdi-map-outline" :title="t('map.title')" />
@@ -513,6 +611,17 @@ function describeFailure(error: unknown, fallback: string): string {
                             </div>
                         </v-card-text>
                     </v-card>
+                </v-col>
+
+                <v-col v-if="isEditMode && orderId" cols="12">
+                    <p v-if="catalogsError" class="text-error error-line" data-testid="order-catalogs-error">
+                        {{ catalogsError }}
+                    </p>
+                    <OrderTolls :order-id="orderId" :toll-categories="tollCategories" />
+                </v-col>
+
+                <v-col v-if="isEditMode && orderId" cols="12">
+                    <OrderCharges :order-id="orderId" :units="units" />
                 </v-col>
             </v-row>
 

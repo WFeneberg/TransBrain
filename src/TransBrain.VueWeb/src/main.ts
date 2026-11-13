@@ -47,6 +47,7 @@ const router = createRouter({
         { path: '/vehicle-catalog', component: VehicleCatalog },
         { path: '/customer-catalog', component: VehicleCatalog, meta: { catalogScope: 'customer' } },
         { path: '/driver-catalog', component: VehicleCatalog, meta: { catalogScope: 'driver' } },
+        { path: '/order-catalog', component: VehicleCatalog, meta: { catalogScope: 'order' } },
         { path: '/drivers', component: DriverList },
         { path: '/drivers/new', component: DriverForm, meta: { capability: 'masterData.write' } },
         { path: '/drivers/:id', component: DriverForm, meta: { capability: 'masterData.write' } },

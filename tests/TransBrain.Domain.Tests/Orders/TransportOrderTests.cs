@@ -89,6 +89,109 @@ public class TransportOrderTests
     }
 
     [Fact]
+    public void Create_WithNotesAndEquipmentFlags_StoresThem()
+    {
+        Result<TransportOrder> result = TransportOrder.Create(
+            OrderNumber.From(2027, 2),
+            AnAddress("Absender GmbH"),
+            AnAddress("Empfänger AG"),
+            AnyCargo(),
+            Window(8, 10),
+            Window(12, 16),
+            CreatedAt,
+            notes: "  Anlieferung nur vormittags  ",
+            confirmationNotes: "Avisierung 24h vorher",
+            requiresPartitionWall: true,
+            requiresDoubleDeck: true);
+
+        result.Value.Should().BeEquivalentTo(new
+        {
+            Notes = "Anlieferung nur vormittags",
+            ConfirmationNotes = "Avisierung 24h vorher",
+            RequiresPartitionWall = true,
+            RequiresDoubleDeck = true,
+        });
+    }
+
+    [Fact]
+    public void Create_BlankNotes_AreNormalizedToNull()
+    {
+        Result<TransportOrder> result = TransportOrder.Create(
+            OrderNumber.From(2027, 3),
+            AnAddress("Absender GmbH"),
+            AnAddress("Empfänger AG"),
+            AnyCargo(),
+            Window(8, 10),
+            Window(12, 16),
+            CreatedAt,
+            notes: "   ",
+            confirmationNotes: "");
+
+        result.Value.Notes.Should().BeNull();
+        result.Value.ConfirmationNotes.Should().BeNull();
+        result.Value.RequiresPartitionWall.Should().BeFalse();
+        result.Value.RequiresDoubleDeck.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(true, false, "TransportOrder.NotesTooLong")]
+    [InlineData(false, true, "TransportOrder.ConfirmationNotesTooLong")]
+    public void Create_OverlongNotes_ReturnsValidationError(bool longNotes, bool longConfirmation, string code)
+    {
+        string overlong = new('x', TransportOrder.MaxNotesLength + 1);
+
+        Result<TransportOrder> result = TransportOrder.Create(
+            OrderNumber.From(2027, 4),
+            AnAddress("Absender GmbH"),
+            AnAddress("Empfänger AG"),
+            AnyCargo(),
+            Window(8, 10),
+            Window(12, 16),
+            CreatedAt,
+            notes: longNotes ? overlong : null,
+            confirmationNotes: longConfirmation ? overlong : null);
+
+        result.Error!.Code.Should().Be(code);
+        result.Error.Type.Should().Be(ErrorType.Validation);
+    }
+
+    [Fact]
+    public void Update_WithNotesAndEquipmentFlags_ReplacesThem()
+    {
+        TransportOrder order = AnOrder();
+
+        Result<TransportOrder> result = order.Update(
+            order.Consignor,
+            order.Consignee,
+            order.Cargo,
+            order.PickupWindow,
+            order.DeliveryWindow,
+            notes: "Neue Hinweise",
+            requiresDoubleDeck: true);
+
+        result.IsSuccess.Should().BeTrue();
+        order.Notes.Should().Be("Neue Hinweise");
+        order.RequiresDoubleDeck.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Update_OverlongNotes_ReturnsValidationErrorAndLeavesOrderUntouched()
+    {
+        TransportOrder order = AnOrder();
+
+        Result<TransportOrder> result = order.Update(
+            order.Consignor,
+            order.Consignee,
+            order.Cargo,
+            order.PickupWindow,
+            order.DeliveryWindow,
+            notes: new string('x', TransportOrder.MaxNotesLength + 1));
+
+        result.Error!.Code.Should().Be("TransportOrder.NotesTooLong");
+        order.Notes.Should().BeNull();
+    }
+
+    [Fact]
     public void MarkPlanned_AlreadyPlanned_ReturnsConflictAndLeavesStatusUnchanged()
     {
         TransportOrder order = AnOrder();

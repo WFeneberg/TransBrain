@@ -24,6 +24,12 @@ export interface Order {
     status: string;
     createdAt: string;
     consigneeLocationId: string | null;
+    /** Special remarks for dispatch ("Besonderes"). */
+    notes: string | null;
+    /** Special remarks printed on the order confirmation. */
+    confirmationNotes: string | null;
+    requiresPartitionWall: boolean;
+    requiresDoubleDeck: boolean;
 }
 
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
@@ -38,6 +44,55 @@ export interface OrderWriteRequest {
     deliveryFrom: string;
     deliveryTo: string;
     consigneeLocationId: string | null;
+    notes: string | null;
+    confirmationNotes: string | null;
+    requiresPartitionWall: boolean;
+    requiresDoubleDeck: boolean;
+}
+
+/** One toll record ("Mautdaten") of an order; the amounts are computed by the API. */
+export interface OrderToll {
+    id: string;
+    orderId: string;
+    /** Code of a TollCategory entry of the catalog; the UI shows the entry's name. */
+    tollCategory: string;
+    emptyKm: number;
+    loadedKm: number;
+    factorPerKm: number;
+    emptyAmount: number;
+    loadedAmount: number;
+    modifiedAt: string;
+    modifiedBy: string | null;
+}
+
+/** Body shared by toll create and update - the ids come from the route. */
+export interface OrderTollWriteRequest {
+    tollCategory: string;
+    emptyKm: number;
+    loadedKm: number;
+    factorPerKm: number;
+}
+
+/** One additional charge position ("Zusatzposition") of an order; the total is computed by the API. */
+export interface OrderCharge {
+    id: string;
+    orderId: string;
+    description: string;
+    quantity: number;
+    /** Code of a Unit entry of the catalog, or null for a bare quantity. */
+    unit: string | null;
+    unitPrice: number;
+    total: number;
+    modifiedAt: string;
+    modifiedBy: string | null;
+}
+
+/** Body shared by charge create and update - the ids come from the route. */
+export interface OrderChargeWriteRequest {
+    description: string;
+    quantity: number;
+    unit: string | null;
+    unitPrice: number;
 }
 
 export interface PagedResult<T> {
@@ -125,4 +180,61 @@ export interface OrderLocations {
 export async function getOrderLocations(id: string): Promise<OrderLocations> {
     const response = await client.get<OrderLocations>(`/orders/${id}/locations`);
     return response.data;
+}
+
+/** Oldest first. Toll records stay editable after dispatch: the km arrive after the trip. */
+export async function listOrderTolls(orderId: string): Promise<OrderToll[]> {
+    const response = await client.get<OrderToll[]>(`/orders/${orderId}/tolls`);
+    return response.data;
+}
+
+export async function createOrderToll(
+    orderId: string,
+    request: OrderTollWriteRequest,
+): Promise<OrderToll> {
+    const response = await client.post<OrderToll>(`/orders/${orderId}/tolls`, request);
+    return response.data;
+}
+
+export async function updateOrderToll(
+    orderId: string,
+    tollId: string,
+    request: OrderTollWriteRequest,
+): Promise<OrderToll> {
+    const response = await client.put<OrderToll>(`/orders/${orderId}/tolls/${tollId}`, request);
+    return response.data;
+}
+
+export async function removeOrderToll(orderId: string, tollId: string): Promise<void> {
+    await client.delete(`/orders/${orderId}/tolls/${tollId}`);
+}
+
+/** Oldest first, like the tolls. */
+export async function listOrderCharges(orderId: string): Promise<OrderCharge[]> {
+    const response = await client.get<OrderCharge[]>(`/orders/${orderId}/charges`);
+    return response.data;
+}
+
+export async function createOrderCharge(
+    orderId: string,
+    request: OrderChargeWriteRequest,
+): Promise<OrderCharge> {
+    const response = await client.post<OrderCharge>(`/orders/${orderId}/charges`, request);
+    return response.data;
+}
+
+export async function updateOrderCharge(
+    orderId: string,
+    chargeId: string,
+    request: OrderChargeWriteRequest,
+): Promise<OrderCharge> {
+    const response = await client.put<OrderCharge>(
+        `/orders/${orderId}/charges/${chargeId}`,
+        request,
+    );
+    return response.data;
+}
+
+export async function removeOrderCharge(orderId: string, chargeId: string): Promise<void> {
+    await client.delete(`/orders/${orderId}/charges/${chargeId}`);
 }

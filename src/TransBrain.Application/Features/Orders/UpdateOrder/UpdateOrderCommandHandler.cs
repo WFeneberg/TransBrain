@@ -72,7 +72,16 @@ internal sealed class UpdateOrderCommandHandler(ITransportOrderRepository reposi
         // not re-check the status: the rule lives in the entity, and duplicating it here would
         // be the same mistake a validator duplicating a domain invariant makes.
         Result<TransportOrder> updated = order.Update(
-            consignor.Value, consignee.Value, cargo.Value, pickup.Value, delivery.Value, command.ConsigneeLocationId);
+            consignor.Value,
+            consignee.Value,
+            cargo.Value,
+            pickup.Value,
+            delivery.Value,
+            command.ConsigneeLocationId,
+            command.Notes,
+            command.ConfirmationNotes,
+            command.RequiresPartitionWall,
+            command.RequiresDoubleDeck);
 
         if (!updated.IsSuccess)
         {

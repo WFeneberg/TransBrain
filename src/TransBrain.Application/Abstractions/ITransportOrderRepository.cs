@@ -28,4 +28,26 @@ public interface ITransportOrderRepository
         CancellationToken cancellationToken);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>The order's toll records ("Mautdaten"), oldest first.</summary>
+    Task<IReadOnlyList<OrderTollCharge>> ListTollsAsync(Guid orderId, CancellationToken cancellationToken);
+
+    Task<OrderTollCharge?> GetTollAsync(Guid orderId, Guid tollId, CancellationToken cancellationToken);
+
+    /// <summary>Adds and saves.</summary>
+    Task AddTollAsync(OrderTollCharge toll, CancellationToken cancellationToken);
+
+    /// <summary>Removes and saves.</summary>
+    Task RemoveTollAsync(OrderTollCharge toll, CancellationToken cancellationToken);
+
+    /// <summary>The order's additional charge positions ("Zusatzpositionen"), oldest first.</summary>
+    Task<IReadOnlyList<OrderAdditionalCharge>> ListChargesAsync(Guid orderId, CancellationToken cancellationToken);
+
+    Task<OrderAdditionalCharge?> GetChargeAsync(Guid orderId, Guid chargeId, CancellationToken cancellationToken);
+
+    /// <summary>Adds and saves.</summary>
+    Task AddChargeAsync(OrderAdditionalCharge charge, CancellationToken cancellationToken);
+
+    /// <summary>Removes and saves.</summary>
+    Task RemoveChargeAsync(OrderAdditionalCharge charge, CancellationToken cancellationToken);
 }

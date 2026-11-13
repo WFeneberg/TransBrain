@@ -4,6 +4,8 @@ namespace TransBrain.Domain.Orders;
 
 public sealed class TransportOrder
 {
+    public const int MaxNotesLength = 2000;
+
     // EF Core materialization only. Every other construction goes through Create.
     private TransportOrder()
     {
@@ -24,7 +26,11 @@ public sealed class TransportOrder
         TimeWindow pickupWindow,
         TimeWindow deliveryWindow,
         DateTimeOffset createdAt,
-        Guid? consigneeLocationId)
+        Guid? consigneeLocationId,
+        string? notes,
+        string? confirmationNotes,
+        bool requiresPartitionWall,
+        bool requiresDoubleDeck)
     {
         Id = id;
         OrderNumber = orderNumber;
@@ -35,6 +41,10 @@ public sealed class TransportOrder
         DeliveryWindow = deliveryWindow;
         CreatedAt = createdAt;
         ConsigneeLocationId = consigneeLocationId;
+        Notes = notes;
+        ConfirmationNotes = confirmationNotes;
+        RequiresPartitionWall = requiresPartitionWall;
+        RequiresDoubleDeck = requiresDoubleDeck;
         Status = OrderStatus.Draft;
     }
 
@@ -62,6 +72,18 @@ public sealed class TransportOrder
     /// </summary>
     public Guid? ConsigneeLocationId { get; private set; }
 
+    /// <summary>Special remarks for dispatch ("Besonderes").</summary>
+    public string? Notes { get; private set; }
+
+    /// <summary>Special remarks printed on the order confirmation ("Besonderes Auftragsbestätigung").</summary>
+    public string? ConfirmationNotes { get; private set; }
+
+    /// <summary>The load needs a vehicle with a partition wall ("Trennwand").</summary>
+    public bool RequiresPartitionWall { get; private set; }
+
+    /// <summary>The load needs a vehicle with a second loading level ("Doppelstock").</summary>
+    public bool RequiresDoubleDeck { get; private set; }
+
     public static Result<TransportOrder> Create(
         OrderNumber orderNumber,
         Address consignor,
@@ -70,12 +92,22 @@ public sealed class TransportOrder
         TimeWindow pickupWindow,
         TimeWindow deliveryWindow,
         DateTimeOffset createdAt,
-        Guid? consigneeLocationId = null)
+        Guid? consigneeLocationId = null,
+        string? notes = null,
+        string? confirmationNotes = null,
+        bool requiresPartitionWall = false,
+        bool requiresDoubleDeck = false)
     {
         Result<Unit> windows = ValidateWindows(pickupWindow, deliveryWindow);
         if (!windows.IsSuccess)
         {
             return windows.Error!;
+        }
+
+        Result<Unit> notesResult = ValidateNotes(notes, confirmationNotes);
+        if (!notesResult.IsSuccess)
+        {
+            return notesResult.Error!;
         }
 
         return new TransportOrder(
@@ -87,7 +119,11 @@ public sealed class TransportOrder
             pickupWindow,
             deliveryWindow,
             createdAt.ToUniversalTime(),
-            consigneeLocationId);
+            consigneeLocationId,
+            OptionalText.Normalize(notes),
+            OptionalText.Normalize(confirmationNotes),
+            requiresPartitionWall,
+            requiresDoubleDeck);
     }
 
     /// <remarks>Editable only while the order is still a draft; spec §6.4.</remarks>
@@ -97,7 +133,11 @@ public sealed class TransportOrder
         Cargo cargo,
         TimeWindow pickupWindow,
         TimeWindow deliveryWindow,
-        Guid? consigneeLocationId = null)
+        Guid? consigneeLocationId = null,
+        string? notes = null,
+        string? confirmationNotes = null,
+        bool requiresPartitionWall = false,
+        bool requiresDoubleDeck = false)
     {
         if (Status != OrderStatus.Draft)
         {
@@ -112,12 +152,22 @@ public sealed class TransportOrder
             return windows.Error!;
         }
 
+        Result<Unit> notesResult = ValidateNotes(notes, confirmationNotes);
+        if (!notesResult.IsSuccess)
+        {
+            return notesResult.Error!;
+        }
+
         Consignor = consignor;
         Consignee = consignee;
         Cargo = cargo;
         PickupWindow = pickupWindow;
         DeliveryWindow = deliveryWindow;
         ConsigneeLocationId = consigneeLocationId;
+        Notes = OptionalText.Normalize(notes);
+        ConfirmationNotes = OptionalText.Normalize(confirmationNotes);
+        RequiresPartitionWall = requiresPartitionWall;
+        RequiresDoubleDeck = requiresDoubleDeck;
 
         return this;
     }
@@ -181,6 +231,25 @@ public sealed class TransportOrder
             return Error.Validation(
                 "TransportOrder.DeliveryBeforePickupEnds",
                 "The delivery window must not start before the pickup window ends.");
+        }
+
+        return Unit.Value;
+    }
+
+    private static Result<Unit> ValidateNotes(string? notes, string? confirmationNotes)
+    {
+        if (OptionalText.Normalize(notes) is { Length: > MaxNotesLength })
+        {
+            return Error.Validation(
+                "TransportOrder.NotesTooLong",
+                $"The notes must not exceed {MaxNotesLength} characters.");
+        }
+
+        if (OptionalText.Normalize(confirmationNotes) is { Length: > MaxNotesLength })
+        {
+            return Error.Validation(
+                "TransportOrder.ConfirmationNotesTooLong",
+                $"The confirmation notes must not exceed {MaxNotesLength} characters.");
         }
 
         return Unit.Value;

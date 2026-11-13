@@ -22,10 +22,17 @@ export const CUSTOMER_CATALOG_KINDS = ['CustomerClass'] as const;
  */
 export const DRIVER_CATALOG_KINDS = ['PhoneType', 'DriverDocumentType'] as const;
 
+/**
+ * The kinds behind the order form (toll categories and units of the additional charges), shown
+ * on '/order-catalog'. They live in the shared catalog of the API as well.
+ */
+export const ORDER_CATALOG_KINDS = ['TollCategory', 'Unit'] as const;
+
 export type VehicleCatalogKind =
     | (typeof VEHICLE_CATALOG_KINDS)[number]
     | (typeof CUSTOMER_CATALOG_KINDS)[number]
-    | (typeof DRIVER_CATALOG_KINDS)[number];
+    | (typeof DRIVER_CATALOG_KINDS)[number]
+    | (typeof ORDER_CATALOG_KINDS)[number];
 
 export interface VehicleCatalogEntry {
     id: string;

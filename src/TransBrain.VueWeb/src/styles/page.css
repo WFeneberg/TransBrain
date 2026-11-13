@@ -102,3 +102,9 @@
     position: relative;
     z-index: 0;
 }
+
+.flags-row {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 24px;
+}
