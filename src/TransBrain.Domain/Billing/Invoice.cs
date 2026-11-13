@@ -9,9 +9,12 @@ namespace TransBrain.Domain.Billing;
 /// plus VAT. Frachtabrechnung, spec-wise the commercial close of the transport workflow.
 /// </summary>
 /// <remarks>
-/// The customer name, billing address, VAT id and payment term are COPIES taken when the invoice
+/// The recipient name, billing address, VAT id and payment term are COPIES taken when the invoice
 /// is created: an invoice is a document, and editing the customer later must not rewrite
-/// invoices that were already written. The one rule this aggregate cannot enforce alone is
+/// invoices that were already written. A delivery location with its own company name can be the
+/// recipient instead of the customer; the invoice then carries the location's company name,
+/// address and VAT id, while the commercial terms (payment term) stay those of the customer.
+/// The one rule this aggregate cannot enforce alone is
 /// "a delivered order is billed at most once across invoices" — that spans all invoices, so the
 /// CreateInvoice handler checks it against the repository. No unique index backs that check:
 /// a cancelled invoice must release its orders for re-billing, and a partial index on the line
@@ -41,7 +44,8 @@ public sealed class Invoice
         string? customerVatId,
         int paymentTermDays,
         decimal vatRatePercent,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        Guid? billToLocationId)
     {
         Id = id;
         InvoiceNumber = invoiceNumber;
@@ -52,6 +56,7 @@ public sealed class Invoice
         PaymentTermDays = paymentTermDays;
         VatRatePercent = vatRatePercent;
         CreatedAt = createdAt;
+        BillToLocationId = billToLocationId;
         Status = InvoiceStatus.Draft;
     }
 
@@ -66,6 +71,12 @@ public sealed class Invoice
     public Address BillingAddress { get; private set; }
 
     public string? CustomerVatId { get; private set; }
+
+    /// <summary>
+    /// The delivery location billed instead of the customer, when the invoice goes to a location
+    /// with its own company name. Null for invoices addressed to the customer itself.
+    /// </summary>
+    public Guid? BillToLocationId { get; private set; }
 
     /// <summary>Days from issuing until payment is due; copied from the customer at creation.</summary>
     public int PaymentTermDays { get; private set; }
@@ -104,7 +115,8 @@ public sealed class Invoice
         InvoiceNumber invoiceNumber,
         Customer customer,
         decimal vatRatePercent,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        CustomerLocation? billTo = null)
     {
         if (vatRatePercent is < 0m or > MaxVatRatePercent)
         {
@@ -113,16 +125,57 @@ public sealed class Invoice
                 $"VAT rate must be between 0 and {MaxVatRatePercent} percent.");
         }
 
+        string recipientName = customer.Name;
+        Address billingAddress = customer.Address;
+        string? recipientVatId = customer.VatId;
+
+        if (billTo is not null)
+        {
+            if (billTo.CustomerId != customer.Id)
+            {
+                return Error.Validation(
+                    "Invoice.BillToLocationForeign",
+                    "The billed delivery location does not belong to the invoiced customer.");
+            }
+
+            // Only a location that is its own legal entity may receive an invoice; otherwise the
+            // customer remains the recipient and billTo must not be set.
+            if (billTo.CompanyName is null)
+            {
+                return Error.Conflict(
+                    "Invoice.BillToLocationHasNoCompanyName",
+                    "The delivery location has no own company name and cannot receive its own invoice.");
+            }
+
+            Result<Address> locationBilling = Address.Create(
+                billTo.CompanyName,
+                billTo.Address.Street,
+                billTo.Address.PostalCode,
+                billTo.Address.City,
+                billTo.Address.Country);
+            if (!locationBilling.IsSuccess)
+            {
+                return locationBilling.Error!;
+            }
+
+            recipientName = billTo.CompanyName;
+            billingAddress = locationBilling.Value;
+            // The location's own VAT id, deliberately without falling back to the customer's:
+            // a distinct legal entity must not inherit a foreign VAT id onto its invoice.
+            recipientVatId = billTo.VatId;
+        }
+
         return new Invoice(
             Guid.CreateVersion7(),
             invoiceNumber,
             customer.Id,
-            customer.Name,
-            customer.Address,
-            customer.VatId,
+            recipientName,
+            billingAddress,
+            recipientVatId,
             customer.PaymentTermDays,
             vatRatePercent,
-            createdAt.ToUniversalTime());
+            createdAt.ToUniversalTime(),
+            billTo?.Id);
     }
 
     public Result<Unit> AddLine(TransportOrder order, decimal netAmount, string? description = null)

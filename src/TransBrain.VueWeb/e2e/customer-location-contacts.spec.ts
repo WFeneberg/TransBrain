@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { signIn } from './login';
+import { chooseOption } from './select';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
@@ -27,7 +28,7 @@ async function createCustomer(page: Page, name: string): Promise<void> {
     await page.getByTestId('customer-street').fill('Hauptstraße 1');
     await page.getByTestId('customer-postalCode').fill('6600');
     await page.getByTestId('customer-city').fill('Reutte');
-    await page.getByTestId('customer-country').fill('AT');
+    await chooseOption(page, 'customer-country', 'Austria');
     await page.getByTestId('customer-save').click();
     await expect(page.getByRole('heading', { name: 'Customers', exact: true })).toBeVisible();
 }
@@ -64,7 +65,7 @@ test('adminUser_recordsSeveralContactPersonsPerDeliveryLocation_andReplacesThemO
     await page.getByTestId('location-street').fill('Südbahnstraße 5');
     await page.getByTestId('location-postalCode').fill('1100');
     await page.getByTestId('location-city').fill('Wien');
-    await page.getByTestId('location-country').fill('AT');
+    await chooseOption(page, 'location-country', 'Austria');
     await expect(page.getByTestId('location-contacts-empty')).toBeVisible();
     await page.getByTestId('location-contact-add').click();
     await page.getByTestId('location-contact-add').click();
@@ -114,7 +115,7 @@ test('contactPersonWithoutName_showsTheRowError', async ({ page }) => {
     await page.getByTestId('location-street').fill('Südbahnstraße 5');
     await page.getByTestId('location-postalCode').fill('1100');
     await page.getByTestId('location-city').fill('Wien');
-    await page.getByTestId('location-country').fill('AT');
+    await chooseOption(page, 'location-country', 'Austria');
     await page.getByTestId('location-contact-add').click();
     await fillContact(page, 0, '', '+43 1 111', 'keine-mail');
     await page.getByTestId('location-save').click();

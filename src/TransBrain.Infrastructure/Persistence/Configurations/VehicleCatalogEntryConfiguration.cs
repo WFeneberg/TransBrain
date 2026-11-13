@@ -28,7 +28,9 @@ internal sealed class VehicleCatalogEntryConfiguration : IEntityTypeConfiguratio
         // The common special document types are seeded as a starting point and can be edited like any entry.
         // The vehicle classes are those of the legacy vehicle screen; their codes are the former enum
         // names where one existed, so vehicles saved before the catalog existed keep resolving. The
-        // carrier groups are those of the legacy vehicle screen too. Seeded for the default tenant
+        // carrier groups are those of the legacy vehicle screen too, and the phone types and driver
+        // document types are the fixed dropdown values of the legacy driver screen ("Zusatz → Telefone"
+        // and "Zusatz → Sonderpapiere"). Seeded for the default tenant
         // only: a newly onboarded tenant starts with an empty catalog and fills it via the admin UI.
         builder.HasData(
             Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-00000000000b", "Other", "Sonstige"),
@@ -50,7 +52,23 @@ internal sealed class VehicleCatalogEntryConfiguration : IEntityTypeConfiguratio
             Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000105", "UVV", "UVV-Prüfung"),
             Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000106", "Crane", "Kranprüfung"),
             Seed(VehicleCatalogKind.DocumentType, "0199a6c0-0000-7000-8000-000000000107", "TailLift", "Ladebordwandprüfung"),
-            Seed(VehicleCatalogKind.CustomerClass, "0199a6c0-0000-7000-8000-000000000301", "HuterVilsAll", "Huter Vils alle Gattungen"));
+            Seed(VehicleCatalogKind.CustomerClass, "0199a6c0-0000-7000-8000-000000000301", "HuterVilsAll", "Huter Vils alle Gattungen"),
+            Seed(VehicleCatalogKind.PhoneType, "0199a6c0-0000-7000-8000-000000000401", "Fax", "Fax"),
+            Seed(VehicleCatalogKind.PhoneType, "0199a6c0-0000-7000-8000-000000000402", "Phone", "Telefon"),
+            Seed(VehicleCatalogKind.PhoneType, "0199a6c0-0000-7000-8000-000000000403", "Email", "Email"),
+            Seed(VehicleCatalogKind.PhoneType, "0199a6c0-0000-7000-8000-000000000404", "CarPhone", "Auto-Telefon"),
+            Seed(VehicleCatalogKind.PhoneType, "0199a6c0-0000-7000-8000-000000000405", "HomePage", "Home-Page"),
+            Seed(VehicleCatalogKind.PhoneType, "0199a6c0-0000-7000-8000-000000000406", "Private", "Privat"),
+            Seed(VehicleCatalogKind.PhoneType, "0199a6c0-0000-7000-8000-000000000407", "Emergency", "Notruf"),
+            Seed(VehicleCatalogKind.PhoneType, "0199a6c0-0000-7000-8000-000000000408", "CompanyExtension", "Firma (DW)"),
+            Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000501", "DangerousGoods", "Gefahrengutschein"),
+            Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000502", "MedicalOfficer", "Amtsarzt"),
+            Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000503", "TuvAssessment", "TÜV - Begutachtung"),
+            Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000504", "B3Certificate", "B-3 - Bescheinigung"),
+            Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000505", "SpecialApproval", "besondere Zulassung"),
+            Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000506", "SpecialPermit", "besondere Genehmigung"),
+            Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000507", "BoilerPressure", "Kesseldruckbescheinigung"),
+            Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000508", "ServiceInterval", "Service - Intervall"));
     }
 
     private static object Seed(VehicleCatalogKind kind, string id, string code, string name) => new

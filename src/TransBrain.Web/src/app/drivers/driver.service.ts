@@ -10,6 +10,67 @@ export interface Driver {
     licenseValidUntil: string;
     status: string;
     externalUserId: string | null;
+    socialInsurance: DriverSocialInsurance;
+    documents: DriverDocuments;
+    clothingSizes: DriverClothingSizes;
+    relatives: DriverRelative[];
+    specialDocuments: DriverSpecialDocument[];
+    phoneNumbers: DriverPhoneNumber[];
+}
+
+/** The social insurance data ("Sozv-Daten") of a driver. Every value is optional. */
+export interface DriverSocialInsurance {
+    dateOfBirth: string | null;
+    placeOfBirth: string | null;
+    nationality: string | null;
+    socialInsuranceNumber: string | null;
+    entryDate: string | null;
+    healthInsurance: string | null;
+    bankName: string | null;
+    bankCode: string | null;
+    accountNumber: string | null;
+    bic: string | null;
+    iban: string | null;
+    familyDoctor: string | null;
+    familyDoctorPhone: string | null;
+}
+
+/** Driving licence document details. Every value is optional. */
+export interface DriverDocuments {
+    licenseNumber: string | null;
+    issuingAuthority: string | null;
+    issueDate: string | null;
+}
+
+/** Work clothing sizes - free text, the legacy app used pick lists. */
+export interface DriverClothingSizes {
+    clothingSize: string | null;
+    shoeSize: string | null;
+    gloveSize: string | null;
+}
+
+/** An emergency contact / relative of the driver. Only the last name is required. */
+export interface DriverRelative {
+    lastName: string;
+    firstName: string | null;
+    relationship: string | null;
+    dateOfBirth: string | null;
+    phone: string | null;
+}
+
+/** A special paper such as a dangerous-goods certificate. The type is a DriverDocumentType catalog code. */
+export interface DriverSpecialDocument {
+    type: string;
+    lastInspectionDate: string | null;
+    validUntil: string | null;
+    comment: string | null;
+}
+
+/** An additional phone number of the driver. Only the number is required. */
+export interface DriverPhoneNumber {
+    number: string;
+    type: string | null;
+    comment: string | null;
 }
 
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
@@ -19,6 +80,12 @@ export interface DriverWriteRequest {
     licenseClasses: string[];
     licenseValidUntil: string;
     externalUserId: string | null;
+    socialInsurance: DriverSocialInsurance;
+    documents: DriverDocuments;
+    clothingSizes: DriverClothingSizes;
+    relatives: DriverRelative[];
+    specialDocuments: DriverSpecialDocument[];
+    phoneNumbers: DriverPhoneNumber[];
 }
 
 export interface PagedResult<T> {

@@ -8,6 +8,7 @@ import { de, en as vuetifyEn } from 'vuetify/locale';
 import 'vuetify/styles';
 import '@mdi/font/css/materialdesignicons.css';
 import './styles/page.css';
+import './styles/flags.css';
 import App from './App.vue';
 import Home from './views/Home.vue';
 import VehicleList from './views/VehicleList.vue';
@@ -45,6 +46,7 @@ const router = createRouter({
         // Readable by every signed-in role like '/vehicles'; the write controls inside are gated.
         { path: '/vehicle-catalog', component: VehicleCatalog },
         { path: '/customer-catalog', component: VehicleCatalog, meta: { catalogScope: 'customer' } },
+        { path: '/driver-catalog', component: VehicleCatalog, meta: { catalogScope: 'driver' } },
         { path: '/drivers', component: DriverList },
         { path: '/drivers/new', component: DriverForm, meta: { capability: 'masterData.write' } },
         { path: '/drivers/:id', component: DriverForm, meta: { capability: 'masterData.write' } },

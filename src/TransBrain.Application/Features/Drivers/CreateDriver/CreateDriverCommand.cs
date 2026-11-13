@@ -7,4 +7,10 @@ public sealed record CreateDriverCommand(
     string LastName,
     string[] LicenseClasses,
     DateOnly LicenseValidUntil,
-    string? ExternalUserId) : ICommand<DriverResponse>;
+    string? ExternalUserId,
+    DriverSocialInsuranceData? SocialInsurance = null,
+    DriverDocumentsData? Documents = null,
+    DriverClothingSizesData? ClothingSizes = null,
+    IReadOnlyList<DriverRelativeData>? Relatives = null,
+    IReadOnlyList<DriverSpecialDocumentData>? SpecialDocuments = null,
+    IReadOnlyList<DriverPhoneNumberData>? PhoneNumbers = null) : ICommand<DriverResponse>;

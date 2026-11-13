@@ -95,6 +95,43 @@ public class CustomerLocationEndpointsTests(TransBrainApiFactory factory) : ICla
     }
 
     [Fact]
+    public async Task PostLocation_WithOwnCompanyNameAndVatId_RoundTripsBoth()
+    {
+        Guid customerId = await CreateCustomerAsync(factory, "Eigene Firma GmbH");
+        HttpClient admin = factory.CreateClientAs("admin");
+
+        HttpResponseMessage create = await admin.PostAsJsonAsync($"/api/customers/{customerId}/locations", new
+        {
+            name = "Werk Berlin",
+            street = "Bahnhofstr. 2",
+            postalCode = "10115",
+            city = "Berlin",
+            country = "DE",
+            companyName = "Werk Berlin GmbH",
+            vatId = "DE987654321"
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        CustomerLocationResponse created = (await create.Content.ReadFromJsonAsync<CustomerLocationResponse>())!;
+        created.CompanyName.Should().Be("Werk Berlin GmbH");
+        created.VatId.Should().Be("DE987654321");
+
+        HttpResponseMessage update = await admin.PutAsJsonAsync($"/api/customers/{customerId}/locations/{created.Id}", new
+        {
+            name = "Werk Berlin",
+            street = "Bahnhofstr. 2",
+            postalCode = "10115",
+            city = "Berlin",
+            country = "DE",
+            companyName = (string?)null,
+            vatId = (string?)null
+        });
+        update.StatusCode.Should().Be(HttpStatusCode.OK);
+        CustomerLocationResponse updated = (await update.Content.ReadFromJsonAsync<CustomerLocationResponse>())!;
+        updated.CompanyName.Should().BeNull();
+        updated.VatId.Should().BeNull();
+    }
+
+    [Fact]
     public async Task GetPosition_WithoutGeocoderConfigured_ReturnsServiceUnavailable()
     {
         Guid customerId = await CreateCustomerAsync(factory, "Karten GmbH");

@@ -42,6 +42,8 @@ public sealed class CustomerLocationEndpoints : IEndpointGroup
                         request.PostalCode,
                         request.City,
                         request.Country,
+                        request.CompanyName,
+                        request.VatId,
                         request.Contacts),
                     ct);
                 return result.ToHttpResult(location => Results.Created(
@@ -66,6 +68,8 @@ public sealed class CustomerLocationEndpoints : IEndpointGroup
                         request.PostalCode,
                         request.City,
                         request.Country,
+                        request.CompanyName,
+                        request.VatId,
                         request.Contacts),
                     ct);
                 return result.ToHttpResult();
@@ -121,6 +125,8 @@ public sealed record AddCustomerLocationRequest(
     string PostalCode,
     string City,
     string Country,
+    string? CompanyName = null,
+    string? VatId = null,
     IReadOnlyList<CustomerLocationContactData>? Contacts = null);
 
 /// <summary>Body of a delivery location update. The ids come from the route; <c>contacts</c> replaces the list as a whole.</summary>
@@ -130,4 +136,6 @@ public sealed record UpdateCustomerLocationRequest(
     string PostalCode,
     string City,
     string Country,
+    string? CompanyName = null,
+    string? VatId = null,
     IReadOnlyList<CustomerLocationContactData>? Contacts = null);

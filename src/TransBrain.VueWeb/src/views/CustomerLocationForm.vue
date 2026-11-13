@@ -13,6 +13,7 @@ import {
     type CustomerLocationWriteRequest,
 } from '../api/customerLocations';
 import LocationMap from '../components/LocationMap.vue';
+import CountrySelect from '../components/CountrySelect.vue';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useI18n, type MessageKey } from '../i18n';
 
@@ -36,6 +37,8 @@ const form = reactive({
     postalCode: '',
     city: '',
     country: '',
+    companyName: '',
+    vatId: '',
 });
 
 const fieldErrors = reactive<Record<keyof typeof form, string | null>>({
@@ -44,6 +47,8 @@ const fieldErrors = reactive<Record<keyof typeof form, string | null>>({
     postalCode: null,
     city: null,
     country: null,
+    companyName: null,
+    vatId: null,
 });
 
 type ContactField = 'name' | 'phone' | 'email';
@@ -102,6 +107,15 @@ const sections: { key: string; icon: string; title: MessageKey; fields: SectionF
             { name: 'country', label: 'common.country', sm: 12 },
         ],
     },
+    {
+        key: 'company',
+        icon: 'mdi-receipt-text-outline',
+        title: 'customers.location.section.company',
+        fields: [
+            { name: 'companyName', label: 'customers.location.companyName', sm: 12 },
+            { name: 'vatId', label: 'customers.location.vatId', sm: 12 },
+        ],
+    },
 ];
 
 const attemptedSubmit = ref(false);
@@ -144,6 +158,8 @@ onMounted(async () => {
             form.postalCode = location.postalCode;
             form.city = location.city;
             form.country = location.country;
+            form.companyName = location.companyName ?? '';
+            form.vatId = location.vatId ?? '';
             contacts.value = [];
             location.contacts.forEach((contact) => addContact(contact));
         } catch (error) {
@@ -178,6 +194,8 @@ async function save(): Promise<void> {
 
     const request: CustomerLocationWriteRequest = {
         ...form,
+        companyName: form.companyName.trim() || null,
+        vatId: form.vatId.trim() || null,
         contacts: contacts.value.map((c) => ({
             name: c.name.trim(),
             phone: c.phone.trim() || null,
@@ -278,7 +296,15 @@ function describeFailure(error: unknown, fallback: string): string {
                         <v-card-text>
                             <v-row dense>
                                 <v-col v-for="field in section.fields" :key="field.name" cols="12" :sm="field.sm">
+                                    <CountrySelect
+                                        v-if="field.name === 'country'"
+                                        v-model="form.country"
+                                        :label="labelFor('country', field.label)"
+                                        testid="location-country"
+                                        :error-messages="errorsFor('country')"
+                                    />
                                     <v-text-field
+                                        v-else
                                         v-model="form[field.name]"
                                         v-native-testid="'location-' + field.name"
                                         :label="labelFor(field.name, field.label)"

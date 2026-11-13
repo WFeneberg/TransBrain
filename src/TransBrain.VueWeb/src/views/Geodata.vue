@@ -13,6 +13,7 @@ import {
     type MapExtract,
 } from '../api/geodata';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import CountrySelect from '../components/CountrySelect.vue';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useAuthStore } from '../stores/auth';
 import { useI18n, type MessageKey } from '../i18n';
@@ -210,8 +211,8 @@ function validate(): boolean {
     if (!form.city.trim()) {
         fieldErrors.city = t('common.required');
     }
-    if (form.country.trim().length !== 2) {
-        fieldErrors.country = t('geodata.countryInvalid');
+    if (!form.country.trim()) {
+        fieldErrors.country = t('common.required');
     }
     const latitude = Number(form.latitude);
     if (form.latitude.trim() === '' || Number.isNaN(latitude) || latitude < -90 || latitude > 90) {
@@ -544,16 +545,12 @@ function describe(error: unknown, fallback: string): string {
                                 class="dialog-field city-field"
                             />
                         </div>
-                        <v-text-field
+                        <CountrySelect
                             v-model="form.country"
-                            v-native-testid="'geodata-country'"
                             :label="`${t('common.country')} *`"
-                            :hint="t('geodata.countryHint')"
+                            testid="geodata-country"
                             :disabled="!!editTarget"
                             :error-messages="errorsFor('country')"
-                            maxlength="2"
-                            variant="outlined"
-                            density="comfortable"
                             class="dialog-field country-field"
                         />
                         <div class="field-row">
@@ -731,7 +728,7 @@ function describe(error: unknown, fallback: string): string {
 }
 
 .country-field {
-    max-width: 160px;
+    max-width: 280px;
 }
 
 .hint-line {

@@ -5,7 +5,8 @@ using TransBrain.Domain.Drivers;
 
 namespace TransBrain.Application.Features.Drivers.UpdateDriver;
 
-internal sealed class UpdateDriverCommandHandler(IDriverRepository repository, ICacheService cache)
+internal sealed class UpdateDriverCommandHandler(
+    IDriverRepository repository, IVehicleCatalogRepository catalog, ICacheService cache)
     : ICommandHandler<UpdateDriverCommand, DriverResponse>
 {
     public async Task<Result<DriverResponse>> Handle(
@@ -24,12 +25,34 @@ internal sealed class UpdateDriverCommandHandler(IDriverRepository repository, I
             return classes.Error!;
         }
 
+        Result<DriverWriteMapping.DriverWriteValues> values = await DriverWriteMapping.ToDomainAsync(
+            command.SocialInsurance,
+            command.Documents,
+            command.ClothingSizes,
+            command.Relatives,
+            command.SpecialDocuments,
+            command.PhoneNumbers,
+            catalog,
+            currentPhoneTypeCodes: [.. driver.PhoneNumbers.Select(p => p.Type).OfType<string>()],
+            currentDocumentTypeCodes: [.. driver.SpecialDocuments.Select(d => d.Type)],
+            cancellationToken);
+        if (!values.IsSuccess)
+        {
+            return values.Error!;
+        }
+
         Result<Driver> updated = driver.Update(
             command.FirstName,
             command.LastName,
             classes.Value,
             command.LicenseValidUntil,
-            command.ExternalUserId);
+            command.ExternalUserId,
+            values.Value.SocialInsurance,
+            values.Value.Documents,
+            values.Value.ClothingSizes,
+            values.Value.Relatives,
+            values.Value.SpecialDocuments,
+            values.Value.PhoneNumbers);
 
         if (!updated.IsSuccess)
         {

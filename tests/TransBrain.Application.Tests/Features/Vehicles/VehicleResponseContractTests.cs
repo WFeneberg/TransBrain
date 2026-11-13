@@ -36,6 +36,6 @@ public class VehicleResponseContractTests
     public void VehicleCatalogKind_Members_MatchThePinnedRouteStrings()
     {
         Enum.GetValues<VehicleCatalogKind>().Select(k => k.ToString()).Should().BeEquivalentTo(
-            ["VehicleClass", "CarrierGroup", "InsuranceCompany", "DocumentType", "CustomerClass"]);
+            ["VehicleClass", "CarrierGroup", "InsuranceCompany", "DocumentType", "CustomerClass", "PhoneType", "DriverDocumentType"]);
     }
 }

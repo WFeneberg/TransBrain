@@ -28,6 +28,10 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("BillToLocationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bill_to_location_id");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -85,6 +89,8 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .HasColumnName("vat_rate_percent");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BillToLocationId");
 
                     b.HasIndex("CustomerId");
 
@@ -146,6 +152,11 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CompanyName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("company_name");
+
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid");
 
@@ -157,6 +168,11 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
+
+                    b.Property<string>("VatId")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("vat_id");
 
                     b.HasKey("Id");
 
@@ -631,6 +647,150 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             Kind = "CustomerClass",
                             Name = "Huter Vils alle Gattungen",
                             TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000401"),
+                            Code = "Fax",
+                            IsActive = true,
+                            Kind = "PhoneType",
+                            Name = "Fax",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000402"),
+                            Code = "Phone",
+                            IsActive = true,
+                            Kind = "PhoneType",
+                            Name = "Telefon",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000403"),
+                            Code = "Email",
+                            IsActive = true,
+                            Kind = "PhoneType",
+                            Name = "Email",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000404"),
+                            Code = "CarPhone",
+                            IsActive = true,
+                            Kind = "PhoneType",
+                            Name = "Auto-Telefon",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000405"),
+                            Code = "HomePage",
+                            IsActive = true,
+                            Kind = "PhoneType",
+                            Name = "Home-Page",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000406"),
+                            Code = "Private",
+                            IsActive = true,
+                            Kind = "PhoneType",
+                            Name = "Privat",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000407"),
+                            Code = "Emergency",
+                            IsActive = true,
+                            Kind = "PhoneType",
+                            Name = "Notruf",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000408"),
+                            Code = "CompanyExtension",
+                            IsActive = true,
+                            Kind = "PhoneType",
+                            Name = "Firma (DW)",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000501"),
+                            Code = "DangerousGoods",
+                            IsActive = true,
+                            Kind = "DriverDocumentType",
+                            Name = "Gefahrengutschein",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000502"),
+                            Code = "MedicalOfficer",
+                            IsActive = true,
+                            Kind = "DriverDocumentType",
+                            Name = "Amtsarzt",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000503"),
+                            Code = "TuvAssessment",
+                            IsActive = true,
+                            Kind = "DriverDocumentType",
+                            Name = "TÜV - Begutachtung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000504"),
+                            Code = "B3Certificate",
+                            IsActive = true,
+                            Kind = "DriverDocumentType",
+                            Name = "B-3 - Bescheinigung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000505"),
+                            Code = "SpecialApproval",
+                            IsActive = true,
+                            Kind = "DriverDocumentType",
+                            Name = "besondere Zulassung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000506"),
+                            Code = "SpecialPermit",
+                            IsActive = true,
+                            Kind = "DriverDocumentType",
+                            Name = "besondere Genehmigung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000507"),
+                            Code = "BoilerPressure",
+                            IsActive = true,
+                            Kind = "DriverDocumentType",
+                            Name = "Kesseldruckbescheinigung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000508"),
+                            Code = "ServiceInterval",
+                            IsActive = true,
+                            Kind = "DriverDocumentType",
+                            Name = "Service - Intervall",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         });
                 });
 
@@ -681,6 +841,11 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("TransBrain.Domain.Billing.Invoice", b =>
                 {
+                    b.HasOne("TransBrain.Domain.Customers.CustomerLocation", null)
+                        .WithMany()
+                        .HasForeignKey("BillToLocationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("TransBrain.Domain.Customers.Customer", null)
                         .WithMany()
                         .HasForeignKey("CustomerId")
@@ -1006,6 +1171,284 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Contacts");
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Drivers.Driver", b =>
+                {
+                    b.OwnsOne("TransBrain.Domain.Drivers.DriverClothingSizes", "ClothingSizes", b1 =>
+                        {
+                            b1.Property<Guid>("DriverId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("ClothingSize")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("ClothingSize");
+
+                            b1.Property<string>("GloveSize")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("GloveSize");
+
+                            b1.Property<string>("ShoeSize")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("ShoeSize");
+
+                            b1.HasKey("DriverId");
+
+                            b1.ToTable("drivers");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DriverId");
+                        });
+
+                    b.OwnsOne("TransBrain.Domain.Drivers.DriverDocumentsInfo", "Documents", b1 =>
+                        {
+                            b1.Property<Guid>("DriverId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateOnly?>("IssueDate")
+                                .HasColumnType("date")
+                                .HasColumnName("LicenseIssueDate");
+
+                            b1.Property<string>("IssuingAuthority")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)")
+                                .HasColumnName("IssuingAuthority");
+
+                            b1.Property<string>("LicenseNumber")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("LicenseNumber");
+
+                            b1.HasKey("DriverId");
+
+                            b1.ToTable("drivers");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DriverId");
+                        });
+
+                    b.OwnsOne("TransBrain.Domain.Drivers.DriverSocialInsuranceInfo", "SocialInsurance", b1 =>
+                        {
+                            b1.Property<Guid>("DriverId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("AccountNumber")
+                                .HasMaxLength(34)
+                                .HasColumnType("character varying(34)")
+                                .HasColumnName("AccountNumber");
+
+                            b1.Property<string>("BankCode")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("BankCode");
+
+                            b1.Property<string>("BankName")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("BankName");
+
+                            b1.Property<string>("Bic")
+                                .HasMaxLength(11)
+                                .HasColumnType("character varying(11)")
+                                .HasColumnName("Bic");
+
+                            b1.Property<DateOnly?>("DateOfBirth")
+                                .HasColumnType("date")
+                                .HasColumnName("DateOfBirth");
+
+                            b1.Property<DateOnly?>("EntryDate")
+                                .HasColumnType("date")
+                                .HasColumnName("EntryDate");
+
+                            b1.Property<string>("FamilyDoctor")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)")
+                                .HasColumnName("FamilyDoctor");
+
+                            b1.Property<string>("FamilyDoctorPhone")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("FamilyDoctorPhone");
+
+                            b1.Property<string>("HealthInsurance")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)")
+                                .HasColumnName("HealthInsurance");
+
+                            b1.Property<string>("Iban")
+                                .HasMaxLength(34)
+                                .HasColumnType("character varying(34)")
+                                .HasColumnName("Iban");
+
+                            b1.Property<string>("Nationality")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("Nationality");
+
+                            b1.Property<string>("PlaceOfBirth")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("PlaceOfBirth");
+
+                            b1.Property<string>("SocialInsuranceNumber")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("SocialInsuranceNumber");
+
+                            b1.HasKey("DriverId");
+
+                            b1.ToTable("drivers");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DriverId");
+                        });
+
+                    b.OwnsMany("TransBrain.Domain.Drivers.DriverPhoneNumber", "PhoneNumbers", b1 =>
+                        {
+                            b1.Property<Guid>("driver_id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Id"));
+
+                            b1.Property<string>("Comment")
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("comment");
+
+                            b1.Property<string>("Number")
+                                .IsRequired()
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("number");
+
+                            b1.Property<int>("Sequence")
+                                .HasColumnType("integer")
+                                .HasColumnName("sequence");
+
+                            b1.Property<string>("Type")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("type");
+
+                            b1.HasKey("driver_id", "Id");
+
+                            b1.ToTable("driver_phone_numbers", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("driver_id");
+                        });
+
+                    b.OwnsMany("TransBrain.Domain.Drivers.DriverRelative", "Relatives", b1 =>
+                        {
+                            b1.Property<Guid>("driver_id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Id"));
+
+                            b1.Property<DateOnly?>("DateOfBirth")
+                                .HasColumnType("date")
+                                .HasColumnName("date_of_birth");
+
+                            b1.Property<string>("FirstName")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("first_name");
+
+                            b1.Property<string>("LastName")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("last_name");
+
+                            b1.Property<string>("Phone")
+                                .HasMaxLength(50)
+                                .HasColumnType("character varying(50)")
+                                .HasColumnName("phone");
+
+                            b1.Property<string>("Relationship")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)")
+                                .HasColumnName("relationship");
+
+                            b1.Property<int>("Sequence")
+                                .HasColumnType("integer")
+                                .HasColumnName("sequence");
+
+                            b1.HasKey("driver_id", "Id");
+
+                            b1.ToTable("driver_relatives", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("driver_id");
+                        });
+
+                    b.OwnsMany("TransBrain.Domain.Drivers.DriverSpecialDocument", "SpecialDocuments", b1 =>
+                        {
+                            b1.Property<Guid>("driver_id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Id"));
+
+                            b1.Property<string>("Comment")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)")
+                                .HasColumnName("comment");
+
+                            b1.Property<DateOnly?>("LastInspectionDate")
+                                .HasColumnType("date")
+                                .HasColumnName("last_inspection_date");
+
+                            b1.Property<int>("Sequence")
+                                .HasColumnType("integer")
+                                .HasColumnName("sequence");
+
+                            b1.Property<string>("Type")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("character varying(200)")
+                                .HasColumnName("type");
+
+                            b1.Property<DateOnly?>("ValidUntil")
+                                .HasColumnType("date")
+                                .HasColumnName("valid_until");
+
+                            b1.HasKey("driver_id", "Id");
+
+                            b1.ToTable("driver_special_documents", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("driver_id");
+                        });
+
+                    b.Navigation("ClothingSizes")
+                        .IsRequired();
+
+                    b.Navigation("Documents")
+                        .IsRequired();
+
+                    b.Navigation("PhoneNumbers");
+
+                    b.Navigation("Relatives");
+
+                    b.Navigation("SocialInsurance")
+                        .IsRequired();
+
+                    b.Navigation("SpecialDocuments");
                 });
 
             modelBuilder.Entity("TransBrain.Domain.Orders.TransportOrder", b =>

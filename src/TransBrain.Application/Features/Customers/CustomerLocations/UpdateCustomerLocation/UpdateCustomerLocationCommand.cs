@@ -11,4 +11,6 @@ public sealed record UpdateCustomerLocationCommand(
     string PostalCode,
     string City,
     string Country,
+    string? CompanyName = null,
+    string? VatId = null,
     IReadOnlyList<CustomerLocationContactData>? Contacts = null) : ICommand<CustomerLocationResponse>;

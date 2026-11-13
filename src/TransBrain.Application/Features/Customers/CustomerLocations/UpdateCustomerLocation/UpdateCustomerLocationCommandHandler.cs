@@ -32,7 +32,8 @@ internal sealed class UpdateCustomerLocationCommandHandler(ICustomerRepository r
             return contacts.Error!;
         }
 
-        Result<CustomerLocation> updated = location.Update(command.Name, address.Value, contacts.Value);
+        Result<CustomerLocation> updated = location.Update(
+            command.Name, address.Value, contacts.Value, command.CompanyName, command.VatId);
         if (!updated.IsSuccess)
         {
             return updated.Error!;

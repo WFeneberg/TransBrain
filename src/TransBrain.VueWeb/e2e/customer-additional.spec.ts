@@ -21,7 +21,7 @@ async function fillRequiredFields(page: Page, name: string): Promise<void> {
     await page.getByTestId('customer-street').fill('Hauptstraße 1');
     await page.getByTestId('customer-postalCode').fill('6600');
     await page.getByTestId('customer-city').fill('Reutte');
-    await page.getByTestId('customer-country').fill('AT');
+    await chooseOption(page, 'customer-country', 'Austria');
 }
 
 async function openForEdit(page: Page, name: string): Promise<void> {
@@ -65,7 +65,7 @@ test('adminUser_recordsAdditionalDataWithACustomerClass_andKeepsItAfterReload', 
     await additional.getByTestId('customer-secondaryStreet').fill('Industriestraße 5');
     await additional.getByTestId('customer-secondaryPostalCode').fill('6682');
     await additional.getByTestId('customer-secondaryCity').fill('Vils');
-    await additional.getByTestId('customer-secondaryCountry').fill('at');
+    await chooseOption(page, 'customer-secondaryCountry', 'Austria');
     await additional.getByTestId('customer-foundedOn').fill('1985-04-01');
     await additional.getByTestId('customer-workerCount').fill('42');
     await additional.getByTestId('customer-salariedEmployeeCount').fill('7');
@@ -82,7 +82,7 @@ test('adminUser_recordsAdditionalDataWithACustomerClass_andKeepsItAfterReload', 
     await expect(page.getByTestId('customer-secondaryStreet')).toHaveValue('Industriestraße 5');
     await expect(page.getByTestId('customer-secondaryPostalCode')).toHaveValue('6682');
     await expect(page.getByTestId('customer-secondaryCity')).toHaveValue('Vils');
-    await expect(page.getByTestId('customer-secondaryCountry')).toHaveValue('AT');
+    await expect(page.getByTestId('customer-secondaryCountry')).toContainText('Austria');
     await expect(page.getByTestId('customer-foundedOn')).toHaveValue('1985-04-01');
     await expect(page.getByTestId('customer-workerCount')).toHaveValue('42');
     await expect(page.getByTestId('customer-salariedEmployeeCount')).toHaveValue('7');

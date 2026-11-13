@@ -10,7 +10,7 @@ namespace TransBrain.Application.Tests.Features.Customers;
 public class CustomerLocationContactValidatorTests
 {
     private static AddCustomerLocationCommand Add(params CustomerLocationContactData[] contacts) => new(
-        Guid.CreateVersion7(), "Lager Süd", "Südbahnstraße 5", "1100", "Wien", "AT", contacts);
+        Guid.CreateVersion7(), "Lager Süd", "Südbahnstraße 5", "1100", "Wien", "AT", Contacts: contacts);
 
     [Fact]
     public void Validate_AddWithoutContacts_IsValid()
@@ -46,7 +46,7 @@ public class CustomerLocationContactValidatorTests
     {
         UpdateCustomerLocationCommand command = new(
             Guid.CreateVersion7(), Guid.CreateVersion7(), "Lager Süd", "Südbahnstraße 5", "1100", "Wien", "AT",
-            [new CustomerLocationContactData("Hans Huber", Email: "keine-mail")]);
+            Contacts: [new CustomerLocationContactData("Hans Huber", Email: "keine-mail")]);
 
         ValidationResult result = new UpdateCustomerLocationCommandValidator().Validate(command);
 

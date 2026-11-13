@@ -21,7 +21,8 @@ async function fillAddress(
     await page.getByTestId(`order-${party}-street`).fill('Hauptstr. 1');
     await page.getByTestId(`order-${party}-postalCode`).fill('80331');
     await page.getByTestId(`order-${party}-city`).fill('München');
-    await page.getByTestId(`order-${party}-country`).fill('DE');
+    await page.getByTestId(`order-${party}-country`).click();
+    await page.getByRole('option', { name: 'Germany', exact: true }).click();
 }
 
 test('dispatcher_createEditAndCancelOrder_throughTheUi', async ({ page }) => {

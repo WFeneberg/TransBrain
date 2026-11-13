@@ -130,6 +130,13 @@ function describe(error: unknown, fallback: string): string {
                 </div>
                 <div class="header-actions">
                     <v-btn
+                        variant="tonal"
+                        prepend-icon="mdi-tune-variant"
+                        data-testid="driver-catalog-link"
+                        @click="router.push('/driver-catalog')"
+                        >{{ t('drivers.catalogLink') }}</v-btn
+                    >
+                    <v-btn
                         v-if="auth.can('masterData.write')"
                         color="primary"
                         prepend-icon="mdi-plus"

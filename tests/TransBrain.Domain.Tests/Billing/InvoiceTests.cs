@@ -68,6 +68,80 @@ public class InvoiceTests
         result.Value.Id.Should().NotBe(Guid.Empty);
     }
 
+    private static CustomerLocation ALocation(
+        Guid customerId, string? companyName = "Werk Berlin GmbH", string? vatId = "DE987654321") =>
+        CustomerLocation.Create(
+            customerId,
+            "Werk Berlin",
+            Address.Create("Werk Berlin", "Bahnhofstr. 2", "10115", "Berlin", "DE").Value,
+            [],
+            companyName,
+            vatId).Value;
+
+    [Fact]
+    public void Create_BillToLocationWithOwnCompanyName_TakesRecipientSnapshotFromLocation()
+    {
+        Customer customer = ACustomer();
+        CustomerLocation location = ALocation(customer.Id);
+
+        Result<Invoice> result = Invoice.Create(InvoiceNumber.From(2027, 1), customer, 19m, CreatedAt, location);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.BillToLocationId.Should().Be(location.Id);
+        result.Value.CustomerId.Should().Be(customer.Id);
+        result.Value.CustomerName.Should().Be("Werk Berlin GmbH");
+        result.Value.BillingAddress.Name.Should().Be("Werk Berlin GmbH");
+        result.Value.BillingAddress.Street.Should().Be("Bahnhofstr. 2");
+        result.Value.BillingAddress.City.Should().Be("Berlin");
+        result.Value.CustomerVatId.Should().Be("DE987654321");
+        result.Value.PaymentTermDays.Should().Be(30);
+    }
+
+    [Fact]
+    public void Create_BillToLocationWithoutVatId_LeavesVatIdEmptyInsteadOfInheriting()
+    {
+        Customer customer = ACustomer();
+        CustomerLocation location = ALocation(customer.Id, vatId: null);
+
+        Result<Invoice> result = Invoice.Create(InvoiceNumber.From(2027, 1), customer, 19m, CreatedAt, location);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.CustomerVatId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Create_BillToLocationWithoutCompanyName_ReturnsConflict()
+    {
+        Customer customer = ACustomer();
+        CustomerLocation location = ALocation(customer.Id, companyName: null);
+
+        Result<Invoice> result = Invoice.Create(InvoiceNumber.From(2027, 1), customer, 19m, CreatedAt, location);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Invoice.BillToLocationHasNoCompanyName");
+    }
+
+    [Fact]
+    public void Create_BillToLocationOfAnotherCustomer_ReturnsValidationError()
+    {
+        Customer customer = ACustomer();
+        CustomerLocation foreign = ALocation(Guid.CreateVersion7());
+
+        Result<Invoice> result = Invoice.Create(InvoiceNumber.From(2027, 1), customer, 19m, CreatedAt, foreign);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Invoice.BillToLocationForeign");
+    }
+
+    [Fact]
+    public void Create_WithoutBillToLocation_LeavesBillToLocationIdNull()
+    {
+        Result<Invoice> result = Invoice.Create(InvoiceNumber.From(2027, 1), ACustomer(), 19m, CreatedAt);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.BillToLocationId.Should().BeNull();
+    }
+
     [Theory]
     [InlineData(-0.01)]
     [InlineData(100.01)]

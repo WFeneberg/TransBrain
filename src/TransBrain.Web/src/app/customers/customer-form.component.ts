@@ -16,6 +16,7 @@ import { filter, switchMap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { I18nService } from '../i18n/i18n.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
+import { CountrySelectComponent } from '../shared/country-select.component';
 import {
     VehicleCatalogEntry,
     VehicleCatalogOption,
@@ -67,6 +68,7 @@ const ADDITIONAL_FLAGS = [
         MatTableModule,
         MatTooltipModule,
         RouterLink,
+        CountrySelectComponent,
     ],
     styleUrl: '../shared/page-layout.scss',
     template: `
@@ -95,22 +97,30 @@ const ADDITIONAL_FLAGS = [
                             </mat-card-header>
                             <mat-card-content class="fields">
                                 @for (field of section.fields; track field.name) {
-                                    <mat-form-field>
-                                        <mat-label>{{ i18n.t(field.label) }}</mat-label>
-                                        <input
-                                            matInput
-                                            [formControlName]="field.name"
-                                            [attr.data-testid]="'customer-' + field.name"
+                                    @if (field.name === 'country') {
+                                        <app-country-select
+                                            [control]="form.controls.country"
+                                            [label]="i18n.t('common.country')"
+                                            testid="customer-country"
                                         />
-                                        @if (form.controls[field.name].errors; as errors) {
-                                            <mat-error
-                                                [attr.data-testid]="
-                                                    'customer-' + field.name + '-error'
-                                                "
-                                                >{{ fieldErrorText(errors) }}</mat-error
-                                            >
-                                        }
-                                    </mat-form-field>
+                                    } @else {
+                                        <mat-form-field>
+                                            <mat-label>{{ i18n.t(field.label) }}</mat-label>
+                                            <input
+                                                matInput
+                                                [formControlName]="field.name"
+                                                [attr.data-testid]="'customer-' + field.name"
+                                            />
+                                            @if (form.controls[field.name].errors; as errors) {
+                                                <mat-error
+                                                    [attr.data-testid]="
+                                                        'customer-' + field.name + '-error'
+                                                    "
+                                                    >{{ fieldErrorText(errors) }}</mat-error
+                                                >
+                                            }
+                                        </mat-form-field>
+                                    }
                                 }
                             </mat-card-content>
                         </mat-card>
@@ -160,26 +170,37 @@ const ADDITIONAL_FLAGS = [
                                 </h3>
                                 <div class="fields">
                                     @for (field of secondaryAddressFields; track field.name) {
-                                        <mat-form-field [class.full-width]="field.wide">
-                                            <mat-label>{{ i18n.t(field.label) }}</mat-label>
-                                            <input
-                                                matInput
-                                                [formControlName]="field.name"
-                                                [attr.maxlength]="field.maxLength"
-                                                [attr.data-testid]="'customer-' + field.name"
+                                        @if (field.name === 'secondaryCountry') {
+                                            <app-country-select
+                                                [control]="additional.controls.secondaryCountry"
+                                                [label]="
+                                                    i18n.t('customers.additional.secondaryCountry')
+                                                "
+                                                testid="customer-secondaryCountry"
+                                                [allowEmpty]="true"
                                             />
-                                            @if (
-                                                additional.controls[field.name].errors;
-                                                as errors
-                                            ) {
-                                                <mat-error
-                                                    [attr.data-testid]="
-                                                        'customer-' + field.name + '-error'
-                                                    "
-                                                    >{{ fieldErrorText(errors) }}</mat-error
-                                                >
-                                            }
-                                        </mat-form-field>
+                                        } @else {
+                                            <mat-form-field [class.full-width]="field.wide">
+                                                <mat-label>{{ i18n.t(field.label) }}</mat-label>
+                                                <input
+                                                    matInput
+                                                    [formControlName]="field.name"
+                                                    [attr.maxlength]="field.maxLength"
+                                                    [attr.data-testid]="'customer-' + field.name"
+                                                />
+                                                @if (
+                                                    additional.controls[field.name].errors;
+                                                    as errors
+                                                ) {
+                                                    <mat-error
+                                                        [attr.data-testid]="
+                                                            'customer-' + field.name + '-error'
+                                                        "
+                                                        >{{ fieldErrorText(errors) }}</mat-error
+                                                    >
+                                                }
+                                            </mat-form-field>
+                                        }
                                     }
                                 </div>
                             </section>
@@ -527,12 +548,7 @@ export class CustomerFormComponent {
     protected readonly session = inject(SessionService);
     protected readonly i18n = inject(I18nService);
 
-    protected readonly locationColumns = [
-        'name',
-        'city',
-        'contacts',
-        'actions',
-    ];
+    protected readonly locationColumns = ['name', 'city', 'contacts', 'actions'];
     protected readonly locations = signal<CustomerLocation[]>([]);
     protected readonly locationError = signal<string | null>(null);
 
@@ -602,7 +618,7 @@ export class CustomerFormComponent {
         street: ['', Validators.required],
         postalCode: ['', Validators.required],
         city: ['', Validators.required],
-        country: ['', [Validators.required, Validators.pattern(/^[A-Za-z]{2}$/)]],
+        country: ['', Validators.required],
         contactPerson: [''],
         email: ['', Validators.email],
         phone: [''],
@@ -616,7 +632,7 @@ export class CustomerFormComponent {
             secondaryStreet: ['', Validators.maxLength(200)],
             secondaryPostalCode: ['', Validators.maxLength(20)],
             secondaryCity: ['', Validators.maxLength(200)],
-            secondaryCountry: ['', Validators.pattern(/^[A-Za-z]{2}$/)],
+            secondaryCountry: [''],
             foundedOn: ['', dateFromYear(MIN_FOUNDING_YEAR)],
             workerCount: this.fb.control<number | null>(0, wholeNumberInRange(0, MAX_HEADCOUNT)),
             salariedEmployeeCount: this.fb.control<number | null>(

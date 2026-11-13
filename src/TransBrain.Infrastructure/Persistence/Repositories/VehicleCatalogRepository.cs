@@ -45,6 +45,8 @@ internal sealed class VehicleCatalogRepository(TransBrainDbContext context) : IV
         VehicleCatalogKind.InsuranceCompany => CountInsurerUsageAsync(cancellationToken),
         VehicleCatalogKind.CustomerClass =>
             CountCodesAsync(context.Customers.Select(c => c.Additional.CustomerClass), cancellationToken),
+        VehicleCatalogKind.PhoneType => CountPhoneTypeUsageAsync(cancellationToken),
+        VehicleCatalogKind.DriverDocumentType => CountDriverDocumentTypeUsageAsync(cancellationToken),
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
     };
 
@@ -68,6 +70,37 @@ internal sealed class VehicleCatalogRepository(TransBrainDbContext context) : IV
             .SelectMany(i => new[] { i.VehicleInsurer, i.TransportInsurer }.Distinct())
             .OfType<string>()
             .GroupBy(code => code, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+    }
+
+    // A driver listing two numbers of the same type counts once.
+    private async Task<IReadOnlyDictionary<string, int>> CountPhoneTypeUsageAsync(
+        CancellationToken cancellationToken)
+    {
+        var typesPerDriver = await context.Drivers
+            .SelectMany(d => d.PhoneNumbers
+                .Where(p => p.Type != null)
+                .Select(p => new { DriverId = d.Id, p.Type }))
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return typesPerDriver
+            .GroupBy(entry => entry.Type!, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+    }
+
+    // A driver listing two special papers of the same type counts once.
+    private async Task<IReadOnlyDictionary<string, int>> CountDriverDocumentTypeUsageAsync(
+        CancellationToken cancellationToken)
+    {
+        var typesPerDriver = await context.Drivers
+            .SelectMany(d => d.SpecialDocuments
+                .Select(s => new { DriverId = d.Id, s.Type }))
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return typesPerDriver
+            .GroupBy(entry => entry.Type, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
     }
 

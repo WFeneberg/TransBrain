@@ -10,6 +10,7 @@ import {
 } from '../api/customerLocations';
 import { catalogSelectOptions, listVehicleCatalog, type VehicleCatalogEntry } from '../api/vehicleCatalog';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import CountrySelect from '../components/CountrySelect.vue';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useI18n, type MessageKey } from '../i18n';
 
@@ -108,9 +109,9 @@ type AdditionalTextField = 'secondaryName' | 'secondaryStreet' | 'secondaryPosta
 const secondaryAddressFields: { name: AdditionalTextField; label: MessageKey; sm: number }[] = [
     { name: 'secondaryName', label: 'customers.additional.secondaryName', sm: 12 },
     { name: 'secondaryStreet', label: 'common.street', sm: 12 },
-    { name: 'secondaryCountry', label: 'customers.additional.secondaryCountry', sm: 2 },
+    { name: 'secondaryCountry', label: 'customers.additional.secondaryCountry', sm: 4 },
     { name: 'secondaryPostalCode', label: 'common.postalCode', sm: 3 },
-    { name: 'secondaryCity', label: 'common.city', sm: 7 },
+    { name: 'secondaryCity', label: 'common.city', sm: 5 },
 ];
 
 const flagFields: { name: 'requiresPalletCheck' | 'excludeTollFromInvoice' | 'reimburseToll'; label: MessageKey }[] = [
@@ -289,8 +290,8 @@ function validateAdditional(): void {
     for (const [field, max] of Object.entries(SECONDARY_MAX_LENGTHS) as [keyof typeof SECONDARY_MAX_LENGTHS, number][]) {
         additionalErrors[field] = additional[field].trim().length > max ? t('vehicleCatalog.maxLength', { max }) : null;
     }
-    const country = additional.secondaryCountry.trim();
-    additionalErrors.secondaryCountry = !country || /^[A-Za-z]{2}$/.test(country) ? null : t('common.invalid');
+    // The dropdown only offers valid ISO codes, so no format check is needed any more.
+    additionalErrors.secondaryCountry = null;
     additionalErrors.foundedOn =
         !additional.foundedOn || Number(additional.foundedOn.slice(0, 4)) >= MIN_FOUNDING_YEAR
             ? null
@@ -437,7 +438,15 @@ function describeFailure(error: unknown, fallback: string): string {
                         <v-card-text>
                             <v-row dense>
                                 <v-col v-for="field in section.fields" :key="field.name" cols="12" :sm="field.sm">
+                                    <CountrySelect
+                                        v-if="field.name === 'country'"
+                                        v-model="form.country"
+                                        :label="labelFor('country', field.label)"
+                                        testid="customer-country"
+                                        :error-messages="errorsFor('country')"
+                                    />
                                     <v-text-field
+                                        v-else
                                         v-model="form[field.name]"
                                         v-native-testid="'customer-' + field.name"
                                         :label="labelFor(field.name, field.label)"
@@ -483,7 +492,16 @@ function describeFailure(error: unknown, fallback: string): string {
                                     <div class="section-group-title">{{ t('customers.additional.secondaryAddress') }}</div>
                                     <v-row dense>
                                         <v-col v-for="field in secondaryAddressFields" :key="field.name" cols="12" :sm="field.sm">
+                                            <CountrySelect
+                                                v-if="field.name === 'secondaryCountry'"
+                                                v-model="additional.secondaryCountry"
+                                                :label="t(field.label)"
+                                                testid="customer-secondaryCountry"
+                                                clearable
+                                                :error-messages="additionalErrorsFor('secondaryCountry')"
+                                            />
                                             <v-text-field
+                                                v-else
                                                 v-model="additional[field.name]"
                                                 v-native-testid="'customer-' + field.name"
                                                 :label="t(field.label)"

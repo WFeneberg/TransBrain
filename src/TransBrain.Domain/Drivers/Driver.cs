@@ -5,14 +5,24 @@ namespace TransBrain.Domain.Drivers;
 
 public sealed class Driver
 {
+    public const int MaxRelatives = 20;
+    public const int MaxSpecialDocuments = 20;
+    public const int MaxPhoneNumbers = 20;
+
     private readonly HashSet<LicenseClass> _licenseClasses = [];
     private readonly ReadOnlySet<LicenseClass> _licenseClassesView;
+    private readonly List<DriverRelative> _relatives = [];
+    private readonly List<DriverSpecialDocument> _specialDocuments = [];
+    private readonly List<DriverPhoneNumber> _phoneNumbers = [];
 
     // EF Core materialization only. Every other construction goes through Create.
     private Driver()
     {
         FirstName = null!;
         LastName = null!;
+        SocialInsurance = null!;
+        Documents = null!;
+        ClothingSizes = null!;
         _licenseClassesView = new ReadOnlySet<LicenseClass>(_licenseClasses);
     }
 
@@ -22,7 +32,10 @@ public sealed class Driver
         string lastName,
         IEnumerable<LicenseClass> licenseClasses,
         DateOnly licenseValidUntil,
-        string? externalUserId)
+        string? externalUserId,
+        DriverSocialInsuranceInfo socialInsurance,
+        DriverDocumentsInfo documents,
+        DriverClothingSizes clothingSizes)
     {
         Id = id;
         FirstName = firstName;
@@ -31,6 +44,9 @@ public sealed class Driver
         _licenseClassesView = new ReadOnlySet<LicenseClass>(_licenseClasses);
         LicenseValidUntil = licenseValidUntil;
         ExternalUserId = externalUserId;
+        SocialInsurance = socialInsurance;
+        Documents = documents;
+        ClothingSizes = clothingSizes;
         Status = DriverStatus.Available;
     }
 
@@ -49,26 +65,57 @@ public sealed class Driver
     /// <summary>Keycloak's <c>sub</c> claim, set when the driver has a login.</summary>
     public string? ExternalUserId { get; private set; }
 
+    /// <summary>The social insurance data ("Sozv-Daten"); <see cref="DriverSocialInsuranceInfo.Empty"/> when nothing is set.</summary>
+    public DriverSocialInsuranceInfo SocialInsurance { get; private set; }
+
+    /// <summary>The licence document data ("Dokumente"); <see cref="DriverDocumentsInfo.Empty"/> when nothing is set.</summary>
+    public DriverDocumentsInfo Documents { get; private set; }
+
+    /// <summary>The work-clothing sizes ("Kleidergrößen"); <see cref="DriverClothingSizes.Empty"/> when nothing is set.</summary>
+    public DriverClothingSizes ClothingSizes { get; private set; }
+
+    /// <summary>The relatives ("Verwandte") in the order they were entered.</summary>
+    public IReadOnlyList<DriverRelative> Relatives => _relatives.OrderBy(r => r.Sequence).ToList();
+
+    /// <summary>The special papers ("Sonderpapiere") in the order they were entered.</summary>
+    public IReadOnlyList<DriverSpecialDocument> SpecialDocuments =>
+        _specialDocuments.OrderBy(d => d.Sequence).ToList();
+
+    /// <summary>The phone numbers ("Telefone") in the order they were entered.</summary>
+    public IReadOnlyList<DriverPhoneNumber> PhoneNumbers => _phoneNumbers.OrderBy(p => p.Sequence).ToList();
+
     public static Result<Driver> Create(
         string firstName,
         string lastName,
         IReadOnlyCollection<LicenseClass> licenseClasses,
         DateOnly licenseValidUntil,
-        string? externalUserId)
+        string? externalUserId,
+        DriverSocialInsuranceInfo? socialInsurance = null,
+        DriverDocumentsInfo? documents = null,
+        DriverClothingSizes? clothingSizes = null,
+        IReadOnlyList<DriverRelative>? relatives = null,
+        IReadOnlyList<DriverSpecialDocument>? specialDocuments = null,
+        IReadOnlyList<DriverPhoneNumber>? phoneNumbers = null)
     {
-        Result<Unit> validation = Validate(firstName, lastName, licenseClasses);
+        Result<Unit> validation = Validate(
+            firstName, lastName, licenseClasses, relatives, specialDocuments, phoneNumbers);
         if (!validation.IsSuccess)
         {
             return validation.Error!;
         }
 
-        return new Driver(
+        var driver = new Driver(
             Guid.CreateVersion7(),
             firstName.Trim(),
             lastName.Trim(),
             licenseClasses,
             licenseValidUntil,
-            NormalizeExternalUserId(externalUserId));
+            NormalizeExternalUserId(externalUserId),
+            socialInsurance ?? DriverSocialInsuranceInfo.Empty,
+            documents ?? DriverDocumentsInfo.Empty,
+            clothingSizes ?? DriverClothingSizes.Empty);
+        driver.ReplaceCollections(relatives, specialDocuments, phoneNumbers);
+        return driver;
     }
 
     public Result<Driver> Update(
@@ -76,9 +123,16 @@ public sealed class Driver
         string lastName,
         IReadOnlyCollection<LicenseClass> licenseClasses,
         DateOnly licenseValidUntil,
-        string? externalUserId)
+        string? externalUserId,
+        DriverSocialInsuranceInfo? socialInsurance = null,
+        DriverDocumentsInfo? documents = null,
+        DriverClothingSizes? clothingSizes = null,
+        IReadOnlyList<DriverRelative>? relatives = null,
+        IReadOnlyList<DriverSpecialDocument>? specialDocuments = null,
+        IReadOnlyList<DriverPhoneNumber>? phoneNumbers = null)
     {
-        Result<Unit> validation = Validate(firstName, lastName, licenseClasses);
+        Result<Unit> validation = Validate(
+            firstName, lastName, licenseClasses, relatives, specialDocuments, phoneNumbers);
         if (!validation.IsSuccess)
         {
             return validation.Error!;
@@ -94,6 +148,10 @@ public sealed class Driver
 
         LicenseValidUntil = licenseValidUntil;
         ExternalUserId = NormalizeExternalUserId(externalUserId);
+        SocialInsurance = socialInsurance ?? DriverSocialInsuranceInfo.Empty;
+        Documents = documents ?? DriverDocumentsInfo.Empty;
+        ClothingSizes = clothingSizes ?? DriverClothingSizes.Empty;
+        ReplaceCollections(relatives, specialDocuments, phoneNumbers);
 
         return this;
     }
@@ -128,10 +186,26 @@ public sealed class Driver
     public bool CanDriveOn(DateOnly date) =>
         Status == DriverStatus.Available && LicenseValidUntil >= date;
 
+    private void ReplaceCollections(
+        IReadOnlyList<DriverRelative>? relatives,
+        IReadOnlyList<DriverSpecialDocument>? specialDocuments,
+        IReadOnlyList<DriverPhoneNumber>? phoneNumbers)
+    {
+        _relatives.Clear();
+        _relatives.AddRange((relatives ?? []).Select((r, index) => r.WithSequence(index + 1)));
+        _specialDocuments.Clear();
+        _specialDocuments.AddRange((specialDocuments ?? []).Select((d, index) => d.WithSequence(index + 1)));
+        _phoneNumbers.Clear();
+        _phoneNumbers.AddRange((phoneNumbers ?? []).Select((p, index) => p.WithSequence(index + 1)));
+    }
+
     private static Result<Unit> Validate(
         string firstName,
         string lastName,
-        IReadOnlyCollection<LicenseClass> licenseClasses)
+        IReadOnlyCollection<LicenseClass> licenseClasses,
+        IReadOnlyList<DriverRelative>? relatives,
+        IReadOnlyList<DriverSpecialDocument>? specialDocuments,
+        IReadOnlyList<DriverPhoneNumber>? phoneNumbers)
     {
         if (string.IsNullOrWhiteSpace(firstName))
         {
@@ -146,6 +220,26 @@ public sealed class Driver
         if (licenseClasses.Count == 0)
         {
             return Error.Validation("Driver.LicenseClassRequired", "At least one licence class is required.");
+        }
+
+        if (relatives is { Count: > MaxRelatives })
+        {
+            return Error.Validation(
+                "Driver.TooManyRelatives", $"A driver can have at most {MaxRelatives} relatives.");
+        }
+
+        if (specialDocuments is { Count: > MaxSpecialDocuments })
+        {
+            return Error.Validation(
+                "Driver.TooManySpecialDocuments",
+                $"A driver can have at most {MaxSpecialDocuments} special papers.");
+        }
+
+        if (phoneNumbers is { Count: > MaxPhoneNumbers })
+        {
+            return Error.Validation(
+                "Driver.TooManyPhoneNumbers",
+                $"A driver can have at most {MaxPhoneNumbers} phone numbers.");
         }
 
         return Unit.Value;

@@ -53,11 +53,14 @@ async function createOrder(page: Page, consignor: string, weightKg = '5000'): Pr
     await page.goto('/orders/new');
     await expect(page.getByRole('heading', { name: 'New order' })).toBeVisible();
     for (const party of ['consignor', 'consignee'] as const) {
-        await page.getByTestId(`order-${party}-name`).fill(party === 'consignor' ? consignor : 'Empfaenger AG');
+        await page
+            .getByTestId(`order-${party}-name`)
+            .fill(party === 'consignor' ? consignor : 'Empfaenger AG');
         await page.getByTestId(`order-${party}-street`).fill('Hauptstr. 1');
         await page.getByTestId(`order-${party}-postalCode`).fill('80331');
         await page.getByTestId(`order-${party}-city`).fill('Muenchen');
-        await page.getByTestId(`order-${party}-country`).fill('DE');
+        await page.getByTestId(`order-${party}-country`).click();
+        await page.getByRole('option', { name: 'Germany', exact: true }).click();
     }
     await page.getByTestId('order-cargoDescription').fill('Palettenware');
     await page.getByTestId('order-cargoWeightKg').fill(weightKg);
@@ -70,7 +73,12 @@ async function createOrder(page: Page, consignor: string, weightKg = '5000'): Pr
     await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible();
 }
 
-async function createTour(page: Page, date: string, plate: string, driverLastName: string): Promise<void> {
+async function createTour(
+    page: Page,
+    date: string,
+    plate: string,
+    driverLastName: string,
+): Promise<void> {
     await page.goto('/tours');
     await expect(page.getByRole('heading', { name: 'Tours' })).toBeVisible();
     await page.getByTestId('tour-add').click();
@@ -108,7 +116,8 @@ test('dispatcher_planATourAssignAnOrderAndRunIt_throughTheUi', async ({ page, br
     // wrong. The race was always here; it started losing once the home page began issuing its
     // own five requests ahead of this one.
     const draftOrders = page.waitForResponse(
-        (response) => response.url().includes('/api/orders') && response.url().includes('status=Draft'),
+        (response) =>
+            response.url().includes('/api/orders') && response.url().includes('status=Draft'),
     );
     await createTour(page, date, plate, driverName);
 
@@ -133,8 +142,9 @@ test('dispatcher_planATourAssignAnOrderAndRunIt_throughTheUi', async ({ page, br
     await expect(page.getByTestId('tour-detail-status')).toHaveText('InProgress');
 
     await page.goto('/orders');
-    await expect(page.locator('tr').filter({ hasText: consignor }).getByTestId('order-status'))
-        .toHaveText('InTransit');
+    await expect(
+        page.locator('tr').filter({ hasText: consignor }).getByTestId('order-status'),
+    ).toHaveText('InTransit');
 
     // Complete: the order is delivered without anyone touching the order screen.
     await page.goto('/tours');
@@ -145,8 +155,9 @@ test('dispatcher_planATourAssignAnOrderAndRunIt_throughTheUi', async ({ page, br
     await expect(page.getByTestId('tour-detail-status')).toHaveText('Completed');
 
     await page.goto('/orders');
-    await expect(page.locator('tr').filter({ hasText: consignor }).getByTestId('order-status'))
-        .toHaveText('Delivered');
+    await expect(
+        page.locator('tr').filter({ hasText: consignor }).getByTestId('order-status'),
+    ).toHaveText('Delivered');
 });
 
 test('removingAnOrderFromATour_returnsItToDraft', async ({ page, browser }) => {
@@ -168,7 +179,8 @@ test('removingAnOrderFromATour_returnsItToDraft', async ({ page, browser }) => {
     // Same wait as the two sibling tests: the detail page renders as soon as the TOUR arrives,
     // so touching the picker before its options exist makes this flaky rather than wrong.
     const draftOrders = page.waitForResponse(
-        (response) => response.url().includes('/api/orders') && response.url().includes('status=Draft'),
+        (response) =>
+            response.url().includes('/api/orders') && response.url().includes('status=Draft'),
     );
     await createTour(page, uniqueTourDate(1), plate, driverName);
     await draftOrders;
@@ -184,8 +196,9 @@ test('removingAnOrderFromATour_returnsItToDraft', async ({ page, browser }) => {
 
     // Back to Draft, so it can be planned onto another tour - not stranded in Planned.
     await page.goto('/orders');
-    await expect(page.locator('tr').filter({ hasText: consignor }).getByTestId('order-status'))
-        .toHaveText('Draft');
+    await expect(
+        page.locator('tr').filter({ hasText: consignor }).getByTestId('order-status'),
+    ).toHaveText('Draft');
 });
 
 test('doubleBookingAVehicle_showsTheConflict', async ({ page, browser }) => {
@@ -263,7 +276,8 @@ test('directNavigationToTheTourDetail_canStillAssign', async ({ page, browser })
     // renders as soon as the TOUR arrives, and clicking the select before its options exist
     // makes this test flaky rather than wrong.
     const draftOrders = page.waitForResponse(
-        (response) => response.url().includes('/api/orders') && response.url().includes('status=Draft'),
+        (response) =>
+            response.url().includes('/api/orders') && response.url().includes('status=Draft'),
     );
     await page.goto(detailUrl);
     await expect(page.getByTestId('tour-detail-status')).toHaveText('Planned');
@@ -303,7 +317,8 @@ test('fittingOrders_offerOnlyWhatStillFits_andAssignFromThePanel', async ({ page
     await createOrder(page, tooHeavy, heavyKg);
 
     const draftOrders = page.waitForResponse(
-        (response) => response.url().includes('/api/orders') && response.url().includes('status=Draft'),
+        (response) =>
+            response.url().includes('/api/orders') && response.url().includes('status=Draft'),
     );
     await createTour(page, uniqueTourDate(4), plate, driverName);
     await expect(page.getByTestId('tour-detail-status')).toHaveText('Planned');
@@ -313,8 +328,18 @@ test('fittingOrders_offerOnlyWhatStillFits_andAssignFromThePanel', async ({ page
     const fittingPanel = page.getByTestId('tour-fitting');
     await expect(fittingPanel).toBeVisible();
     await expect(page.getByTestId('tour-fitting-remaining')).toContainText('18000 kg');
-    await expect(fittingPanel.locator('tr').filter({ hasText: `${smallKg} kg` }).first()).toBeVisible();
-    await expect(fittingPanel.locator('tr').filter({ hasText: `${heavyKg} kg` }).first()).toBeVisible();
+    await expect(
+        fittingPanel
+            .locator('tr')
+            .filter({ hasText: `${smallKg} kg` })
+            .first(),
+    ).toBeVisible();
+    await expect(
+        fittingPanel
+            .locator('tr')
+            .filter({ hasText: `${heavyKg} kg` })
+            .first(),
+    ).toBeVisible();
 
     // Assign the heavy one from the panel: it leaves the list AND squeezes the small one out.
     await fittingPanel
@@ -325,7 +350,9 @@ test('fittingOrders_offerOnlyWhatStillFits_andAssignFromThePanel', async ({ page
 
     await expect(page.getByTestId('tour-stop-type').first()).toHaveText('Pickup');
     await expect(page.getByTestId('tour-capacity-weight')).toHaveText(`${heavyKg} / 18000 kg`);
-    await expect(page.getByTestId('tour-fitting-remaining')).toContainText(`${18_000 - Number(heavyKg)} kg`);
+    await expect(page.getByTestId('tour-fitting-remaining')).toContainText(
+        `${18_000 - Number(heavyKg)} kg`,
+    );
     await expect(fittingPanel.locator('tr').filter({ hasText: `${heavyKg} kg` })).toHaveCount(0);
     await expect(fittingPanel.locator('tr').filter({ hasText: `${smallKg} kg` })).toHaveCount(0);
 });
@@ -349,7 +376,8 @@ test('optimizeButton_appearsOnlyWithTwoOrMoreOrders', async ({ page, browser }) 
     await createOrder(page, second, '1000');
 
     const draftOrders = page.waitForResponse(
-        (response) => response.url().includes('/api/orders') && response.url().includes('status=Draft'),
+        (response) =>
+            response.url().includes('/api/orders') && response.url().includes('status=Draft'),
     );
     await createTour(page, uniqueTourDate(5), plate, driverName);
     await expect(page.getByTestId('tour-detail-status')).toHaveText('Planned');

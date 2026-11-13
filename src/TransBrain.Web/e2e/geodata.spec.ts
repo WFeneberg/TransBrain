@@ -23,7 +23,8 @@ test('adminUser_maintainsManualCoordinates', async ({ page }) => {
     await page.getByTestId('geodata-street').fill(street);
     await page.getByTestId('geodata-postal').fill('86150');
     await page.getByTestId('geodata-city').fill('Augsburg');
-    await page.getByTestId('geodata-country').fill('DE');
+    await page.getByTestId('geodata-country').click();
+    await page.getByRole('option', { name: 'Germany', exact: true }).click();
     await page.getByTestId('geodata-latitude').fill('48.37154');
     await page.getByTestId('geodata-longitude').fill('10.89851');
     await page.getByTestId('geodata-save').click();
@@ -63,7 +64,8 @@ test('invalidLatitude_staysInTheDialog', async ({ page }) => {
     await page.getByTestId('geodata-street').fill(`E2E Fehler ${uniqueSuffix()}`);
     await page.getByTestId('geodata-postal').fill('86150');
     await page.getByTestId('geodata-city').fill('Augsburg');
-    await page.getByTestId('geodata-country').fill('DE');
+    await page.getByTestId('geodata-country').click();
+    await page.getByRole('option', { name: 'Germany', exact: true }).click();
     await page.getByTestId('geodata-latitude').fill('123');
     await page.getByTestId('geodata-longitude').fill('10.89851');
     await page.getByTestId('geodata-save').click();
@@ -91,6 +93,8 @@ test('viewerUser_onGeodata_seesNoWriteActions', async ({ page }) => {
     // The map material status card reports both services (status text depends on the stack).
     await expect(page.getByTestId('geodata-map-status')).toBeVisible();
     await expect(page.getByTestId('geodata-map-geocoder')).toContainText('Geocoder (Nominatim)');
-    await expect(page.getByTestId('geodata-map-routing')).toContainText('Routing (OpenRouteService)');
+    await expect(page.getByTestId('geodata-map-routing')).toContainText(
+        'Routing (OpenRouteService)',
+    );
     await expect(page.getByTestId('geodata-map-extract')).toContainText('Map extract');
 });

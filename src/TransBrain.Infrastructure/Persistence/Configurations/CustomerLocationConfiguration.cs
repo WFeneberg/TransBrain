@@ -17,6 +17,11 @@ internal sealed class CustomerLocationConfiguration : IEntityTypeConfiguration<C
 
         builder.Property(l => l.Name).HasMaxLength(200).IsRequired();
 
+        // The location's own legal identity, when it differs from the customer: a location with
+        // a company name can receive its own invoices.
+        builder.Property(l => l.CompanyName).HasColumnName("company_name").HasMaxLength(200);
+        builder.Property(l => l.VatId).HasColumnName("vat_id").HasMaxLength(20);
+
         builder.OwnsMany(l => l.Contacts, contact =>
         {
             contact.ToTable("customer_location_contacts");

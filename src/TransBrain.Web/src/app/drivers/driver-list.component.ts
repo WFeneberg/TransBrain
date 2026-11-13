@@ -61,14 +61,22 @@ interface DriverFilter {
                             {{ i18n.t('drivers.count', { count: filteredCount() }) }}
                         </p>
                     </div>
-                    @if (session.can('masterData.write')) {
-                        <div class="header-actions">
+                    <div class="header-actions">
+                        <a
+                            mat-stroked-button
+                            routerLink="/driver-catalog"
+                            data-testid="driver-catalog-link"
+                        >
+                            <mat-icon>tune</mat-icon>
+                            {{ i18n.t('drivers.catalogLink') }}
+                        </a>
+                        @if (session.can('masterData.write')) {
                             <a mat-flat-button routerLink="/drivers/new" data-testid="driver-add">
                                 <mat-icon>add</mat-icon>
                                 {{ i18n.t('drivers.add') }}
                             </a>
-                        </div>
-                    }
+                        }
+                    </div>
                 </header>
 
                 @if (actionError(); as message) {

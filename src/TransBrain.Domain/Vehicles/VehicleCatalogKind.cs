@@ -19,5 +19,20 @@ public enum VehicleCatalogKind
     /// Customer class ("Kundenklasse") a customer is assigned to. Not a vehicle list: it lives in this
     /// catalog so customers share its maintenance, deactivation and usage counting.
     /// </summary>
-    CustomerClass
+    CustomerClass,
+
+    /// <summary>
+    /// Kind of phone number ("Telefontyp") of a driver's phone list, for example private or car phone.
+    /// Not a vehicle list: it lives in this catalog so drivers share its maintenance, deactivation and
+    /// usage counting.
+    /// </summary>
+    PhoneType,
+
+    /// <summary>
+    /// Kind of special paper ("Sonderpapier-Art") of a driver's document list, for example a dangerous
+    /// goods certificate or a TÜV assessment. Not a vehicle list (that one is
+    /// <see cref="DocumentType"/>): it lives in this catalog so drivers share its maintenance,
+    /// deactivation and usage counting.
+    /// </summary>
+    DriverDocumentType
 }

@@ -43,6 +43,15 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
 
         builder.Property(i => i.CustomerName).HasColumnName("customer_name").HasMaxLength(200).IsRequired();
         builder.Property(i => i.CustomerVatId).HasColumnName("customer_vat_id").HasMaxLength(20);
+
+        // SetNull, like orders.consignee_location_id: the invoice carries its recipient as a
+        // snapshot, so deleting the location must not touch the document — only the reference.
+        builder.Property(i => i.BillToLocationId).HasColumnName("bill_to_location_id");
+        builder.HasOne<CustomerLocation>()
+            .WithMany()
+            .HasForeignKey(i => i.BillToLocationId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.Property(i => i.PaymentTermDays).HasColumnName("payment_term_days").IsRequired();
         builder.Property(i => i.VatRatePercent)
             .HasColumnName("vat_rate_percent")

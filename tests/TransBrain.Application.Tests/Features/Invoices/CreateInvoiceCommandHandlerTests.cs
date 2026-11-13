@@ -3,6 +3,7 @@ using TransBrain.Application.Features.Invoices;
 using TransBrain.Application.Features.Invoices.CreateInvoice;
 using TransBrain.Application.Tests.Fakes;
 using TransBrain.Domain.Common;
+using TransBrain.Domain.Customers;
 using TransBrain.Domain.Orders;
 
 namespace TransBrain.Application.Tests.Features.Invoices;
@@ -128,6 +129,76 @@ public class CreateInvoiceCommandHandlerTests
             CancellationToken.None);
 
         result.Error!.Code.Should().Be("Invoice.VatRateOutOfRange");
+    }
+
+    [Fact]
+    public async Task Handle_BillToLocationWithOwnCompanyName_AddressesInvoiceToTheLocation()
+    {
+        InvoiceFixture fixture = InvoiceFixture.Create();
+        TransportOrder order = fixture.DeliveredOrder();
+        CustomerLocation location = CustomerLocation.Create(
+            fixture.Customer.Id,
+            "Werk Berlin",
+            Address.Create("Werk Berlin", "Bahnhofstr. 2", "10115", "Berlin", "DE").Value,
+            [],
+            companyName: "Werk Berlin GmbH",
+            vatId: "DE987654321").Value;
+        fixture.Customers.SeedLocations(location);
+
+        Result<InvoiceResponse> result = await Handler(fixture).Handle(
+            new CreateInvoiceCommand(
+                fixture.Customer.Id, 19m, [new InvoiceLinePayload(order.Id, 100m)], location.Id),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.BillToLocationId.Should().Be(location.Id);
+        result.Value.CustomerName.Should().Be("Werk Berlin GmbH");
+        result.Value.BillingAddress.City.Should().Be("Berlin");
+        result.Value.CustomerVatId.Should().Be("DE987654321");
+        result.Value.CustomerId.Should().Be(fixture.Customer.Id);
+    }
+
+    [Fact]
+    public async Task Handle_BillToLocationWithoutCompanyName_ReturnsConflictAndPersistsNothing()
+    {
+        InvoiceFixture fixture = InvoiceFixture.Create();
+        TransportOrder order = fixture.DeliveredOrder();
+        CustomerLocation location = CustomerLocation.Create(
+            fixture.Customer.Id,
+            "Lager Nord",
+            Address.Create("Lager Nord", "Hafenstr. 9", "20095", "Hamburg", "DE").Value,
+            []).Value;
+        fixture.Customers.SeedLocations(location);
+
+        Result<InvoiceResponse> result = await Handler(fixture).Handle(
+            new CreateInvoiceCommand(
+                fixture.Customer.Id, 19m, [new InvoiceLinePayload(order.Id, 100m)], location.Id),
+            CancellationToken.None);
+
+        result.Error!.Code.Should().Be("Invoice.BillToLocationHasNoCompanyName");
+        fixture.Invoices.Invoices.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_BillToLocationOfAnotherCustomer_ReturnsNotFound()
+    {
+        InvoiceFixture fixture = InvoiceFixture.Create();
+        TransportOrder order = fixture.DeliveredOrder();
+        CustomerLocation foreign = CustomerLocation.Create(
+            Guid.CreateVersion7(),
+            "Fremdes Werk",
+            Address.Create("Fremdes Werk", "Weg 1", "50667", "Köln", "DE").Value,
+            [],
+            companyName: "Fremdes Werk GmbH").Value;
+        fixture.Customers.SeedLocations(foreign);
+
+        Result<InvoiceResponse> result = await Handler(fixture).Handle(
+            new CreateInvoiceCommand(
+                fixture.Customer.Id, 19m, [new InvoiceLinePayload(order.Id, 100m)], foreign.Id),
+            CancellationToken.None);
+
+        result.Error!.Code.Should().Be("CustomerLocation.NotFound");
+        fixture.Invoices.Invoices.Should().BeEmpty();
     }
 
     [Fact]

@@ -25,6 +25,7 @@ import {
     CustomerLocationWriteRequest,
 } from './customer-location.service';
 import { LocationMapComponent, MapMarker } from '../shared/location-map.component';
+import { CountrySelectComponent } from '../shared/country-select.component';
 
 interface ContactControls {
     name: FormControl<string>;
@@ -52,6 +53,7 @@ interface ProblemDetailsBody {
         MatIconModule,
         MatInputModule,
         LocationMapComponent,
+        CountrySelectComponent,
     ],
     styleUrl: '../shared/page-layout.scss',
     styles: [
@@ -106,22 +108,30 @@ interface ProblemDetailsBody {
                             </mat-card-header>
                             <mat-card-content class="fields">
                                 @for (field of section.fields; track field.name) {
-                                    <mat-form-field>
-                                        <mat-label>{{ i18n.t(field.label) }}</mat-label>
-                                        <input
-                                            matInput
-                                            [formControlName]="field.name"
-                                            [attr.data-testid]="'location-' + field.name"
+                                    @if (field.name === 'country') {
+                                        <app-country-select
+                                            [control]="form.controls.country"
+                                            [label]="i18n.t('common.country')"
+                                            testid="location-country"
                                         />
-                                        @if (form.controls[field.name].errors; as errors) {
-                                            <mat-error
-                                                [attr.data-testid]="
-                                                    'location-' + field.name + '-error'
-                                                "
-                                                >{{ fieldErrorText(errors) }}</mat-error
-                                            >
-                                        }
-                                    </mat-form-field>
+                                    } @else {
+                                        <mat-form-field>
+                                            <mat-label>{{ i18n.t(field.label) }}</mat-label>
+                                            <input
+                                                matInput
+                                                [formControlName]="field.name"
+                                                [attr.data-testid]="'location-' + field.name"
+                                            />
+                                            @if (form.controls[field.name].errors; as errors) {
+                                                <mat-error
+                                                    [attr.data-testid]="
+                                                        'location-' + field.name + '-error'
+                                                    "
+                                                    >{{ fieldErrorText(errors) }}</mat-error
+                                                >
+                                            }
+                                        </mat-form-field>
+                                    }
                                 }
                             </mat-card-content>
                         </mat-card>
@@ -151,7 +161,9 @@ interface ProblemDetailsBody {
                                             <input
                                                 matInput
                                                 [formControlName]="field.name"
-                                                [attr.data-testid]="'location-contact-' + field.name"
+                                                [attr.data-testid]="
+                                                    'location-contact-' + field.name
+                                                "
                                             />
                                             @if (contact.controls[field.name].errors; as errors) {
                                                 <mat-error
@@ -168,7 +180,9 @@ interface ProblemDetailsBody {
                                         type="button"
                                         class="delete"
                                         data-testid="location-contact-remove"
-                                        [attr.aria-label]="i18n.t('customers.location.removeContact')"
+                                        [attr.aria-label]="
+                                            i18n.t('customers.location.removeContact')
+                                        "
                                         (click)="removeContact(i)"
                                     >
                                         <mat-icon>delete</mat-icon>
@@ -258,6 +272,14 @@ export class CustomerLocationFormComponent {
                 { name: 'country', label: 'common.country' },
             ],
         },
+        {
+            title: 'customers.location.section.company',
+            icon: 'receipt_long',
+            fields: [
+                { name: 'companyName', label: 'customers.location.companyName' },
+                { name: 'vatId', label: 'customers.location.vatId' },
+            ],
+        },
     ] as const;
 
     protected readonly customerId = this.route.snapshot.paramMap.get('id')!;
@@ -285,7 +307,9 @@ export class CustomerLocationFormComponent {
         street: ['', Validators.required],
         postalCode: ['', Validators.required],
         city: ['', Validators.required],
-        country: ['', [Validators.required, Validators.pattern(/^[A-Za-z]{2}$/)]],
+        country: ['', Validators.required],
+        companyName: [''],
+        vatId: [''],
         contacts: this.fb.nonNullable.array<FormGroup<ContactControls>>([]),
     });
 
@@ -336,6 +360,8 @@ export class CustomerLocationFormComponent {
                             postalCode: location.postalCode,
                             city: location.city,
                             country: location.country,
+                            companyName: location.companyName ?? '',
+                            vatId: location.vatId ?? '',
                         });
                         this.contacts.clear();
                         location.contacts.forEach((contact) => this.addContact(contact));
@@ -388,6 +414,8 @@ export class CustomerLocationFormComponent {
         const value = this.form.getRawValue();
         const request: CustomerLocationWriteRequest = {
             ...value,
+            companyName: value.companyName.trim() || null,
+            vatId: value.vatId.trim() || null,
             contacts: value.contacts.map((c) => ({
                 name: c.name.trim(),
                 phone: c.phone.trim() || null,

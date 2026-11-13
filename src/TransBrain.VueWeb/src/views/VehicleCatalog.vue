@@ -8,6 +8,7 @@ import {
     listVehicleCatalog,
     updateVehicleCatalogEntry,
     CUSTOMER_CATALOG_KINDS,
+    DRIVER_CATALOG_KINDS,
     VEHICLE_CATALOG_KINDS,
     type VehicleCatalogEntry,
     type VehicleCatalogKind,
@@ -32,11 +33,14 @@ const KIND_ICONS: Record<VehicleCatalogKind, string> = {
     InsuranceCompany: 'mdi-shield-car',
     DocumentType: 'mdi-file-certificate-outline',
     CustomerClass: 'mdi-account-star-outline',
+    PhoneType: 'mdi-phone-outline',
+    DriverDocumentType: 'mdi-card-account-details-outline',
 };
 
 /**
- * The page serves two routes: '/vehicle-catalog' with the lists behind the vehicle form and
- * '/customer-catalog' (route meta `catalogScope: 'customer'`) with those behind the customer form.
+ * The page serves three routes: '/vehicle-catalog' with the lists behind the vehicle form,
+ * '/customer-catalog' (route meta `catalogScope: 'customer'`) with those behind the customer form
+ * and '/driver-catalog' (`catalogScope: 'driver'`) with those behind the driver form.
  */
 interface CatalogScope {
     kinds: readonly VehicleCatalogKind[];
@@ -48,7 +52,7 @@ interface CatalogScope {
     testIdPrefix: string;
 }
 
-const SCOPES: Record<'vehicle' | 'customer', CatalogScope> = {
+const SCOPES: Record<'vehicle' | 'customer' | 'driver', CatalogScope> = {
     vehicle: {
         kinds: VEHICLE_CATALOG_KINDS,
         title: 'vehicleCatalog.title',
@@ -67,6 +71,15 @@ const SCOPES: Record<'vehicle' | 'customer', CatalogScope> = {
         usage: 'customerCatalog.usage',
         testIdPrefix: 'customer-catalog',
     },
+    driver: {
+        kinds: DRIVER_CATALOG_KINDS,
+        title: 'driverCatalog.title',
+        subtitle: 'driverCatalog.subtitle',
+        back: 'driverCatalog.back',
+        backPath: '/drivers',
+        usage: 'driverCatalog.usage',
+        testIdPrefix: 'driver-catalog',
+    },
 };
 
 const auth = useAuthStore();
@@ -75,7 +88,10 @@ const route = useRoute();
 const router = useRouter();
 
 const canWrite = computed(() => auth.can('masterData.write'));
-const scope = computed(() => SCOPES[route.meta.catalogScope === 'customer' ? 'customer' : 'vehicle']);
+const scope = computed(() => {
+    const value = route.meta.catalogScope;
+    return SCOPES[value === 'customer' || value === 'driver' ? value : 'vehicle'];
+});
 
 const kind = ref<VehicleCatalogKind>(kindFromQuery(route.query.kind));
 const entries = ref<VehicleCatalogEntry[]>([]);

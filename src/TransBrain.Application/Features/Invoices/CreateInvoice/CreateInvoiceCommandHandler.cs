@@ -25,6 +25,20 @@ internal sealed class CreateInvoiceCommandHandler(
             return Error.NotFound("Customer.NotFound", $"No customer with id '{command.CustomerId}'.");
         }
 
+        // The recipient location, when the invoice goes to a delivery location with its own
+        // company name. Scoped to the customer: a foreign location is a NotFound, not a leak.
+        CustomerLocation? billTo = null;
+        if (command.BillToLocationId is Guid billToLocationId)
+        {
+            billTo = await customers.GetLocationAsync(command.CustomerId, billToLocationId, cancellationToken);
+            if (billTo is null)
+            {
+                return Error.NotFound(
+                    "CustomerLocation.NotFound",
+                    $"No delivery location with id '{billToLocationId}'.");
+            }
+        }
+
         // Load every order before touching anything, so a missing or unbillable one refuses the
         // whole command rather than leaving a half-built invoice.
         List<TransportOrder> billedOrders = [with(capacity: command.Lines.Count)];
@@ -58,7 +72,7 @@ internal sealed class CreateInvoiceCommandHandler(
         DateTimeOffset now = timeProvider.GetUtcNow();
         InvoiceNumber invoiceNumber = await invoiceNumbers.NextAsync(now.Year, cancellationToken);
 
-        Result<Invoice> invoice = Invoice.Create(invoiceNumber, customer, command.VatRatePercent, now);
+        Result<Invoice> invoice = Invoice.Create(invoiceNumber, customer, command.VatRatePercent, now, billTo);
         if (!invoice.IsSuccess)
         {
             return invoice.Error!;

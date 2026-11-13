@@ -11,6 +11,18 @@ public sealed record DriverResponse(
     string Status,
     string? ExternalUserId)
 {
+    public DriverSocialInsuranceData SocialInsurance { get; init; } = new();
+
+    public DriverDocumentsData Documents { get; init; } = new();
+
+    public DriverClothingSizesData ClothingSizes { get; init; } = new();
+
+    public IReadOnlyList<DriverRelativeData> Relatives { get; init; } = [];
+
+    public IReadOnlyList<DriverSpecialDocumentData> SpecialDocuments { get; init; } = [];
+
+    public IReadOnlyList<DriverPhoneNumberData> PhoneNumbers { get; init; } = [];
+
     public static DriverResponse From(Driver driver) => new(
         driver.Id,
         driver.FirstName,
@@ -22,5 +34,13 @@ public sealed record DriverResponse(
         driver.LicenseClasses.Select(c => c.ToString()).OrderBy(c => c, StringComparer.Ordinal).ToArray(),
         driver.LicenseValidUntil,
         driver.Status.ToString(),
-        driver.ExternalUserId);
+        driver.ExternalUserId)
+    {
+        SocialInsurance = DriverSocialInsuranceData.From(driver.SocialInsurance),
+        Documents = DriverDocumentsData.From(driver.Documents),
+        ClothingSizes = DriverClothingSizesData.From(driver.ClothingSizes),
+        Relatives = driver.Relatives.Select(DriverRelativeData.From).ToList(),
+        SpecialDocuments = driver.SpecialDocuments.Select(DriverSpecialDocumentData.From).ToList(),
+        PhoneNumbers = driver.PhoneNumbers.Select(DriverPhoneNumberData.From).ToList(),
+    };
 }

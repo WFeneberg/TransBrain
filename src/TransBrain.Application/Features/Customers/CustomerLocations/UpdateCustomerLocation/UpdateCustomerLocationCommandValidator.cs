@@ -13,6 +13,8 @@ public sealed class UpdateCustomerLocationCommandValidator : AbstractValidator<U
         RuleFor(c => c.PostalCode).MaximumLength(20);
         RuleFor(c => c.City).MaximumLength(200);
         RuleFor(c => c.Country).MaximumLength(2);
+        RuleFor(c => c.CompanyName).MaximumLength(200);
+        RuleFor(c => c.VatId).MaximumLength(20);
         RuleFor(c => c.Contacts!.Count)
             .LessThanOrEqualTo(CustomerLocation.MaxContacts)
             .When(c => c.Contacts is not null)

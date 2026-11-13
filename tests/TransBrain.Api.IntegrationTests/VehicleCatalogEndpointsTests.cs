@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using AwesomeAssertions;
+using TransBrain.Application.Features.Drivers;
 using TransBrain.Application.Features.VehicleCatalog;
 using TransBrain.Application.Features.Vehicles;
 
@@ -51,6 +52,122 @@ public class VehicleCatalogEndpointsTests(TransBrainApiFactory factory) : IClass
         VehicleCatalogEntryResponse[] entries = (await response.Content.ReadFromJsonAsync<VehicleCatalogEntryResponse[]>())!;
         entries.Select(e => (e.Code, e.Name)).Should().Contain(("HuterVilsAll", "Huter Vils alle Gattungen"));
         entries.Should().AllSatisfy(e => e.Kind.Should().Be("CustomerClass"));
+    }
+
+    [Fact]
+    public async Task GetPhoneTypes_FreshDatabase_ReturnsTheSeededLegacyTypes()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("viewer").GetAsync("/api/vehicle-catalog/PhoneType");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        VehicleCatalogEntryResponse[] entries = (await response.Content.ReadFromJsonAsync<VehicleCatalogEntryResponse[]>())!;
+        entries.Select(e => (e.Code, e.Name)).Should().Contain(
+        [
+            ("Fax", "Fax"),
+            ("Phone", "Telefon"),
+            ("Email", "Email"),
+            ("CarPhone", "Auto-Telefon"),
+            ("HomePage", "Home-Page"),
+            ("Private", "Privat"),
+            ("Emergency", "Notruf"),
+            ("CompanyExtension", "Firma (DW)")
+        ]);
+        entries.Should().AllSatisfy(e => e.Kind.Should().Be("PhoneType"));
+    }
+
+    [Fact]
+    public async Task GetDriverDocumentTypes_FreshDatabase_ReturnsTheSeededLegacyTypes()
+    {
+        HttpResponseMessage response = await factory.CreateClientAs("viewer")
+            .GetAsync("/api/vehicle-catalog/DriverDocumentType");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        VehicleCatalogEntryResponse[] entries = (await response.Content.ReadFromJsonAsync<VehicleCatalogEntryResponse[]>())!;
+        entries.Select(e => (e.Code, e.Name)).Should().Contain(
+        [
+            ("DangerousGoods", "Gefahrengutschein"),
+            ("MedicalOfficer", "Amtsarzt"),
+            ("TuvAssessment", "TÜV - Begutachtung"),
+            ("B3Certificate", "B-3 - Bescheinigung"),
+            ("SpecialApproval", "besondere Zulassung"),
+            ("SpecialPermit", "besondere Genehmigung"),
+            ("BoilerPressure", "Kesseldruckbescheinigung"),
+            ("ServiceInterval", "Service - Intervall")
+        ]);
+        entries.Should().AllSatisfy(e => e.Kind.Should().Be("DriverDocumentType"));
+    }
+
+    [Fact]
+    public async Task DriverDocumentType_UsedByADriver_CountsTheDriverOnceAndBlocksDelete()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        HttpResponseMessage createdEntry = await admin.PostAsJsonAsync(
+            "/api/vehicle-catalog/DriverDocumentType",
+            new { code = "CraneLicense", name = "Kranschein", isActive = true });
+        createdEntry.StatusCode.Should().Be(HttpStatusCode.Created);
+        Guid entryId = (await createdEntry.Content.ReadFromJsonAsync<VehicleCatalogEntryResponse>())!.Id;
+
+        HttpResponseMessage created = await admin.PostAsJsonAsync("/api/drivers", new
+        {
+            firstName = "Karl",
+            lastName = "Kessel",
+            licenseClasses = new[] { "C" },
+            licenseValidUntil = "2028-06-30",
+            externalUserId = (string?)null,
+            specialDocuments = new[]
+            {
+                new { type = "CraneLicense", lastInspectionDate = (string?)"2024-05-02" },
+                new { type = "CraneLicense", lastInspectionDate = (string?)null },
+            }
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        Guid driverId = (await created.Content.ReadFromJsonAsync<DriverResponse>())!.Id;
+
+        VehicleCatalogEntryResponse listed = await GetEntryAsync(admin, "DriverDocumentType", entryId);
+        listed.UsageCount.Should().Be(1);
+
+        HttpResponseMessage blockedDelete = await admin.DeleteAsync($"/api/vehicle-catalog/DriverDocumentType/{entryId}");
+        blockedDelete.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await blockedDelete.Content.ReadAsStringAsync()).Should().Contain("driver(s)");
+
+        (await admin.DeleteAsync($"/api/drivers/{driverId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await admin.DeleteAsync($"/api/vehicle-catalog/DriverDocumentType/{entryId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task PhoneType_UsedByADriver_CountsTheDriverOnceAndBlocksDelete()
+    {
+        HttpClient admin = factory.CreateClientAs("admin");
+        VehicleCatalogEntryResponse emergency = (await (await admin.GetAsync("/api/vehicle-catalog/PhoneType"))
+            .Content.ReadFromJsonAsync<VehicleCatalogEntryResponse[]>())!.Single(e => e.Code == "Emergency");
+
+        HttpResponseMessage created = await admin.PostAsJsonAsync("/api/drivers", new
+        {
+            firstName = "Nora",
+            lastName = "Notruf",
+            licenseClasses = new[] { "C" },
+            licenseValidUntil = "2028-06-30",
+            externalUserId = (string?)null,
+            phoneNumbers = new[]
+            {
+                new { number = "+43 1 133", type = "Emergency" },
+                new { number = "+43 1 144", type = "Emergency" },
+            }
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        Guid driverId = (await created.Content.ReadFromJsonAsync<DriverResponse>())!.Id;
+
+        VehicleCatalogEntryResponse listed = await GetEntryAsync(admin, "PhoneType", emergency.Id);
+        listed.UsageCount.Should().Be(1);
+
+        HttpResponseMessage blockedDelete = await admin.DeleteAsync($"/api/vehicle-catalog/PhoneType/{emergency.Id}");
+        blockedDelete.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await blockedDelete.Content.ReadAsStringAsync()).Should().Contain("driver(s)");
+
+        (await admin.DeleteAsync($"/api/drivers/{driverId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await admin.DeleteAsync($"/api/vehicle-catalog/PhoneType/{emergency.Id}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     [Fact]

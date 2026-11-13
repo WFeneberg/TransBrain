@@ -60,7 +60,13 @@ public sealed class DriverEndpoints : IEndpointGroup
                         request.LastName,
                         request.LicenseClasses,
                         request.LicenseValidUntil,
-                        request.ExternalUserId),
+                        request.ExternalUserId,
+                        request.SocialInsurance,
+                        request.Documents,
+                        request.ClothingSizes,
+                        request.Relatives,
+                        request.SpecialDocuments,
+                        request.PhoneNumbers),
                     ct);
                 return result.ToHttpResult();
             })
@@ -82,10 +88,20 @@ public sealed class DriverEndpoints : IEndpointGroup
     }
 }
 
-/// <summary>Body of a driver update. The id comes from the route, not the payload.</summary>
+/// <summary>
+/// Body of a driver update. The id comes from the route, not the payload. The optional parts
+/// (social insurance, documents, clothing sizes and the three lists) replace the driver's data
+/// as a whole; omitted means cleared, like on create.
+/// </summary>
 public sealed record UpdateDriverRequest(
     string FirstName,
     string LastName,
     string[] LicenseClasses,
     DateOnly LicenseValidUntil,
-    string? ExternalUserId);
+    string? ExternalUserId,
+    DriverSocialInsuranceData? SocialInsurance = null,
+    DriverDocumentsData? Documents = null,
+    DriverClothingSizesData? ClothingSizes = null,
+    IReadOnlyList<DriverRelativeData>? Relatives = null,
+    IReadOnlyList<DriverSpecialDocumentData>? SpecialDocuments = null,
+    IReadOnlyList<DriverPhoneNumberData>? PhoneNumbers = null);

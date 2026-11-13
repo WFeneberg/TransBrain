@@ -12,6 +12,7 @@ import {
     type OrderWriteRequest,
 } from '../api/orders';
 import LocationMap from '../components/LocationMap.vue';
+import CountrySelect from '../components/CountrySelect.vue';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useI18n, type MessageKey } from '../i18n';
 
@@ -43,8 +44,8 @@ const addressFields = [
     { name: 'name', label: 'common.name', sm: 12 },
     { name: 'street', label: 'orders.street', sm: 12 },
     { name: 'postalCode', label: 'orders.postalCode', sm: 4 },
-    { name: 'city', label: 'orders.city', sm: 5 },
-    { name: 'country', label: 'orders.country', sm: 3 },
+    { name: 'city', label: 'orders.city', sm: 4 },
+    { name: 'country', label: 'orders.country', sm: 4 },
 ] as const;
 
 const windows = [
@@ -363,7 +364,15 @@ function describeFailure(error: unknown, fallback: string): string {
                                     </v-select>
                                 </v-col>
                                 <v-col v-for="field in addressFields" :key="field.name" cols="12" :sm="field.sm">
+                                    <CountrySelect
+                                        v-if="field.name === 'country'"
+                                        v-model="form[party].country"
+                                        :label="`${t(field.label)} *`"
+                                        :testid="`order-${party}-country`"
+                                        :error-messages="errorsFor(`${party}.country`)"
+                                    />
                                     <v-text-field
+                                        v-else
                                         v-model="form[party][field.name]"
                                         v-native-testid="`order-${party}-${field.name}`"
                                         :label="`${t(field.label)} *`"

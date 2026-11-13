@@ -3,9 +3,17 @@ import { userManager } from '../auth/userManager';
 
 /**
  * The maintainable selection lists - see VehicleCatalog.vue. Despite the name the API also keeps
- * the customer classes here, which are maintained on their own page ('/customer-catalog').
+ * the customer classes here, maintained on '/customer-catalog', and the driver phone types,
+ * maintained on '/driver-catalog'.
  */
-export type VehicleCatalogKind = 'VehicleClass' | 'CarrierGroup' | 'InsuranceCompany' | 'DocumentType' | 'CustomerClass';
+export type VehicleCatalogKind =
+    | 'VehicleClass'
+    | 'CarrierGroup'
+    | 'InsuranceCompany'
+    | 'DocumentType'
+    | 'CustomerClass'
+    | 'PhoneType'
+    | 'DriverDocumentType';
 
 /** The kinds behind the vehicle form, shown on '/vehicle-catalog'. */
 export const VEHICLE_CATALOG_KINDS: readonly VehicleCatalogKind[] = [
@@ -18,6 +26,9 @@ export const VEHICLE_CATALOG_KINDS: readonly VehicleCatalogKind[] = [
 /** The kinds behind the customer form, shown on '/customer-catalog'. */
 export const CUSTOMER_CATALOG_KINDS: readonly VehicleCatalogKind[] = ['CustomerClass'];
 
+/** The kinds behind the driver form, shown on '/driver-catalog'. */
+export const DRIVER_CATALOG_KINDS: readonly VehicleCatalogKind[] = ['PhoneType', 'DriverDocumentType'];
+
 export interface VehicleCatalogEntry {
     id: string;
     kind: VehicleCatalogKind;
@@ -27,7 +38,7 @@ export interface VehicleCatalogEntry {
     name: string;
     /** Inactive entries stay valid on vehicles (or customers) that already use them, but are not offered for new selection. */
     isActive: boolean;
-    /** Number of vehicles - for 'CustomerClass' customers - using the entry. */
+    /** Number of vehicles - for 'CustomerClass' customers, for the driver kinds drivers - using the entry. */
     usageCount: number;
 }
 

@@ -310,6 +310,7 @@ Fahrzeugliste aufgebaut.
 - Angezeigte Spalten: Last name (Nachname), First name (Vorname), License classes
   (Führerscheinklassen), License valid until (Führerschein gültig bis), Status (als farbiger
   Chip). Ein Klick auf einen Spaltenkopf sortiert die Liste.
+- Schaltfläche **„Master data lists“** öffnet die [Fahrer-Stammdaten](#fahrer-stammdaten).
 - Schaltfläche **„Add driver“** legt einen neuen Fahrer an.
 - Pro Zeile: **Stift-Symbol** öffnet den Fahrer, **Papierkorb-Symbol** löscht ihn nach einer
   Sicherheitsabfrage („Really delete driver …?“, **„Delete“** / **„Cancel“**).
@@ -321,9 +322,10 @@ Erreichbar über „Add driver“ (neu, `/drivers/new`) oder das Stift-Symbol in
 
 ![Fahrerformular](img/vueweb/fahrerformular.png)
 
-Die Felder stehen wie im Fahrzeugformular in Karten („Personal data“, „Driving licence“);
-beim Bearbeiten zeigt die Überschrift den Status des Fahrers. **„Cancel“** und **„Save“**
-stehen in einer Leiste, die beim Scrollen am unteren Rand sichtbar bleibt.
+Die Felder stehen wie im Fahrzeugformular in Karten („Personal data“, „Driving licence“,
+„Social insurance data“); beim Bearbeiten zeigt die Überschrift den Status des Fahrers.
+**„Cancel“** und **„Save“** stehen in einer Leiste, die beim Scrollen am unteren Rand
+sichtbar bleibt.
 
 | Feld (Beschriftung)  | Bedeutung                          | Pflichtfeld | Regeln                                   |
 |----------------------|--------------------------------------|:-----------:|--------------------------------------------|
@@ -338,6 +340,121 @@ stehen in einer Leiste, die beim Scrollen am unteren Rand sichtbar bleibt.
 - Validierungsfehler (fehlende Pflichtfelder, keine Führerscheinklasse ausgewählt) und
   serverseitige Fehler werden auf dieselbe Weise wie im Fahrzeugformular direkt am
   betroffenen Feld angezeigt.
+
+### Sozialversicherung (Sozv-Daten)
+
+Die Karte **Social insurance data** entspricht dem Reiter „Zusatz → Sozv-Daten“ des
+Altsystems. Alle Angaben sind freiwillig. Wie bei den Zusatzdaten eines Kunden wird beim
+Speichern immer die ganze Karte übernommen: ein geleertes Feld ist danach auch gespeichert
+leer.
+
+![Karte Social insurance data](img/vueweb/fahrer-sozv.png)
+
+| Feld (Beschriftung) | Bedeutung | Regeln |
+|---|---|---|
+| Date of birth | Geburtsdatum (Geb_Dat.) | nicht vor 1900 |
+| Place of birth | Geburtsort (Geb_Ort) | höchstens 200 Zeichen |
+| Nationality | Staatsangehörigkeit (Staatsangeh.) | höchstens 100 Zeichen |
+| Social insurance number | Sozialversicherungsnummer (Sozialvers-Nr.) | höchstens 50 Zeichen |
+| Entry date | Eintrittsdatum (Eintritts-Dat.) | nicht vor 1900 |
+| Health insurance | Krankenkasse | mehrzeilig, höchstens 500 Zeichen |
+| Bank | Bank | höchstens 200 Zeichen |
+| Bank code | Bankleitzahl (BLZ) | höchstens 20 Zeichen |
+| Account number | Kontonummer (Konto) | höchstens 34 Zeichen |
+| BIC | BIC | höchstens 11 Zeichen; Kleinbuchstaben werden zu Großbuchstaben |
+| IBAN | IBAN | höchstens 34 Zeichen; Kleinbuchstaben werden zu Großbuchstaben |
+| Family doctor | Hausarzt (Name und Anschrift) | mehrzeilig, höchstens 500 Zeichen |
+| Family doctor phone | Telefon des Hausarzts (Tel_Hausarzt) | höchstens 50 Zeichen |
+
+- Die Karte ist in drei Gruppen gegliedert: **„Social insurance“** (Geburts- und
+  Versicherungsdaten samt Krankenkasse), **„Bank details“** (Bankverbindung) und
+  **„Family doctor“** (Hausarzt mit Telefonnummer).
+- Ein zu frühes Datum (vor 1900) oder ein zu langer Text wird direkt am betroffenen Feld
+  angezeigt; das Formular wird dann nicht gespeichert.
+
+### Führerschein-Dokumente
+
+Die Karte **Driving licence** enthält neben Klassen und Ablaufdatum auch die Angaben des
+Reiters „Zusatz → Dokumente“ des Altsystems. Alle drei Felder sind freiwillig.
+
+![Karte Driving licence mit Dokumentfeldern](img/vueweb/fahrer-dokumente.png)
+
+| Feld (Beschriftung) | Bedeutung | Regeln |
+|---|---|---|
+| Licence number | Führerscheinnummer | höchstens 50 Zeichen |
+| Issue date | Ausstellungsdatum | nicht vor 1900 |
+| Issuing authority | Ausstellende Behörde | mehrzeilig, höchstens 500 Zeichen |
+
+### Kleidergrößen, Verwandte, Sonderpapiere und Telefone
+
+Diese vier Karten entsprechen den Reitern „Zusatz → Kleidergrößen / Verwandte /
+Sonderpapiere / Telefone“ des Altsystems. Alle Angaben sind freiwillig; beim Speichern
+wird immer der ganze Formularinhalt übernommen (eine gelöschte Zeile ist danach auch
+gespeichert gelöscht).
+
+![Karten Kleidergrößen, Verwandte, Sonderpapiere und Telefone](img/vueweb/fahrer-zusatzdaten.png)
+
+**Clothing sizes (Kleidergrößen)** — drei Textfelder mit je höchstens 50 Zeichen:
+
+| Feld (Beschriftung) | Bedeutung |
+|---|---|
+| Clothing size | Kleidergröße |
+| Shoe size | Schuhgröße |
+| Glove size | Handschuhgröße |
+
+**Relatives (Verwandte)** — Liste mit bis zu 20 Zeilen; **„Add relative“** fügt eine Zeile
+hinzu, das Papierkorb-Symbol neben dem Nachnamen entfernt sie wieder:
+
+| Feld (Beschriftung) | Bedeutung | Pflichtfeld | Regeln |
+|---|---|:---:|---|
+| Last name | Nachname | ja | höchstens 100 Zeichen |
+| First name | Vorname | nein | höchstens 100 Zeichen |
+| Relationship | Verwandtschaftsverhältnis (z. B. Ehefrau) | nein | höchstens 100 Zeichen |
+| Date of birth | Geburtsdatum | nein | nicht vor 1900 |
+| Phone | Telefonnummer | nein | höchstens 50 Zeichen |
+
+**Special papers (Sonderpapiere)** — Liste mit bis zu 20 Zeilen (z. B. Gefahrengutschein,
+TÜV - Begutachtung); **„Add special paper“** fügt eine Zeile hinzu:
+
+| Feld (Beschriftung) | Bedeutung | Pflichtfeld | Regeln |
+|---|---|:---:|---|
+| Type | Art des Papiers | ja | Auswahl aus den aktiven Sonderpapier-Arten der [Fahrer-Stammdaten](#fahrer-stammdaten) (anfangs: Gefahrengutschein, Amtsarzt, TÜV - Begutachtung, B-3 - Bescheinigung, besondere Zulassung, besondere Genehmigung, Kesseldruckbescheinigung, Service - Intervall) |
+| Last inspection | Letzte Überprüfung | nein | nicht vor 1900 |
+| Valid until | Gültig bis | nein | nicht vor 1900 |
+| Comment | Kommentar | nein | höchstens 500 Zeichen |
+
+**Phone numbers (Telefone)** — Liste mit bis zu 20 Zeilen; **„Add phone number“** fügt
+eine Zeile hinzu:
+
+| Feld (Beschriftung) | Bedeutung | Pflichtfeld | Regeln |
+|---|---|:---:|---|
+| Type | Art des Anschlusses | nein | Auswahl aus den aktiven Telefontypen der [Fahrer-Stammdaten](#fahrer-stammdaten) (anfangs: Fax, Telefon, Email, Auto-Telefon, Home-Page, Privat, Notruf, Firma (DW)); „–" löscht die Auswahl |
+| Number | Telefonnummer | ja | höchstens 50 Zeichen |
+| Comment | Kommentar | nein | höchstens 200 Zeichen |
+
+- In jeder Liste gilt: eine Zeile mit leerem Pflichtfeld verhindert das Speichern; der
+  Fehler wird direkt in der betroffenen Zeile angezeigt.
+- Die Reihenfolge der Zeilen bleibt beim Speichern und erneuten Öffnen erhalten.
+
+## Fahrer-Stammdaten
+
+Erreichbar über die Schaltfläche **„Master data lists“** oben in der Fahrerliste
+(`/driver-catalog`). Hier pflegen Sie die Auswahllisten des Fahrerformulars in zwei
+Reitern: **Phone types** (Telefontypen) und **Special paper types** (Sonderpapier-Arten).
+Beim ersten Start sind die Einträge des Altsystems bereits angelegt — acht Anschlussarten
+(Fax, Telefon, Email, Auto-Telefon, Home-Page, Privat, Notruf, Firma (DW)) und acht
+Sonderpapier-Arten (Gefahrengutschein, Amtsarzt, TÜV - Begutachtung, B-3 - Bescheinigung,
+besondere Zulassung, besondere Genehmigung, Kesseldruckbescheinigung, Service - Intervall).
+**„Back to drivers“** führt zurück zur Fahrerliste.
+
+![Fahrer-Stammdaten](img/vueweb/fahrer-stammdaten.png)
+
+Die Seite funktioniert genau wie die [Fahrzeug-Stammdaten](#fahrzeug-stammdaten): alle
+angemeldeten Benutzer sehen die Liste, ändern dürfen sie nur Administratoren; Code und Name
+werden im selben Dialog erfasst, der Code ist später nicht änderbar. Die Spalte **Used by**
+zählt hier die Fahrer („2 drivers“ — jeder Fahrer nur einmal, auch mit mehreren Einträgen
+desselben Typs), und ein Eintrag, den noch ein Fahrer verwendet, lässt sich nicht
+löschen, nur deaktivieren.
 
 ## Kundenliste
 
@@ -374,7 +491,7 @@ Die Felder sind in Karten gegliedert („Company“, „Address“, „Contact�
 | Street               | Straße                             | ja          | darf nicht leer sein, höchstens 200 Zeichen           |
 | Postal code          | PLZ                                | ja          | darf nicht leer sein, höchstens 20 Zeichen            |
 | City                 | Ort                                | ja          | darf nicht leer sein, höchstens 200 Zeichen           |
-| Country              | Land                               | ja          | zwei Buchstaben nach ISO 3166-1, z. B. `AT` oder `DE` |
+| Country              | Land                               | ja          | Auswahlliste europäischer Staaten mit Flagge und Landesnamen |
 | Contact person       | Ansprechpartner                    | nein        | höchstens 200 Zeichen                                 |
 | E-mail               | E-Mail-Adresse                     | nein        | gültige E-Mail-Adresse, wenn angegeben                |
 | Phone                | Telefon                            | nein        | höchstens 50 Zeichen                                  |
@@ -395,7 +512,7 @@ ganze Karte übernommen: ein geleertes Feld ist danach auch gespeichert leer.
 
 | Feld (Beschriftung) | Bedeutung | Regeln |
 |---|---|---|
-| Secondary address: Name, Street, Postal code, City, Country | Zusatzadresse (z. B. Lager oder Rechnungsanschrift), unabhängig von der Firmenadresse | Name, Straße, Ort je höchstens 200 Zeichen, PLZ höchstens 20; Country (Staat) zwei Buchstaben nach ISO 3166-1, Kleinbuchstaben werden zu Großbuchstaben |
+| Secondary address: Name, Street, Postal code, City, Country | Zusatzadresse (z. B. Lager oder Rechnungsanschrift), unabhängig von der Firmenadresse | Name, Straße, Ort je höchstens 200 Zeichen, PLZ höchstens 20; Country (Staat) als Auswahlliste mit Flagge und Landesnamen, das Kreuz am Feld leert es |
 | Founded on | Gründungsdatum | nicht vor 1800 |
 | Number of workers | Anzahl Arbeiter | ganze Zahl von 0 bis 1.000.000; leer zählt als 0 |
 | Number of salaried employees | Anzahl Angestellte | ganze Zahl von 0 bis 1.000.000; leer zählt als 0 |
@@ -423,6 +540,12 @@ Dieser Abschnitt erscheint erst im Bearbeitungsmodus, also nachdem der Kunde ges
   eine pro Zeile mit Name · Telefon · E-Mail.
 - Felder: Bezeichnung des Anlieferorts (Pflicht), Straße, PLZ, Ort und Land (Pflicht, wie beim
   Kunden), Ansprechperson, deren Telefon und E-Mail (optional).
+- Karte **„Own company (invoice recipient)“**: optional ein eigener **Firmenname** („Own
+  company name“) und eine eigene **USt-IdNr.** („VAT ID“) des Anlieferorts. Ein Anlieferort
+  mit eigenem Firmennamen ist rechnungstechnisch eine eigene Firma: Er kann im
+  [Rechnungsformular](#rechnungsformular-erstellen) als Rechnungsempfänger gewählt werden und
+  erhält dann eine Rechnung auf seinen Namen, seine Adresse und seine USt-IdNr. Ohne eigenen
+  Firmennamen bietet die Abrechnung den Anlieferort nicht an.
 - Die Adresse eines Anlieferorts ist unabhängig von der Firmenadresse des Kunden. Im Bearbeitungsmodus zeigt eine Karte die Lage des Anlieferorts. Die Position wird aus der Adresse über einen Dienst auf dem eigenen Server bestimmt (Nominatim mit OpenStreetMap-Daten), der nur Adressen im geladenen Kartenausschnitt kennt. Ist die Adresse unbekannt, sagt ein Hinweis das ausdrücklich. Wird ein Kunde
   Kunden).
 - Karte **„Contact persons“**: **„Add contact person“** fügt eine leere Zeile mit Name
@@ -502,7 +625,7 @@ Das Formular ist in fünf Abschnitte gegliedert:
 
 | Abschnitt       | Felder                                   | Pflicht | Hinweise                                                     |
 |-----------------|------------------------------------------|:-------:|---------------------------------------------------------------|
-| Consignor       | Name, Street, Postal code, City, Country | ja      | Country ist ein zweibuchstabiger Ländercode nach ISO 3166-1, z. B. `DE`. Vorbelegt mit `DE`. |
+| Consignor       | Name, Street, Postal code, City, Country | ja      | Country ist eine Auswahlliste europäischer Staaten mit Flagge und Landesnamen. Vorbelegt mit Deutschland. |
 | Consignee       | Name, Street, Postal code, City, Country | ja      | dieselben Regeln wie beim Absender                            |
 | Cargo           | Description, Weight (kg), Load meters    | ja      | Gewicht und Lademeter müssen größer als null sein. Lademeter dürfen Dezimalstellen haben (z. B. `8.4`). |
 | Pickup window   | From, To                                 | ja      | Datum **und** Uhrzeit; „From“ muss vor „To“ liegen            |
@@ -830,6 +953,7 @@ Der Abschnitt **Rechnungsempfänger** erwartet:
 | Feld | Pflicht | Regeln |
 |---|:---:|---|
 | Kunde | ja | Auswahl aus den angelegten Kunden |
+| Rechnung an | nein | erscheint nur, wenn der gewählte Kunde Anlieferorte mit eigenem Firmennamen hat; Vorgabe „Kunde (Standardadresse)“ = Rechnung an den Kunden selbst, alternativ ein Anlieferort als „‹Firmenname› (‹Bezeichnung des Anlieferorts›)“ |
 | USt.-Satz (%) | ja | 0 bis 100, vorbelegt mit 19 |
 
 Der Abschnitt **Abrechenbare Aufträge** listet ausschließlich **zugestellte Aufträge, die noch
@@ -857,7 +981,10 @@ direkt im Rechnungsdetail geöffnet.
   (HTTP 409)“. Die Liste der abrechenbaren Aufträge neu zu laden räumt die Auswahl auf.
 
 **Wichtig zu wissen:** Beim Anlegen übernimmt die Rechnung **Name, Rechnungsadresse,
-USt-IdNr. und Zahlungsziel des Kunden als Kopie**. Spätere Änderungen am Kundenstamm wirken
+USt-IdNr. und Zahlungsziel des Kunden als Kopie**. Ist ein Anlieferort als
+**Rechnungsempfänger** gewählt, übernimmt sie stattdessen **dessen Firmennamen, dessen
+Adresse und dessen USt-IdNr.** — nur das Zahlungsziel bleibt das des Kunden, und in der
+Rechnungsliste steht die Rechnung weiter beim Kunden. Spätere Änderungen am Kundenstamm wirken
 nur auf künftige Rechnungen — eine bereits geschriebene Rechnung ist ein Dokument und ändert
 sich nicht mehr rückwirkend.
 
@@ -980,7 +1107,7 @@ neuen Adresse) erwartet:
 | Feld | Pflicht | Regeln |
 |---|:---:|---|
 | Street, Postal code, City | ja | bei einer bestehenden Adresse schreibgeschützt |
-| Country | ja | ISO-Code, z. B. `DE` oder `AT` |
+| Country | ja | Auswahlliste mit Flagge und Landesnamen; bei einer bestehenden Adresse schreibgeschützt |
 | Latitude | ja | Dezimalgrad (WGS 84), −90 bis 90 |
 | Longitude | ja | Dezimalgrad (WGS 84), −180 bis 180 |
 

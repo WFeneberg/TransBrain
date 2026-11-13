@@ -145,10 +145,10 @@ The two master-data aggregates expose the same shape of CRUD endpoint group:
 | POST   | `/api/vehicles/{id}/documents` | `MasterDataWrite` | `{documentType, lastCheckedOn, validUntil, remark}`; `400` keyed by field, `409` if the vehicle already has that type |
 | PUT    | `/api/vehicles/{id}/documents/{documentId}` | `MasterDataWrite` | Same body; `404` if not found, `409` on a duplicate type |
 | DELETE | `/api/vehicles/{id}/documents/{documentId}` | `MasterDataWrite` | `404` if not found |
-| GET    | `/api/vehicle-catalog/{kind}` | `Read`    | `kind` = `VehicleClass`, `CarrierGroup`, `InsuranceCompany` or `DocumentType`; all entries incl. inactive, with usage count |
+| GET    | `/api/vehicle-catalog/{kind}` | `Read`    | `kind` = `VehicleClass`, `CarrierGroup`, `InsuranceCompany`, `DocumentType`, `CustomerClass`, `PhoneType` or `DriverDocumentType`; all entries incl. inactive, with usage count |
 | POST   | `/api/vehicle-catalog/{kind}` | `MasterDataWrite` | `{code, name, isActive}`; `409` on a duplicate code |
 | PUT    | `/api/vehicle-catalog/{kind}/{id}` | `MasterDataWrite` | `{name, isActive}` (code is fixed); `404` if not found |
-| DELETE | `/api/vehicle-catalog/{kind}/{id}` | `MasterDataWrite` | `404` if not found, `409` while vehicles (or their documents) use the entry |
+| DELETE | `/api/vehicle-catalog/{kind}/{id}` | `MasterDataWrite` | `404` if not found, `409` while vehicles (or their documents), customers or drivers use the entry |
 | POST   | `/api/drivers`       | `MasterDataWrite` | Per-field validation errors                          |
 | GET    | `/api/drivers`       | `Read`             | Paged; filters: `page`, `pageSize`, `status`         |
 | GET    | `/api/drivers/{id}`  | `Read`             | `404` if not found                                   |

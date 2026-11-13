@@ -8,6 +8,7 @@ using TransBrain.Application.Features.VehicleCatalog.UpdateVehicleCatalogEntry;
 using TransBrain.Application.Tests.Fakes;
 using TransBrain.Domain.Common;
 using TransBrain.Domain.Customers;
+using TransBrain.Domain.Drivers;
 using TransBrain.Domain.Vehicles;
 
 namespace TransBrain.Application.Tests.Features.VehicleCatalog;
@@ -236,6 +237,53 @@ public class VehicleCatalogHandlerTests
 
         result.Error!.Code.Should().Be("VehicleCatalog.InUse");
         result.Error.Message.Should().Contain("1 customer(s)");
+        catalog.Entries.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Delete_PhoneTypeInUse_ReturnsConflictCountingDriversOnce()
+    {
+        InMemoryDriverRepository drivers = new();
+        drivers.Seed(Driver.Create(
+            "Frank", "Fahrer", [LicenseClass.C], new DateOnly(2028, 1, 1), null,
+            phoneNumbers:
+            [
+                DriverPhoneNumber.Create("+43 1 1", "Private").Value,
+                DriverPhoneNumber.Create("+43 1 2", "Private").Value,
+            ]).Value);
+        InMemoryVehicleCatalogRepository catalog = new(drivers: drivers);
+        VehicleCatalogEntry phoneType = catalog.Seed(VehicleCatalogKind.PhoneType, "Private", "Privat");
+
+        Result<Unit> result = await new DeleteVehicleCatalogEntryCommandHandler(catalog).Handle(
+            new DeleteVehicleCatalogEntryCommand(VehicleCatalogKind.PhoneType, phoneType.Id),
+            CancellationToken.None);
+
+        result.Error!.Code.Should().Be("VehicleCatalog.InUse");
+        result.Error.Message.Should().Contain("1 driver(s)");
+        catalog.Entries.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Delete_DriverDocumentTypeInUse_ReturnsConflictCountingDriversOnce()
+    {
+        InMemoryDriverRepository drivers = new();
+        drivers.Seed(Driver.Create(
+            "Frank", "Fahrer", [LicenseClass.C], new DateOnly(2028, 1, 1), null,
+            specialDocuments:
+            [
+                DriverSpecialDocument.Create("TuvAssessment").Value,
+                DriverSpecialDocument.Create("TuvAssessment", new DateOnly(2024, 5, 2)).Value,
+            ]).Value);
+        InMemoryVehicleCatalogRepository catalog = new(drivers: drivers);
+        VehicleCatalogEntry docType = catalog.Seed(
+            VehicleCatalogKind.DriverDocumentType, "TuvAssessment", "TÜV - Begutachtung");
+
+        Result<Unit> result = await new DeleteVehicleCatalogEntryCommandHandler(catalog).Handle(
+            new DeleteVehicleCatalogEntryCommand(VehicleCatalogKind.DriverDocumentType, docType.Id),
+            CancellationToken.None);
+
+        result.Error!.Code.Should().Be("VehicleCatalog.InUse");
+        result.Error.Message.Should().Contain("1 driver(s)");
         catalog.Entries.Should().ContainSingle();
     }
 

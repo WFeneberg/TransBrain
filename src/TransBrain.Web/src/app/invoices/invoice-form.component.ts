@@ -13,6 +13,7 @@ import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { forkJoin, switchMap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
+import { CustomerLocation, CustomerLocationService } from '../customers/customer-location.service';
 import { Customer, CustomerService } from '../customers/customer.service';
 import { I18nService } from '../i18n/i18n.service';
 import { Order } from '../orders/order.service';
@@ -95,6 +96,30 @@ const LINE_COLUMNS = ['select', 'orderNumber', 'route', 'cargo', 'netAmount', 'd
                                     }}</mat-error>
                                 }
                             </mat-form-field>
+                            @if (billableLocations().length > 0) {
+                                <mat-form-field>
+                                    <mat-label>{{ i18n.t('invoices.billTo') }}</mat-label>
+                                    <mat-select
+                                        formControlName="billToLocationId"
+                                        data-testid="invoice-billTo"
+                                    >
+                                        <mat-option [value]="''">{{
+                                            i18n.t('invoices.billToCustomer')
+                                        }}</mat-option>
+                                        @for (
+                                            location of billableLocations();
+                                            track location.id
+                                        ) {
+                                            <mat-option [value]="location.id"
+                                                >{{ location.companyName }} ({{
+                                                    location.name
+                                                }})</mat-option
+                                            >
+                                        }
+                                    </mat-select>
+                                    <mat-hint>{{ i18n.t('invoices.billToHint') }}</mat-hint>
+                                </mat-form-field>
+                            }
                             <mat-form-field>
                                 <mat-label>{{ i18n.t('invoices.vatRate') }}</mat-label>
                                 <input
@@ -257,6 +282,7 @@ const LINE_COLUMNS = ['select', 'orderNumber', 'route', 'cargo', 'netAmount', 'd
 export class InvoiceFormComponent {
     private readonly service = inject(InvoiceService);
     private readonly customerService = inject(CustomerService);
+    private readonly locationService = inject(CustomerLocationService);
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
     // See TourFormComponent: session.ready guarantees the rehydrated session before the first
@@ -268,6 +294,8 @@ export class InvoiceFormComponent {
     protected readonly customers = signal<Customer[]>([]);
     protected readonly lines = signal<LineDraft[]>([]);
     protected readonly formError = signal<string | null>(null);
+    /** Locations of the chosen customer that have their own company name, i.e. can be billed. */
+    protected readonly billableLocations = signal<CustomerLocation[]>([]);
 
     protected readonly selectedNetTotal = computed(() =>
         this.lines()
@@ -277,6 +305,7 @@ export class InvoiceFormComponent {
 
     protected readonly form = this.fb.nonNullable.group({
         customerId: ['', Validators.required],
+        billToLocationId: [''],
         vatRatePercent: [19, [Validators.required, Validators.min(0), Validators.max(100)]],
     });
 
@@ -307,6 +336,22 @@ export class InvoiceFormComponent {
                         this.describeFailure(error, this.i18n.t('invoices.error.loadBillable')),
                     ),
             });
+
+        // A changed customer invalidates the recipient choice: reload the eligible locations
+        // and fall back to billing the customer itself.
+        this.form.controls.customerId.valueChanges.subscribe((customerId) => {
+            this.form.controls.billToLocationId.setValue('');
+            this.billableLocations.set([]);
+            if (customerId) {
+                this.locationService.list(customerId).subscribe({
+                    next: (locations) =>
+                        this.billableLocations.set(
+                            locations.filter((location) => location.companyName !== null),
+                        ),
+                    error: () => this.billableLocations.set([]),
+                });
+            }
+        });
     }
 
     protected toggle(orderId: string, selected: boolean): void {
@@ -355,6 +400,7 @@ export class InvoiceFormComponent {
                 customerId: value.customerId,
                 vatRatePercent: Number(value.vatRatePercent),
                 lines,
+                billToLocationId: value.billToLocationId || null,
             })
             .subscribe({
                 next: (invoice) => void this.router.navigate(['/invoices', invoice.id]),

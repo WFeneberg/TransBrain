@@ -4,7 +4,8 @@ namespace TransBrain.Domain.Customers;
 
 /// <summary>
 /// A place a customer delivers to, with its own address and contact persons. A customer can have
-/// many of these; each one is independent of the customer's registered address.
+/// many of these; each one is independent of the customer's registered address. A location with
+/// its own company name is a distinct legal recipient and can receive its own invoices.
 /// </summary>
 public sealed class CustomerLocation
 {
@@ -19,12 +20,15 @@ public sealed class CustomerLocation
         Address = null!;
     }
 
-    private CustomerLocation(Guid id, Guid customerId, string name, Address address)
+    private CustomerLocation(
+        Guid id, Guid customerId, string name, Address address, string? companyName, string? vatId)
     {
         Id = id;
         CustomerId = customerId;
         Name = name;
         Address = address;
+        CompanyName = companyName;
+        VatId = vatId;
     }
 
     public Guid Id { get; private set; }
@@ -35,6 +39,15 @@ public sealed class CustomerLocation
 
     public Address Address { get; private set; }
 
+    /// <summary>
+    /// The location's own company name, if it is a distinct legal entity. A location with a
+    /// company name can be billed directly instead of its customer.
+    /// </summary>
+    public string? CompanyName { get; private set; }
+
+    /// <summary>The location's own VAT identification number (Umsatzsteuer-Identnummer).</summary>
+    public string? VatId { get; private set; }
+
     /// <summary>The contact persons in the order they were entered.</summary>
     public IReadOnlyList<CustomerLocationContact> Contacts => _contacts.OrderBy(c => c.Sequence).ToList();
 
@@ -42,7 +55,9 @@ public sealed class CustomerLocation
         Guid customerId,
         string name,
         Address address,
-        IReadOnlyList<CustomerLocationContact> contacts)
+        IReadOnlyList<CustomerLocationContact> contacts,
+        string? companyName = null,
+        string? vatId = null)
     {
         Result<Unit> validation = Validate(name, contacts);
         if (!validation.IsSuccess)
@@ -50,7 +65,13 @@ public sealed class CustomerLocation
             return validation.Error!;
         }
 
-        var location = new CustomerLocation(Guid.CreateVersion7(), customerId, name.Trim(), address);
+        var location = new CustomerLocation(
+            Guid.CreateVersion7(),
+            customerId,
+            name.Trim(),
+            address,
+            OptionalText.Normalize(companyName),
+            OptionalText.Normalize(vatId));
         location.ReplaceContacts(contacts);
         return location;
     }
@@ -58,7 +79,9 @@ public sealed class CustomerLocation
     public Result<CustomerLocation> Update(
         string name,
         Address address,
-        IReadOnlyList<CustomerLocationContact> contacts)
+        IReadOnlyList<CustomerLocationContact> contacts,
+        string? companyName = null,
+        string? vatId = null)
     {
         Result<Unit> validation = Validate(name, contacts);
         if (!validation.IsSuccess)
@@ -68,6 +91,8 @@ public sealed class CustomerLocation
 
         Name = name.Trim();
         Address = address;
+        CompanyName = OptionalText.Normalize(companyName);
+        VatId = OptionalText.Normalize(vatId);
         ReplaceContacts(contacts);
 
         return this;

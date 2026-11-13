@@ -16,8 +16,16 @@ export const VEHICLE_CATALOG_KINDS = [
  */
 export const CUSTOMER_CATALOG_KINDS = ['CustomerClass'] as const;
 
+/**
+ * The kinds behind the driver form, shown on '/driver-catalog'. Like the customer classes they
+ * live in the shared catalog of the API.
+ */
+export const DRIVER_CATALOG_KINDS = ['PhoneType', 'DriverDocumentType'] as const;
+
 export type VehicleCatalogKind =
-    (typeof VEHICLE_CATALOG_KINDS)[number] | (typeof CUSTOMER_CATALOG_KINDS)[number];
+    | (typeof VEHICLE_CATALOG_KINDS)[number]
+    | (typeof CUSTOMER_CATALOG_KINDS)[number]
+    | (typeof DRIVER_CATALOG_KINDS)[number];
 
 export interface VehicleCatalogEntry {
     id: string;
@@ -28,7 +36,7 @@ export interface VehicleCatalogEntry {
     name: string;
     /** Inactive entries stay valid where already used, but are not offered for new selection. */
     isActive: boolean;
-    /** Number of vehicles - for 'CustomerClass' customers - using the entry. */
+    /** Number of vehicles - for 'CustomerClass' customers, for the driver kinds drivers - using the entry. */
     usageCount: number;
 }
 
@@ -113,7 +121,7 @@ export class VehicleCatalogService {
         return this.http.put<VehicleCatalogEntry>(`/api/vehicle-catalog/${kind}/${id}`, request);
     }
 
-    /** Answers 409 while any vehicle (or customer) still uses the entry. */
+    /** Answers 409 while any vehicle (or customer, or driver) still uses the entry. */
     remove(kind: VehicleCatalogKind, id: string): Observable<void> {
         return this.http.delete<void>(`/api/vehicle-catalog/${kind}/${id}`);
     }

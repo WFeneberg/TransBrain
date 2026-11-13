@@ -63,6 +63,43 @@ public class CustomerLocationTests
     }
 
     [Fact]
+    public void Create_OwnCompanyNameAndVatId_NormalizesBothTrimmed()
+    {
+        Result<CustomerLocation> result = CustomerLocation.Create(
+            Guid.CreateVersion7(), "Lager Süd", SampleAddress(), [],
+            companyName: " Lager Süd Logistik GmbH ", vatId: " ATU99999999 ");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.CompanyName.Should().Be("Lager Süd Logistik GmbH");
+        result.Value.VatId.Should().Be("ATU99999999");
+    }
+
+    [Fact]
+    public void Create_BlankCompanyNameAndVatId_NormalizesToNull()
+    {
+        Result<CustomerLocation> result = CustomerLocation.Create(
+            Guid.CreateVersion7(), "Lager Süd", SampleAddress(), [], companyName: "  ", vatId: "");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.CompanyName.Should().BeNull();
+        result.Value.VatId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Update_OmittingCompanyNameAndVatId_ClearsThem()
+    {
+        CustomerLocation location = CustomerLocation.Create(
+            Guid.CreateVersion7(), "Lager Süd", SampleAddress(), [],
+            companyName: "Lager Süd Logistik GmbH", vatId: "ATU99999999").Value;
+
+        Result<CustomerLocation> result = location.Update("Lager Süd", SampleAddress(), []);
+
+        result.IsSuccess.Should().BeTrue();
+        location.CompanyName.Should().BeNull();
+        location.VatId.Should().BeNull();
+    }
+
+    [Fact]
     public void Update_ValidArguments_ReplacesContactsAndAddress()
     {
         CustomerLocation location = CustomerLocation.Create(

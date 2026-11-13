@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { I18nService } from '../i18n/i18n.service';
+import { CountrySelectComponent } from '../shared/country-select.component';
 import { GeodataEntry, GeodataOverride, GeodataService } from './geodata.service';
 
 export interface GeodataDialogData {
@@ -34,6 +35,7 @@ interface ProblemDetailsBody {
         MatFormFieldModule,
         MatIconModule,
         MatInputModule,
+        CountrySelectComponent,
     ],
     template: `
         <form [formGroup]="form" (ngSubmit)="save()" data-testid="geodata-dialog">
@@ -41,7 +43,9 @@ interface ProblemDetailsBody {
                 <mat-icon class="title-icon" aria-hidden="true">{{
                     isEditMode ? 'edit_location_alt' : 'add_location_alt'
                 }}</mat-icon>
-                <span>{{ isEditMode ? i18n.t('geodata.editTitle') : i18n.t('geodata.newTitle') }}</span>
+                <span>{{
+                    isEditMode ? i18n.t('geodata.editTitle') : i18n.t('geodata.newTitle')
+                }}</span>
             </h2>
             <mat-dialog-content class="content">
                 @if (dialogError(); as message) {
@@ -87,18 +91,12 @@ interface ProblemDetailsBody {
                     </mat-form-field>
                 </div>
 
-                <mat-form-field class="country">
-                    <mat-label>{{ i18n.t('common.country') }}</mat-label>
-                    <input
-                        matInput
-                        formControlName="country"
-                        maxlength="2"
-                        autocomplete="off"
-                        data-testid="geodata-country"
-                        [readonly]="isEditMode"
-                    />
-                    <mat-hint>{{ i18n.t('geodata.countryHint') }}</mat-hint>
-                </mat-form-field>
+                <app-country-select
+                    class="country"
+                    [control]="form.controls.country"
+                    [label]="i18n.t('common.country')"
+                    testid="geodata-country"
+                />
 
                 <div class="row">
                     <mat-form-field>
@@ -138,7 +136,12 @@ interface ProblemDetailsBody {
                 <p class="hint">{{ i18n.t('geodata.coordinatesHint') }}</p>
             </mat-dialog-content>
             <mat-dialog-actions align="end">
-                <button mat-button type="button" data-testid="geodata-cancel" [mat-dialog-close]="undefined">
+                <button
+                    mat-button
+                    type="button"
+                    data-testid="geodata-cancel"
+                    [mat-dialog-close]="undefined"
+                >
                     {{ i18n.t('common.cancel') }}
                 </button>
                 <button
@@ -188,7 +191,7 @@ interface ProblemDetailsBody {
             }
 
             .country {
-                width: 140px;
+                width: 240px;
             }
 
             .hint {
@@ -224,12 +227,12 @@ export class GeodataDialogComponent {
 
     protected readonly form = this.formBuilder.nonNullable.group({
         street: [this.data.entry?.street ?? '', [Validators.required, Validators.maxLength(200)]],
-        postalCode: [this.data.entry?.postalCode ?? '', [Validators.required, Validators.maxLength(20)]],
-        city: [this.data.entry?.city ?? '', [Validators.required, Validators.maxLength(200)]],
-        country: [
-            this.data.entry?.country ?? '',
-            [Validators.required, Validators.minLength(2), Validators.maxLength(2)],
+        postalCode: [
+            this.data.entry?.postalCode ?? '',
+            [Validators.required, Validators.maxLength(20)],
         ],
+        city: [this.data.entry?.city ?? '', [Validators.required, Validators.maxLength(200)]],
+        country: [this.data.entry?.country ?? '', Validators.required],
         latitude: [
             this.data.entry?.latitude ?? (null as number | null),
             [Validators.required, Validators.min(-90), Validators.max(90)],
@@ -239,6 +242,13 @@ export class GeodataDialogComponent {
             [Validators.required, Validators.min(-180), Validators.max(180)],
         ],
     });
+
+    constructor() {
+        if (this.isEditMode) {
+            // The address identifies the override and must stay fixed; getRawValue() still submits it.
+            this.form.controls.country.disable();
+        }
+    }
 
     protected save(): void {
         if (this.form.invalid) {
@@ -270,7 +280,10 @@ export class GeodataDialogComponent {
         const problem = error.error as ProblemDetailsBody | null;
         const fieldErrors = problem?.errors ? Object.values(problem.errors).flat() : [];
         const sentence =
-            fieldErrors[0] ?? problem?.detail ?? problem?.title ?? this.i18n.t('geodata.error.save');
+            fieldErrors[0] ??
+            problem?.detail ??
+            problem?.title ??
+            this.i18n.t('geodata.error.save');
         return `${sentence} (HTTP ${error.status})`;
     }
 }

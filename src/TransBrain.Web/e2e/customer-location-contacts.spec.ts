@@ -4,18 +4,31 @@ import { signIn } from './login';
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 function randomSuffix(length: number): string {
-    return Array.from({ length }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join('');
+    return Array.from({ length }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join(
+        '',
+    );
 }
 
 function contactRow(page: Page, index: number): Locator {
     return page.getByTestId('location-contact-row').nth(index);
 }
 
-async function fillContact(page: Page, index: number, name: string, phone: string, email: string): Promise<void> {
+async function fillContact(
+    page: Page,
+    index: number,
+    name: string,
+    phone: string,
+    email: string,
+): Promise<void> {
     const row = contactRow(page, index);
     await row.getByTestId('location-contact-name').fill(name);
     await row.getByTestId('location-contact-phone').fill(phone);
     await row.getByTestId('location-contact-email').fill(email);
+}
+
+async function chooseOption(page: Page, testId: string, name: string): Promise<void> {
+    await page.getByTestId(testId).click();
+    await page.getByRole('option', { name, exact: true }).click();
 }
 
 async function createCustomer(page: Page, name: string): Promise<void> {
@@ -27,7 +40,7 @@ async function createCustomer(page: Page, name: string): Promise<void> {
     await page.getByTestId('customer-street').fill('Hauptstraße 1');
     await page.getByTestId('customer-postalCode').fill('6600');
     await page.getByTestId('customer-city').fill('Reutte');
-    await page.getByTestId('customer-country').fill('AT');
+    await chooseOption(page, 'customer-country', 'Austria');
     await page.getByTestId('customer-save').click();
     await expect(page.getByRole('heading', { name: 'Customers', exact: true })).toBeVisible();
 }
@@ -49,7 +62,9 @@ async function deleteCustomer(page: Page, name: string): Promise<void> {
     await expect(page.locator('tr').filter({ hasText: name })).toHaveCount(0);
 }
 
-test('adminUser_recordsSeveralContactPersonsPerDeliveryLocation_andReplacesThemOnEdit', async ({ page }) => {
+test('adminUser_recordsSeveralContactPersonsPerDeliveryLocation_andReplacesThemOnEdit', async ({
+    page,
+}) => {
     await signIn(page, 'admin');
     const customerName = `E2E Kunde ${randomSuffix(6)}`;
     const locationName = `Lager ${randomSuffix(4)}`;
@@ -64,7 +79,7 @@ test('adminUser_recordsSeveralContactPersonsPerDeliveryLocation_andReplacesThemO
     await page.getByTestId('location-street').fill('Südbahnstraße 5');
     await page.getByTestId('location-postalCode').fill('1100');
     await page.getByTestId('location-city').fill('Wien');
-    await page.getByTestId('location-country').fill('AT');
+    await chooseOption(page, 'location-country', 'Austria');
     await expect(page.getByTestId('location-contacts-empty')).toBeVisible();
     await page.getByTestId('location-contact-add').click();
     await page.getByTestId('location-contact-add').click();
@@ -83,10 +98,18 @@ test('adminUser_recordsSeveralContactPersonsPerDeliveryLocation_andReplacesThemO
     await locationRow.getByTestId('location-edit').click();
     await expect(page.getByRole('heading', { name: 'Edit delivery location' })).toBeVisible();
     await expect(page.getByTestId('location-contact-row')).toHaveCount(2);
-    await expect(contactRow(page, 0).getByTestId('location-contact-name')).toHaveValue('Hans Huber');
-    await expect(contactRow(page, 0).getByTestId('location-contact-phone')).toHaveValue('+43 1 111');
-    await expect(contactRow(page, 1).getByTestId('location-contact-name')).toHaveValue('Eva Berger');
-    await expect(contactRow(page, 1).getByTestId('location-contact-email')).toHaveValue('e.berger@muster.at');
+    await expect(contactRow(page, 0).getByTestId('location-contact-name')).toHaveValue(
+        'Hans Huber',
+    );
+    await expect(contactRow(page, 0).getByTestId('location-contact-phone')).toHaveValue(
+        '+43 1 111',
+    );
+    await expect(contactRow(page, 1).getByTestId('location-contact-name')).toHaveValue(
+        'Eva Berger',
+    );
+    await expect(contactRow(page, 1).getByTestId('location-contact-email')).toHaveValue(
+        'e.berger@muster.at',
+    );
     await contactRow(page, 0).getByTestId('location-contact-remove').click();
     await expect(page.getByTestId('location-contact-row')).toHaveCount(1);
     await page.getByTestId('location-contact-add').click();
@@ -114,7 +137,7 @@ test('contactPersonWithoutName_showsTheRowError', async ({ page }) => {
     await page.getByTestId('location-street').fill('Südbahnstraße 5');
     await page.getByTestId('location-postalCode').fill('1100');
     await page.getByTestId('location-city').fill('Wien');
-    await page.getByTestId('location-country').fill('AT');
+    await chooseOption(page, 'location-country', 'Austria');
     await page.getByTestId('location-contact-add').click();
     await fillContact(page, 0, '', '+43 1 111', 'keine-mail');
     await page.getByTestId('location-save').click();

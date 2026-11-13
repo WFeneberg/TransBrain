@@ -18,7 +18,7 @@ async function fillAddress(page: Page, party: 'consignor' | 'consignee', name: s
     await page.getByTestId(`order-${party}-street`).fill('Hauptstr. 1');
     await page.getByTestId(`order-${party}-postalCode`).fill('80331');
     await page.getByTestId(`order-${party}-city`).fill('München');
-    await page.getByTestId(`order-${party}-country`).fill('DE');
+    await chooseOption(page, `order-${party}-country`, 'Germany');
 }
 
 test('dispatcher_createEditAndCancelOrder_throughTheUi', async ({ page }) => {

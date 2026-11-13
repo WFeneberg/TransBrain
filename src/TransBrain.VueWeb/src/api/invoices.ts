@@ -17,6 +17,7 @@ export interface Invoice {
     customerName: string;
     billingAddress: AddressPayload;
     customerVatId: string | null;
+    billToLocationId: string | null;
     paymentTermDays: number;
     vatRatePercent: number;
     status: string;
@@ -40,6 +41,7 @@ export interface CreateInvoiceRequest {
     customerId: string;
     vatRatePercent: number;
     lines: InvoiceLinePayload[];
+    billToLocationId?: string | null;
 }
 
 const client = axios.create({ baseURL: '/api' });

@@ -24,7 +24,7 @@ public class CustomerLocationHandlerTests
 
     private static AddCustomerLocationCommand AddCommand(Guid customerId, string name = "Lager Süd") => new(
         customerId, name, "Südbahnstraße 5", "1100", "Wien", "AT",
-        [new CustomerLocationContactData("Hans Huber", Email: "h.huber@muster.at"), new CustomerLocationContactData("Eva Berger", "+43 1 222")]);
+        Contacts: [new CustomerLocationContactData("Hans Huber", Email: "h.huber@muster.at"), new CustomerLocationContactData("Eva Berger", "+43 1 222")]);
 
     [Fact]
     public async Task Add_KnownCustomer_PersistsLocationForThatCustomer()
@@ -78,6 +78,43 @@ public class CustomerLocationHandlerTests
     }
 
     [Fact]
+    public async Task Add_WithOwnCompanyNameAndVatId_PersistsBoth()
+    {
+        InMemoryCustomerRepository repository = new();
+        Customer customer = SeedCustomer(repository);
+        AddCustomerLocationCommandHandler handler = new(repository);
+
+        Result<CustomerLocationResponse> result = await handler.Handle(
+            AddCommand(customer.Id) with { CompanyName = " Lager Süd Logistik GmbH ", VatId = " ATU99999999 " },
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.CompanyName.Should().Be("Lager Süd Logistik GmbH");
+        result.Value.VatId.Should().Be("ATU99999999");
+    }
+
+    [Fact]
+    public async Task Update_ClearingCompanyNameAndVatId_RemovesBoth()
+    {
+        InMemoryCustomerRepository repository = new();
+        Customer customer = SeedCustomer(repository);
+        CustomerLocation location = CustomerLocation.Create(
+            customer.Id, "Lager Süd", Address.Create("Lager Süd", "S 5", "1100", "Wien", "AT").Value, [],
+            companyName: "Lager Süd Logistik GmbH", vatId: "ATU99999999").Value;
+        repository.SeedLocations(location);
+        UpdateCustomerLocationCommandHandler handler = new(repository);
+
+        Result<CustomerLocationResponse> result = await handler.Handle(
+            new UpdateCustomerLocationCommand(
+                customer.Id, location.Id, "Lager Süd", "S 5", "1100", "Wien", "AT", CompanyName: null, VatId: " "),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.CompanyName.Should().BeNull();
+        result.Value.VatId.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Update_UnknownLocation_ReturnsNotFound()
     {
         InMemoryCustomerRepository repository = new();
@@ -107,7 +144,7 @@ public class CustomerLocationHandlerTests
         Result<CustomerLocationResponse> result = await handler.Handle(
             new UpdateCustomerLocationCommand(
                 customer.Id, location.Id, "Lager Süd", "S 5", "1100", "Wien", "AT",
-                [new CustomerLocationContactData("Neu", "+43 1 333"), new CustomerLocationContactData("Zweit")]),
+                Contacts: [new CustomerLocationContactData("Neu", "+43 1 333"), new CustomerLocationContactData("Zweit")]),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import axios from 'axios';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { listCustomerLocations, type CustomerLocation } from '../api/customerLocations';
 import { listCustomers, type Customer } from '../api/customers';
 import { createInvoice, listBillableOrders, type InvoiceLinePayload } from '../api/invoices';
 import type { Order } from '../api/orders';
@@ -25,6 +26,8 @@ const router = useRouter();
 const customers = ref<Customer[]>([]);
 const lines = ref<LineDraft[]>([]);
 const customerId = ref<string | null>(null);
+const billToLocationId = ref<string>('');
+const billableLocations = ref<CustomerLocation[]>([]);
 const vatRatePercent = ref('19');
 const formError = ref<string | null>(null);
 const saving = ref(false);
@@ -41,6 +44,29 @@ const headers = computed(() => [
 const customerOptions = computed(() =>
     customers.value.map((customer) => ({ title: customer.name, value: customer.id })),
 );
+
+// '' bills the customer itself; only locations with their own company name qualify as recipients.
+const billToOptions = computed(() => [
+    { title: t('invoices.billToCustomer'), value: '' },
+    ...billableLocations.value.map((location) => ({
+        title: `${location.companyName} (${location.name})`,
+        value: location.id,
+    })),
+]);
+
+watch(customerId, async (id) => {
+    billToLocationId.value = '';
+    billableLocations.value = [];
+    if (!id) {
+        return;
+    }
+    try {
+        const locations = await listCustomerLocations(id);
+        billableLocations.value = locations.filter((location) => location.companyName !== null);
+    } catch {
+        // The picker is optional; a load failure must not block invoicing the customer.
+    }
+});
 
 const selectedNetTotal = computed(() =>
     lines.value
@@ -103,6 +129,7 @@ async function save(): Promise<void> {
             customerId: customerId.value,
             vatRatePercent: vatRate,
             lines: payload,
+            billToLocationId: billToLocationId.value || null,
         });
         await router.push(`/invoices/${invoice.id}`);
     } catch (error) {
@@ -152,6 +179,18 @@ function describe(error: unknown, fallback: string): string {
                                 variant="outlined"
                                 density="compact"
                                 data-testid="invoice-customerId"
+                            />
+                        </v-col>
+                        <v-col v-if="billableLocations.length > 0" cols="12" md="6">
+                            <v-select
+                                v-model="billToLocationId"
+                                :label="t('invoices.billToLocation')"
+                                :items="billToOptions"
+                                :hint="t('invoices.billToHint')"
+                                persistent-hint
+                                variant="outlined"
+                                density="compact"
+                                data-testid="invoice-billTo"
                             />
                         </v-col>
                         <v-col cols="12" sm="6" md="3">

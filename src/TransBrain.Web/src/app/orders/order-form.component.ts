@@ -10,6 +10,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { SessionService } from '../auth/session.service';
 import { I18nService } from '../i18n/i18n.service';
 import { LocationMapComponent, MapMarker } from '../shared/location-map.component';
+import { CountrySelectComponent } from '../shared/country-select.component';
 import { Observable, switchMap } from 'rxjs';
 import {
     LocatedParty,
@@ -41,6 +42,7 @@ interface ProblemDetailsBody {
         MatIconModule,
         MatInputModule,
         LocationMapComponent,
+        CountrySelectComponent,
     ],
     styleUrl: '../shared/page-layout.scss',
     template: `
@@ -66,25 +68,33 @@ interface ProblemDetailsBody {
                         </mat-card-header>
                         <mat-card-content class="fields" formGroupName="consignor">
                             @for (field of addressFields; track field.name) {
-                                <mat-form-field [class.span-2]="field.name === 'name'">
-                                    <mat-label>{{ i18n.t(field.label) }}</mat-label>
-                                    <input
-                                        matInput
-                                        [formControlName]="field.name"
-                                        [attr.data-testid]="'order-consignor-' + field.name"
+                                @if (field.name === 'country') {
+                                    <app-country-select
+                                        [control]="form.controls.consignor.controls.country"
+                                        [label]="i18n.t(field.label)"
+                                        testid="order-consignor-country"
                                     />
-                                    @if (
-                                        form.controls.consignor.controls[field.name].errors;
-                                        as errors
-                                    ) {
-                                        <mat-error
-                                            [attr.data-testid]="
-                                                'order-consignor-' + field.name + '-error'
-                                            "
-                                            >{{ fieldErrorText(errors) }}</mat-error
-                                        >
-                                    }
-                                </mat-form-field>
+                                } @else {
+                                    <mat-form-field [class.span-2]="field.name === 'name'">
+                                        <mat-label>{{ i18n.t(field.label) }}</mat-label>
+                                        <input
+                                            matInput
+                                            [formControlName]="field.name"
+                                            [attr.data-testid]="'order-consignor-' + field.name"
+                                        />
+                                        @if (
+                                            form.controls.consignor.controls[field.name].errors;
+                                            as errors
+                                        ) {
+                                            <mat-error
+                                                [attr.data-testid]="
+                                                    'order-consignor-' + field.name + '-error'
+                                                "
+                                                >{{ fieldErrorText(errors) }}</mat-error
+                                            >
+                                        }
+                                    </mat-form-field>
+                                }
                             }
                         </mat-card-content>
                     </mat-card>
@@ -122,25 +132,33 @@ interface ProblemDetailsBody {
                         </mat-card-content>
                         <mat-card-content class="fields" formGroupName="consignee">
                             @for (field of addressFields; track field.name) {
-                                <mat-form-field [class.span-2]="field.name === 'name'">
-                                    <mat-label>{{ i18n.t(field.label) }}</mat-label>
-                                    <input
-                                        matInput
-                                        [formControlName]="field.name"
-                                        [attr.data-testid]="'order-consignee-' + field.name"
+                                @if (field.name === 'country') {
+                                    <app-country-select
+                                        [control]="form.controls.consignee.controls.country"
+                                        [label]="i18n.t(field.label)"
+                                        testid="order-consignee-country"
                                     />
-                                    @if (
-                                        form.controls.consignee.controls[field.name].errors;
-                                        as errors
-                                    ) {
-                                        <mat-error
-                                            [attr.data-testid]="
-                                                'order-consignee-' + field.name + '-error'
-                                            "
-                                            >{{ fieldErrorText(errors) }}</mat-error
-                                        >
-                                    }
-                                </mat-form-field>
+                                } @else {
+                                    <mat-form-field [class.span-2]="field.name === 'name'">
+                                        <mat-label>{{ i18n.t(field.label) }}</mat-label>
+                                        <input
+                                            matInput
+                                            [formControlName]="field.name"
+                                            [attr.data-testid]="'order-consignee-' + field.name"
+                                        />
+                                        @if (
+                                            form.controls.consignee.controls[field.name].errors;
+                                            as errors
+                                        ) {
+                                            <mat-error
+                                                [attr.data-testid]="
+                                                    'order-consignee-' + field.name + '-error'
+                                                "
+                                                >{{ fieldErrorText(errors) }}</mat-error
+                                            >
+                                        }
+                                    </mat-form-field>
+                                }
                             }
                         </mat-card-content>
                     </mat-card>

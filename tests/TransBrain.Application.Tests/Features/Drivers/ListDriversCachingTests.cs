@@ -59,7 +59,8 @@ public class ListDriversCachingTests
         InMemoryDriverRepository repository = new();
         InMemoryCacheService cache = new();
         ListDriversQueryHandler list = new(repository, cache);
-        CreateDriverCommandHandler create = new(repository, cache);
+        CreateDriverCommandHandler create = new(
+            repository, InMemoryVehicleCatalogRepository.WithStandardEntries(), cache);
 
         await list.Handle(new ListDriversQuery(), CancellationToken.None);
         await create.Handle(

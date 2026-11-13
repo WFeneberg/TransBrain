@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using AwesomeAssertions;
 using TransBrain.Application.Common.Pagination;
 using TransBrain.Application.Features.Customers;
+using TransBrain.Application.Features.Customers.CustomerLocations;
 using TransBrain.Application.Features.Drivers;
 using TransBrain.Application.Features.Invoices;
 using TransBrain.Application.Features.Orders;
@@ -173,6 +174,71 @@ public class InvoiceEndpointsTests(TransBrainApiFactory factory) : IClassFixture
         HttpResponseMessage list = await factory.CreateClientAs("viewer").GetAsync("/api/invoices?pageSize=100");
         PagedResult<InvoiceResponse>? page = await list.Content.ReadFromJsonAsync<PagedResult<InvoiceResponse>>();
         page!.Items.Should().Contain(i => i.Id == invoice.Id);
+    }
+
+    [Fact]
+    public async Task PostInvoice_BilledToALocationWithOwnCompanyName_UsesTheLocationAsRecipient()
+    {
+        CustomerResponse customer = await CreateCustomerAsync("Konzern Mutter GmbH");
+        OrderResponse order = await CreateDeliveredOrderAsync("Werkslieferung GmbH");
+
+        HttpResponseMessage locationResponse = await factory.CreateClientAs("admin")
+            .PostAsJsonAsync($"/api/customers/{customer.Id}/locations", new
+            {
+                name = "Werk Berlin",
+                street = "Bahnhofstr. 2",
+                postalCode = "10115",
+                city = "Berlin",
+                country = "DE",
+                companyName = "Werk Berlin GmbH",
+                vatId = "DE987654321"
+            });
+        locationResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        Guid locationId = (await locationResponse.Content.ReadFromJsonAsync<CustomerLocationResponse>())!.Id;
+
+        HttpResponseMessage response = await factory.CreateClientAs("disponent").PostAsJsonAsync("/api/invoices", new
+        {
+            customerId = customer.Id,
+            vatRatePercent = 19m,
+            lines = new[] { new { orderId = order.Id, netAmount = 500m, description = (string?)null } },
+            billToLocationId = locationId
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        InvoiceResponse invoice = (await response.Content.ReadFromJsonAsync<InvoiceResponse>())!;
+        invoice.BillToLocationId.Should().Be(locationId);
+        invoice.CustomerName.Should().Be("Werk Berlin GmbH");
+        invoice.BillingAddress.City.Should().Be("Berlin");
+        invoice.CustomerVatId.Should().Be("DE987654321");
+        invoice.CustomerId.Should().Be(customer.Id);
+    }
+
+    [Fact]
+    public async Task PostInvoice_BilledToALocationWithoutCompanyName_ReturnsConflict()
+    {
+        CustomerResponse customer = await CreateCustomerAsync("Nur Lieferort GmbH");
+        OrderResponse order = await CreateDeliveredOrderAsync("Lagerlieferung GmbH");
+
+        HttpResponseMessage locationResponse = await factory.CreateClientAs("admin")
+            .PostAsJsonAsync($"/api/customers/{customer.Id}/locations", new
+            {
+                name = "Lager Nord",
+                street = "Hafenstr. 9",
+                postalCode = "20095",
+                city = "Hamburg",
+                country = "DE"
+            });
+        Guid locationId = (await locationResponse.Content.ReadFromJsonAsync<CustomerLocationResponse>())!.Id;
+
+        HttpResponseMessage response = await factory.CreateClientAs("disponent").PostAsJsonAsync("/api/invoices", new
+        {
+            customerId = customer.Id,
+            vatRatePercent = 19m,
+            lines = new[] { new { orderId = order.Id, netAmount = 500m, description = (string?)null } },
+            billToLocationId = locationId
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]

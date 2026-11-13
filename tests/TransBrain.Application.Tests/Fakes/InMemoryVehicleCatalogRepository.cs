@@ -6,9 +6,11 @@ namespace TransBrain.Application.Tests.Fakes;
 
 /// <param name="vehicles">Source of the vehicle usage counts; without it every entry counts as unused.</param>
 /// <param name="customers">Source of the customer class usage counts.</param>
+/// <param name="drivers">Source of the phone type and driver document type usage counts.</param>
 public sealed class InMemoryVehicleCatalogRepository(
     InMemoryVehicleRepository? vehicles = null,
-    InMemoryCustomerRepository? customers = null)
+    InMemoryCustomerRepository? customers = null,
+    InMemoryDriverRepository? drivers = null)
     : IVehicleCatalogRepository
 {
     private readonly List<VehicleCatalogEntry> _entries = [];
@@ -31,6 +33,12 @@ public sealed class InMemoryVehicleCatalogRepository(
         catalog.Seed(VehicleCatalogKind.DocumentType, "ADR", "ADR-Zulassungsbescheinigung");
         catalog.Seed(VehicleCatalogKind.DocumentType, "Tachograph", "Tachographenprüfung");
         catalog.Seed(VehicleCatalogKind.CustomerClass, "HuterVilsAll", "Huter Vils alle Gattungen");
+        catalog.Seed(VehicleCatalogKind.PhoneType, "Private", "Privat");
+        catalog.Seed(VehicleCatalogKind.PhoneType, "CarPhone", "Auto-Telefon");
+        catalog.Seed(VehicleCatalogKind.PhoneType, "Fax", "Fax");
+        catalog.Seed(VehicleCatalogKind.DriverDocumentType, "TuvAssessment", "TÜV - Begutachtung");
+        catalog.Seed(VehicleCatalogKind.DriverDocumentType, "DangerousGoods", "Gefahrengutschein");
+        catalog.Seed(VehicleCatalogKind.DriverDocumentType, "MedicalOfficer", "Amtsarzt");
         return catalog;
     }
 
@@ -71,6 +79,12 @@ public sealed class InMemoryVehicleCatalogRepository(
             VehicleCatalogKind.DocumentType => (vehicles?.Documents ?? []).Select(d => d.DocumentType),
             VehicleCatalogKind.CustomerClass =>
                 (customers?.Customers ?? []).Select(c => c.Additional.CustomerClass),
+            // A driver listing two numbers of the same type counts once, like the real repository.
+            VehicleCatalogKind.PhoneType => (drivers?.Drivers ?? []).SelectMany(
+                d => d.PhoneNumbers.Select(p => p.Type).OfType<string>().Distinct()),
+            // Same rule for special papers of the same type.
+            VehicleCatalogKind.DriverDocumentType => (drivers?.Drivers ?? []).SelectMany(
+                d => d.SpecialDocuments.Select(s => s.Type).Distinct()),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
         };
 

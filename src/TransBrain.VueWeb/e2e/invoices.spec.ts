@@ -55,7 +55,7 @@ async function createCustomer(page: Page, name: string): Promise<void> {
     await page.getByTestId('customer-street').fill('Rechnungsweg 7');
     await page.getByTestId('customer-postalCode').fill('86899');
     await page.getByTestId('customer-city').fill('Landsberg');
-    await page.getByTestId('customer-country').fill('DE');
+    await chooseOption(page, 'customer-country', 'Germany');
     await page.getByTestId('customer-save').click();
     await expect(page.getByRole('heading', { name: 'Customers' })).toBeVisible();
 }
@@ -70,7 +70,7 @@ async function createOrder(page: Page, consignor: string, cargo: string): Promis
         await page.getByTestId(`order-${party}-street`).fill('Hauptstr. 1');
         await page.getByTestId(`order-${party}-postalCode`).fill('80331');
         await page.getByTestId(`order-${party}-city`).fill('Muenchen');
-        await page.getByTestId(`order-${party}-country`).fill('DE');
+        await chooseOption(page, `order-${party}-country`, 'Germany');
     }
     await page.getByTestId('order-cargoDescription').fill(cargo);
     await page.getByTestId('order-cargoWeightKg').fill('5000');

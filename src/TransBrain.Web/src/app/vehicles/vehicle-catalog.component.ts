@@ -30,6 +30,7 @@ import {
 } from './vehicle-catalog-dialog.component';
 import {
     CUSTOMER_CATALOG_KINDS,
+    DRIVER_CATALOG_KINDS,
     VEHICLE_CATALOG_KINDS,
     VehicleCatalogEntry,
     VehicleCatalogKind,
@@ -44,11 +45,14 @@ const KIND_ICONS: Record<VehicleCatalogKind, string> = {
     InsuranceCompany: 'shield',
     DocumentType: 'description',
     CustomerClass: 'star_outline',
+    PhoneType: 'call',
+    DriverDocumentType: 'badge',
 };
 
 /**
- * The page serves two routes: 'vehicle-catalog' with the lists behind the vehicle form and
- * 'customer-catalog' (route data `catalogScope: 'customer'`) with those behind the customer form.
+ * The page serves three routes: 'vehicle-catalog' with the lists behind the vehicle form,
+ * 'customer-catalog' (route data `catalogScope: 'customer'`) with those behind the customer form
+ * and 'driver-catalog' (`catalogScope: 'driver'`) with those behind the driver form.
  */
 interface CatalogScope {
     kinds: readonly VehicleCatalogKind[];
@@ -60,7 +64,7 @@ interface CatalogScope {
     testIdPrefix: string;
 }
 
-const SCOPES: Record<'vehicle' | 'customer', CatalogScope> = {
+const SCOPES: Record<'vehicle' | 'customer' | 'driver', CatalogScope> = {
     vehicle: {
         kinds: VEHICLE_CATALOG_KINDS,
         title: 'vehicleCatalog.title',
@@ -79,11 +83,24 @@ const SCOPES: Record<'vehicle' | 'customer', CatalogScope> = {
         usage: 'customerCatalog.usage',
         testIdPrefix: 'customer-catalog',
     },
+    driver: {
+        kinds: DRIVER_CATALOG_KINDS,
+        title: 'driverCatalog.title',
+        subtitle: 'driverCatalog.subtitle',
+        back: 'driverCatalog.back',
+        backLink: '/drivers',
+        usage: 'driverCatalog.usage',
+        testIdPrefix: 'driver-catalog',
+    },
 };
 
 function toKind(scope: CatalogScope, value: string | null): VehicleCatalogKind {
     const match = scope.kinds.find((kind) => kind.toLowerCase() === value?.toLowerCase());
     return match ?? scope.kinds[0];
+}
+
+function toScopeKey(value: unknown): keyof typeof SCOPES {
+    return value === 'customer' || value === 'driver' ? value : 'vehicle';
 }
 
 @Component({
@@ -196,7 +213,9 @@ function toKind(scope: CatalogScope, value: string | null): VehicleCatalogKind {
                                         <mat-chip-set>
                                             <mat-chip
                                                 class="chip"
-                                                [attr.data-tone]="e.isActive ? 'success' : 'neutral'"
+                                                [attr.data-tone]="
+                                                    e.isActive ? 'success' : 'neutral'
+                                                "
                                                 data-testid="catalog-entry-status"
                                                 >{{
                                                     e.isActive
@@ -471,9 +490,8 @@ export class VehicleCatalogComponent {
     protected readonly session = inject(SessionService);
     protected readonly i18n = inject(I18nService);
 
-    // Angular recreates the component when navigating between the two routes, so a snapshot is enough.
-    protected readonly scope =
-        SCOPES[this.route.snapshot.data['catalogScope'] === 'customer' ? 'customer' : 'vehicle'];
+    // Angular recreates the component when navigating between the routes, so a snapshot is enough.
+    protected readonly scope = SCOPES[toScopeKey(this.route.snapshot.data['catalogScope'])];
     protected readonly kinds = this.scope.kinds;
     protected readonly kind = toSignal(
         this.route.queryParamMap.pipe(map((params) => toKind(this.scope, params.get('kind')))),

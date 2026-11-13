@@ -60,7 +60,7 @@ async function createOrder(page: Page, consignor: string, weightKg = '5000'): Pr
         await page.getByTestId(`order-${party}-street`).fill('Hauptstr. 1');
         await page.getByTestId(`order-${party}-postalCode`).fill('80331');
         await page.getByTestId(`order-${party}-city`).fill('Muenchen');
-        await page.getByTestId(`order-${party}-country`).fill('DE');
+        await chooseOption(page, `order-${party}-country`, 'Germany');
     }
     await page.getByTestId('order-cargoDescription').fill('Palettenware');
     await page.getByTestId('order-cargoWeightKg').fill(weightKg);

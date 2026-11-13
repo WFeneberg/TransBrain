@@ -18,6 +18,8 @@ export interface CustomerLocation {
     postalCode: string;
     city: string;
     country: string;
+    companyName: string | null;
+    vatId: string | null;
     contacts: CustomerLocationContact[];
 }
 
@@ -33,6 +35,8 @@ export interface CustomerLocationWriteRequest {
     postalCode: string;
     city: string;
     country: string;
+    companyName: string | null;
+    vatId: string | null;
     contacts: CustomerLocationContact[];
 }
 

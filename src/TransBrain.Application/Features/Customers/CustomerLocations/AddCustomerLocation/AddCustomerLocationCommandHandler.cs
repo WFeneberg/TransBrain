@@ -31,7 +31,8 @@ internal sealed class AddCustomerLocationCommandHandler(ICustomerRepository repo
         }
 
         Result<CustomerLocation> location = CustomerLocation.Create(
-            command.CustomerId, command.Name, address.Value, contacts.Value);
+            command.CustomerId, command.Name, address.Value, contacts.Value,
+            command.CompanyName, command.VatId);
         if (!location.IsSuccess)
         {
             return location.Error!;
