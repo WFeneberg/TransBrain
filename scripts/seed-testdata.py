@@ -207,7 +207,7 @@ VEHICLES = [
 # key: (customer body, delivery locations)
 CUSTOMERS = {
     "becker": (dict(
-        name="Natursteinhandel Becker KG", street="Rudolf-Diesel-Str. 10", postalCode="86899", city="Landsberg am Lech",
+        name="Natursteinhandel Becker KG", street="Rudolf-Diesel-Str. 5", postalCode="86899", city="Landsberg am Lech",
         country="DE", contactPerson="Thomas Becker", email="dispo@becker-naturstein.example",
         phone="+49 8191 12345-0", vatId="DE123456789", paymentTermDays=30,
         additional=dict(secondaryName="Becker Steinwerk Lager 2", secondaryStreet="Viktor-Frankl-Str. 12",
@@ -215,7 +215,7 @@ CUSTOMERS = {
                         foundedOn="1978-04-01", workerCount=42, salariedEmployeeCount=11, reimburseToll=True,
                         customerClass="Key",
                         comment="Entladung nur mit Stapler Kategorie 5 t. Gestelle werden getauscht.")),
-        [location("Lager Landsberg", "Rudolf-Diesel-Str. 10", "86899", "Landsberg am Lech", "DE", "Herr Kranz",
+        [location("Lager Landsberg", "Rudolf-Diesel-Str. 5", "86899", "Landsberg am Lech", "DE", "Herr Kranz",
                   "lager@becker-naturstein.example", "+49 8191 12345-20"),
          location("Lager Kaufering", "Viktor-Frankl-Str. 12", "86916", "Kaufering", "DE", "Frau Sedlmeier", None,
                   "+49 8191 12345-30")]),
@@ -262,7 +262,7 @@ ORDERS = {
     "dairy": (address("Alpenmilch Weilheim eG", "Münchener Str. 20", "82362", "Weilheim in Oberbayern", "DE"), "frische",
               "Molkereiprodukte gekühlt +2 bis +6 °C, 33 EUR-Paletten", 18500, 13.2,
               (at(3, "05:00"), at(3, "06:30")), (at(3, "09:00"), at(3, "11:00")), False),
-    "fuel": (address("Chemiepark Gendorf AG", "Industrieparkstr. 1", "84508", "Burgkirchen an der Alz", "DE"),
+    "fuel": (address("Raffinerie Burghausen GmbH", "Haiminger Str. 1", "84489", "Burghausen", "DE"),
              "tanklager", "Heizöl EL, UN 1202, Klasse 3 (ADR) – Tankzug", 22000, 13.6,
              (at(6, "08:00"), at(6, "12:00")), (at(7, "07:00"), at(7, "12:00")), False),
     "timber": (address("Holzbau Werdenfels GmbH & Co. KG", "Zugspitzstr. 20", "82467", "Garmisch-Partenkirchen", "DE"),
@@ -395,7 +395,7 @@ ORDERS_2 = {
     "cement": (address("Zementwerk Rohrdorf GmbH", "Sinning 1", "83101", "Rohrdorf", "DE"), "baustoffe",
                "Sackzement auf EUR-Paletten, 30 Paletten", 24000, 12.0,
                (at(1, "06:00"), at(1, "08:00")), (at(1, "09:00"), at(1, "12:00")), False),
-    "drinks": (address("Brauerei Weihenstephan Logistik GmbH", "Alte Akademie 2", "85354", "Freising", "DE"),
+    "drinks": (address("Brauerei Weihenstephan Logistik GmbH", "Alte Akademie 1", "85354", "Freising", "DE"),
                "getraenke", "Getränke in Kisten, 33 EUR-Paletten", 19000, 13.2,
                (at(2, "07:00"), at(2, "09:00")), (at(2, "12:00"), at(2, "15:00")), False),
     "steel": (address("Stahlhandel München-Nord GmbH", "Frankfurter Ring 105", "80807", "München", "DE"),
