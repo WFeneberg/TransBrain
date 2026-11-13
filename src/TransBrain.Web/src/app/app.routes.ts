@@ -38,6 +38,10 @@ const loadGeodataList = () =>
     import('./geodata/geodata-list.component').then((m) => m.GeodataListComponent);
 const loadMaintenance = () =>
     import('./maintenance/maintenance.component').then((m) => m.MaintenanceComponent);
+const loadImportWizard = () =>
+    import('./imports/import-wizard.component').then((m) => m.ImportWizardComponent);
+const loadImportHistory = () =>
+    import('./imports/import-history.component').then((m) => m.ImportHistoryComponent);
 
 export const routes: Routes = [
     // angular-auth-oidc-client's checkAuth() detects the OIDC callback by comparing the
@@ -151,6 +155,17 @@ export const routes: Routes = [
     },
     // Readable by every signed-in role; the write controls inside are gated on masterData.write.
     { path: 'geodata', loadComponent: loadGeodataList, canActivate: [requireAuthentication] },
+    // The import API is admin-only (MasterDataWrite policy), so the whole wizard is gated too.
+    {
+        path: 'import',
+        loadComponent: loadImportWizard,
+        canActivate: [requireCapability('masterData.write')],
+    },
+    {
+        path: 'import/verlauf',
+        loadComponent: loadImportHistory,
+        canActivate: [requireCapability('masterData.write')],
+    },
     // Backup and restore of the tenant's data; the API's Maintenance policy admits only admins,
     // so the route is capability-guarded instead of merely authenticated.
     {

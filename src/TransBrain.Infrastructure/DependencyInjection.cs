@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TransBrain.Application.Abstractions;
 using TransBrain.Infrastructure.Billing;
+using TransBrain.Infrastructure.Imports;
 using TransBrain.Infrastructure.Persistence.Caching;
 using TransBrain.Infrastructure.Persistence.InvoiceNumbering;
 using TransBrain.Infrastructure.Persistence.Maintenance;
@@ -28,6 +29,8 @@ public static class DependencyInjection
         services.AddSingleton<IXRechnungWriter, UblXRechnungWriter>();
         services.AddScoped<IGeoOverrideRepository, GeoOverrideRepository>();
         services.AddScoped<ITenantDataMaintenance, PostgresTenantDataMaintenance>();
+        services.AddScoped<IImportSessionRepository, ImportSessionRepository>();
+        services.AddSingleton<IImportSourceParser, ImportSourceParser>();
         services.AddScoped<ICacheService, RedisCacheService>();
         services.AddHttpClient<OpenRouteServiceClient>((provider, client) =>
         {

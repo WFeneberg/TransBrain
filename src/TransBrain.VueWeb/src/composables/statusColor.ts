@@ -1,7 +1,7 @@
 /**
- * Chip colours for the driver, order and tour statuses, in the scheme of the vehicle statuses
- * (see useVehicleLabels.ts). The statuses are shown as the API sends them; the e2e specs assert
- * those raw values.
+ * Chip colours for the driver, order, tour and import-session statuses, in the scheme of the
+ * vehicle statuses (see useVehicleLabels.ts). The statuses are shown as the API sends them; the
+ * e2e specs assert those raw values.
  */
 const STATUS_COLORS: Record<string, string> = {
     Available: 'success',
@@ -16,6 +16,9 @@ const STATUS_COLORS: Record<string, string> = {
     Cancelled: 'error',
     Issued: 'info',
     Paid: 'success',
+    Ready: 'info',
+    CompletedWithErrors: 'warning',
+    Failed: 'error',
 };
 
 export const DRIVER_STATUSES = ['Available', 'Absent', 'Inactive'] as const;

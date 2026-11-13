@@ -1217,6 +1217,126 @@ Dienste neu importiert — das dauert je nach Region Minuten bis Stunden (Skript
 Statuskarte **Unavailable**, läuft gerade ein solcher Import oder der Dienst ist gestoppt; die
 Seite bleibt benutzbar, nur „Try geocoding“ und neue Routenberechnungen schlagen solange fehl.
 
+## Datenimport
+
+Der Menüpunkt **Import** (nur für die Rolle `admin` sichtbar) übernimmt Stammdaten aus anderen
+Programmen nach TransBrain: Kunden, Fahrer oder Fahrzeuge. Ein Assistent führt in fünf
+Schritten von der Quelle bis zum Ergebnis; zusätzlich gibt es einen Verlauf aller bisherigen
+Import-Sitzungen.
+
+![Import-Assistent, Schritt Quelle](img/web/import-quelle.png)
+
+### Schritt 1: Quelle
+
+Zwei Arten von Quellen stehen zur Wahl:
+
+- **Datei hochladen** — unterstützt werden die gängigen Austauschformate:
+  - **CSV** (`.csv`, `.txt`): Trennzeichen Semikolon, Komma oder Tabulator werden automatisch erkannt;
+    UTF-8 und Latin-1 (Windows-Umlaute) werden gelesen; Anführungszeichen nach RFC 4180.
+  - **JSON** (`.json`): ein Array von Objekten oder ein Objekt, dessen Eigenschaften Arrays
+    sind (dann wird je Eigenschaft eine Tabelle angeboten); verschachtelte Objekte werden als
+    `adresse.ort` zu Spalten flachgelegt.
+  - **XML** (`.xml`): sich wiederholende Satz-Elemente werden als Zeilen gelesen,
+    Kindelemente und Attribute als Spalten.
+  - **Excel** (`.xlsx`): jedes Tabellenblatt mit Kopfzeile und mindestens einer Datenzeile
+    wird als Tabelle angeboten; Datumszellen werden als Datum gelesen.
+  - **Microsoft Access** (`.mdb`, `.accdb`): die Datei wird auf dem Server über den
+    ODBC-Access-Treiber gelesen. Fehlt der Treiber auf dem Server, erscheint eine
+    entsprechende Meldung (unter Windows ist er meist vorhanden, unter Linux hilft
+    `mdbtools`).
+  - **SQLite** (`.sqlite`, `.sqlite3`, `.db`): alle Tabellen der Datei werden angeboten.
+
+  Die Datei darf höchstens **25 MB** groß sein.
+
+- **Datenbank** — eine laufende Datenbank eines Altsystems wird direkt ausgelesen:
+  **PostgreSQL**, **SQL Server**, **MySQL/MariaDB** oder eine beliebige **ODBC**-Quelle.
+  Dazu werden Anbieter und Verbindungszeichenfolge eingegeben. Die Verbindung wird **einmalig
+  beim Anlegen der Sitzung gelesen** und die Verbindungszeichenfolge **nicht gespeichert** —
+  im Verlauf erscheint nur eine unkenntlich gemachte Anzeige wie `PostgreSql: altserver/altdb`.
+  Ist die Datenbank nicht erreichbar, lehnt der Schritt mit einer klaren Meldung ab, ohne
+  die Zugangsdaten preiszugeben.
+
+In beiden Fällen liest TransBrain die Quelle sofort vollständig ein und legt eine
+**Import-Sitzung** an: alle Tabellen mit ihren Spalten und Zeilen, mandantenbezogen und
+komprimiert in der TransBrain-Datenbank abgelegt. Ab jetzt wird die Quelle nicht mehr
+benötigt — Vorschau und Ausführung arbeiten ausschließlich mit der Sitzung. Je Quelle werden
+höchstens 100 Tabellen, 256 Spalten und 50.000 Zeilen pro Tabelle übernommen.
+
+### Schritt 2: Tabelle und Ziel
+
+Links wird die Quelltabelle gewählt (bei CSV gibt es genau eine; Access, SQLite, Excel und
+Datenbanken bieten meist mehrere an). Zu jeder Tabelle zeigt der Assistent die Zeilenzahl und
+die ersten fünf Zeilen als Kostprobe. Rechts wird das Ziel gewählt: **Kunden**, **Fahrer**
+oder **Fahrzeuge**.
+
+![Schritt Tabelle und Ziel mit Beispieldaten](img/web/import-tabelle-ziel.png)
+
+### Schritt 3: Zuordnung (Mapping)
+
+![Schritt Zuordnung: Quellspalten auf Zielfelder](img/web/import-zuordnung.png)
+
+Das Herzstück: eine Zeile je Zielfeld. Pflichtfelder sind mit `*` markiert. Für jedes
+Zielfeld wird entweder
+
+- eine **Quellspalte** gewählt (der Assistent belegt beim Betreten des Schritts automatisch
+  vor, was per Namensgleichheit passt — Groß-/Kleinschreibung spielt keine Rolle), oder
+- ein **fester Wert** eingetragen, der dann für alle Zeilen gilt (z. B. Land `DE`, wenn die
+  Quelle keine Länderspalte hat), oder
+- beides: dann gilt der feste Wert als Ersatz für leere Zellen.
+
+Zu jedem Feld zeigt der Assistent den erwarteten Typ (Text, Zahl, Datum, Ja/Nein, Liste)
+und — wo es sie gibt — die erlaubten Werte (etwa die Fahrzeugtypen). Die Werte dürfen so
+formatiert sein, wie Altsysteme sie üblicherweise liefern: Zahlen deutsch (`13,6`) oder
+englisch (`13.6`, auch `1.234` als Tausendergruppierung), Datumsangaben als ISO
+(`2026-02-16`), deutsch (`16.02.2026`) oder Excel-Zahlenwert, Ja/Nein-Felder als
+`ja`/`nein`, `true`/`false`, `x` oder `-`, Listen (z. B. Führerscheinklassen) mit Semikolon
+getrennt (`C1;CE`).
+
+### Schritt 4: Vorschau
+
+Die Vorschau prüft die ersten Zeilen (voreingestellt 20) **mit denselben Regeln wie das
+jeweilige Formular** — was hier durchgeht, geht auch beim Ausführen durch. Oben stehen die
+Gesamtzahlen (gesamt / gültig / fehlerhaft über alle Zeilen der Tabelle, nicht nur die
+angezeigten), darunter die geprüften Zeilen mit den übernommenen Werten; fehlerhafte Zeilen
+sind rot markiert und nennen die Fehler im Klartext (z. B. „Name ist erforderlich“ oder ein
+unbekanntes Land). Zum Nachbessern einfach zu Schritt 3 zurückgehen — die Sitzung bleibt
+erhalten.
+
+![Vorschau mit einer fehlerhaften Zeile](img/web/import-vorschau.png)
+
+### Schritt 5: Ausführen und Ergebnis
+
+**Importieren** legt die Datensätze zeilenweise an — über dieselbe Logik wie das manuelle
+Anlegen, einschließlich Duplikatprüfung (ein bereits vorhandenes Kennzeichen lehnt die
+Zeile ab, nicht den ganzen Import). Fehlerhafte Zeilen werden übersprungen und am Ende mit
+Zeilennummer und Begründung aufgelistet (höchstens die ersten 100); alle übrigen Zeilen sind
+dann bereits importiert. Das Ergebnis zeigt den Status der Sitzung: **Completed** (alles
+importiert), **CompletedWithErrors** (teilweise) oder **Failed** (keine Zeile). Ein erneutes
+Ausführen derselben Sitzung — etwa mit nachgebesserter Zuordnung oder anderem Ziel — ist
+möglich. Dabei schützt nur die Duplikatprüfung des Ziels vor Doppelanlagen — bei Fahrzeugen
+das Kennzeichen; Kunden und Fahrer haben kein solches Merkmal und würden erneut angelegt.
+
+![Ergebnis mit Fehlerliste](img/web/import-ergebnis.png)
+
+### Verlauf
+
+Der Reiter **Verlauf** listet alle Import-Sitzungen des Mandanten, neueste zuerst: Quelle,
+Status, Ziel, Anzahl importiert/fehlerhaft, wer sie wann angelegt hat. **Löschen** entfernt
+eine Sitzung samt der eingelesenen Daten endgültig (mit Sicherheitsabfrage); die bereits
+importierten Datensätze bleiben selbstverständlich bestehen.
+
+![Verlauf der Import-Sitzungen](img/web/import-verlauf.png)
+
+### Grenzen
+
+- Datei höchstens 25 MB; je Quelle höchstens 100 Tabellen, 256 Spalten, 50.000 Zeilen je
+  Tabelle, 4.000 Zeichen je Zelle.
+- Importiert werden Stammdaten: Kunden, Fahrer, Fahrzeuge. Aufträge, Touren und Rechnungen
+  sind bewusst nicht importierbar.
+- Access-Dateien benötigen auf dem **Server** einen ODBC-Treiber für Access.
+- Die eingelesenen Daten gehören zum angemeldeten Mandanten; ein anderer Mandant sieht
+  weder die Sitzungen noch die importierten Datensätze.
+
 ## Wartung (Datensicherung)
 
 Erreichbar über den Menüpunkt **Maintenance** (`/maintenance`). Menüpunkt und Seite stehen
@@ -1293,7 +1413,8 @@ und abschließen — siehe Abschnitt „Touren als Fahrer“.
 „Ausstellen“, „Als bezahlt markieren“ und „Stornieren“ (Abrechnung) nur für `admin` und
 `disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Der
 Menüpunkt **Geodata** und die Änderungen der Geodaten-Wartung („Add coordinates“,
-„Set coordinates“, „Remove manual coordinates“) sind ebenfalls `admin` vorbehalten. Der
+„Set coordinates“, „Remove manual coordinates“) sowie der Menüpunkt **Import** (Datenimport)
+sind ebenfalls `admin` vorbehalten. Der
 Menüpunkt **Maintenance** (Datensicherung) ist zur Gänze — einschließlich des Ansehens —
 `admin` vorbehalten. Wer eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
 

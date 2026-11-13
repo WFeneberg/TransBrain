@@ -4,25 +4,44 @@
         <nav>
             <a mat-button routerLink="/" data-testid="nav-home">{{ i18n.t('nav.home') }}</a>
             @if (session.areas().has('vehicles')) {
-                <a mat-button routerLink="/vehicles" data-testid="nav-vehicles">{{ i18n.t('nav.vehicles') }}</a>
+                <a mat-button routerLink="/vehicles" data-testid="nav-vehicles">{{
+                    i18n.t('nav.vehicles')
+                }}</a>
             }
             @if (session.areas().has('drivers')) {
-                <a mat-button routerLink="/drivers" data-testid="nav-drivers">{{ i18n.t('nav.drivers') }}</a>
+                <a mat-button routerLink="/drivers" data-testid="nav-drivers">{{
+                    i18n.t('nav.drivers')
+                }}</a>
             }
             @if (session.areas().has('customers')) {
-                <a mat-button routerLink="/customers" data-testid="nav-customers">{{ i18n.t('nav.customers') }}</a>
+                <a mat-button routerLink="/customers" data-testid="nav-customers">{{
+                    i18n.t('nav.customers')
+                }}</a>
             }
             @if (session.areas().has('orders')) {
-                <a mat-button routerLink="/orders" data-testid="nav-orders">{{ i18n.t('nav.orders') }}</a>
+                <a mat-button routerLink="/orders" data-testid="nav-orders">{{
+                    i18n.t('nav.orders')
+                }}</a>
             }
             @if (session.areas().has('tours')) {
-                <a mat-button routerLink="/tours" data-testid="nav-tours">{{ i18n.t('nav.tours') }}</a>
+                <a mat-button routerLink="/tours" data-testid="nav-tours">{{
+                    i18n.t('nav.tours')
+                }}</a>
             }
             @if (session.areas().has('invoices')) {
-                <a mat-button routerLink="/invoices" data-testid="nav-invoices">{{ i18n.t('nav.invoices') }}</a>
+                <a mat-button routerLink="/invoices" data-testid="nav-invoices">{{
+                    i18n.t('nav.invoices')
+                }}</a>
             }
             @if (session.can('masterData.write')) {
-                <a mat-button routerLink="/geodata" data-testid="nav-geodata">{{ i18n.t('nav.geodata') }}</a>
+                <a mat-button routerLink="/geodata" data-testid="nav-geodata">{{
+                    i18n.t('nav.geodata')
+                }}</a>
+            }
+            @if (session.can('masterData.write')) {
+                <a mat-button routerLink="/import" data-testid="nav-import">{{
+                    i18n.t('nav.import')
+                }}</a>
             }
             @if (session.can('maintenance')) {
                 <a mat-button routerLink="/maintenance" data-testid="nav-maintenance">{{ i18n.t('nav.maintenance') }}</a>
@@ -35,7 +54,9 @@
         {{ i18n.locale() === 'de' ? 'EN' : 'DE' }}
     </button>
     @if (session.isAuthenticated()) {
-        <button mat-button data-testid="logout" (click)="session.logout()">{{ i18n.t('auth.signOut') }}</button>
+        <button mat-button data-testid="logout" (click)="session.logout()">
+            {{ i18n.t('auth.signOut') }}
+        </button>
     }
 </mat-toolbar>
 

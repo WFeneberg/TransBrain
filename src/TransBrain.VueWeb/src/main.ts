@@ -28,6 +28,8 @@ import InvoiceList from './views/InvoiceList.vue';
 import InvoiceForm from './views/InvoiceForm.vue';
 import InvoiceDetail from './views/InvoiceDetail.vue';
 import Geodata from './views/Geodata.vue';
+import ImportWizard from './views/ImportWizard.vue';
+import ImportHistory from './views/ImportHistory.vue';
 import Maintenance from './views/Maintenance.vue';
 import AuthCallback from './views/AuthCallback.vue';
 import { useAuthStore } from './stores/auth';
@@ -72,6 +74,10 @@ const router = createRouter({
         { path: '/invoices/:id', component: InvoiceDetail },
         // Readable by every signed-in role; the write controls inside are gated on masterData.write.
         { path: '/geodata', component: Geodata },
+        // The import API itself is admin-only (Policies.MasterDataWrite), so unlike the list
+        // routes there is nothing a read-only role could see here.
+        { path: '/import', component: ImportWizard, meta: { capability: 'masterData.write' } },
+        { path: '/import/verlauf', component: ImportHistory, meta: { capability: 'masterData.write' } },
         // Backup and restore of the tenant's data; the API's Maintenance policy admits only
         // admins, so this route carries the matching capability.
         { path: '/maintenance', component: Maintenance, meta: { capability: 'maintenance' } },
