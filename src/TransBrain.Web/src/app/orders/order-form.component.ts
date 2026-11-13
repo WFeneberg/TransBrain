@@ -1,24 +1,44 @@
+import { DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SessionService } from '../auth/session.service';
 import { I18nService } from '../i18n/i18n.service';
 import { LocationMapComponent, MapMarker } from '../shared/location-map.component';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../shared/confirm-dialog.component';
 import { CountrySelectComponent } from '../shared/country-select.component';
-import { Observable, switchMap } from 'rxjs';
+import { Observable, filter, forkJoin, switchMap } from 'rxjs';
+import {
+    VehicleCatalogEntry,
+    VehicleCatalogService,
+    catalogIndex,
+    catalogName,
+} from '../vehicles/vehicle-catalog.service';
+import { formatDateTime } from '../vehicles/vehicle-format';
 import {
     LocatedParty,
     Order,
+    OrderCharge,
     OrderLocations,
     OrderService,
+    OrderToll,
     OrderWriteRequest,
 } from './order.service';
+import {
+    OrderChargeDialogComponent,
+    OrderChargeDialogData,
+} from './order-charge-dialog.component';
+import { OrderTollDialogComponent, OrderTollDialogData } from './order-toll-dialog.component';
 import {
     CustomerLocationOption,
     CustomerLocationService,
@@ -31,16 +51,32 @@ interface ProblemDetailsBody {
     errorCode?: string;
 }
 
+const NOTES_MAX_LENGTH = 2000;
+const TOLL_COLUMNS = [
+    'category',
+    'emptyKm',
+    'loadedKm',
+    'factorPerKm',
+    'emptyAmount',
+    'loadedAmount',
+    'modified',
+] as const;
+const CHARGE_COLUMNS = ['description', 'quantity', 'unit', 'unitPrice', 'total', 'modified'] as const;
+
 @Component({
     selector: 'app-order-form',
     standalone: true,
     imports: [
         ReactiveFormsModule,
+        DecimalPipe,
         MatButtonModule,
         MatCardModule,
+        MatCheckboxModule,
         MatFormFieldModule,
         MatIconModule,
         MatInputModule,
+        MatTableModule,
+        MatTooltipModule,
         LocationMapComponent,
         CountrySelectComponent,
     ],
@@ -287,6 +323,69 @@ interface ProblemDetailsBody {
                         </mat-card-content>
                     </mat-card>
 
+                    <mat-card
+                        appearance="outlined"
+                        class="full-width"
+                        data-testid="order-special"
+                    >
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">notes</mat-icon>
+                            <mat-card-title>{{ i18n.t('orders.special') }}</mat-card-title>
+                        </mat-card-header>
+                        <mat-card-content>
+                            <mat-form-field class="block">
+                                <mat-label>{{ i18n.t('orders.notes') }}</mat-label>
+                                <textarea
+                                    matInput
+                                    rows="3"
+                                    formControlName="notes"
+                                    [maxlength]="notesMaxLength"
+                                    data-testid="order-notes"
+                                ></textarea>
+                                <mat-hint align="end"
+                                    >{{ form.controls.notes.value.length }} /
+                                    {{ notesMaxLength }}</mat-hint
+                                >
+                                @if (form.controls.notes.errors; as errors) {
+                                    <mat-error data-testid="order-notes-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                            <mat-form-field class="block">
+                                <mat-label>{{ i18n.t('orders.confirmationNotes') }}</mat-label>
+                                <textarea
+                                    matInput
+                                    rows="3"
+                                    formControlName="confirmationNotes"
+                                    [maxlength]="notesMaxLength"
+                                    data-testid="order-confirmationNotes"
+                                ></textarea>
+                                <mat-hint align="end"
+                                    >{{ form.controls.confirmationNotes.value.length }} /
+                                    {{ notesMaxLength }}</mat-hint
+                                >
+                                @if (form.controls.confirmationNotes.errors; as errors) {
+                                    <mat-error data-testid="order-confirmationNotes-error">{{
+                                        fieldErrorText(errors)
+                                    }}</mat-error>
+                                }
+                            </mat-form-field>
+                            <div class="flags">
+                                <mat-checkbox
+                                    formControlName="requiresPartitionWall"
+                                    data-testid="order-requiresPartitionWall"
+                                    >{{ i18n.t('orders.requiresPartitionWall') }}</mat-checkbox
+                                >
+                                <mat-checkbox
+                                    formControlName="requiresDoubleDeck"
+                                    data-testid="order-requiresDoubleDeck"
+                                    >{{ i18n.t('orders.requiresDoubleDeck') }}</mat-checkbox
+                                >
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+
                     @if (isEditMode) {
                         <mat-card appearance="outlined" class="full-width" data-testid="order-map">
                             <mat-card-header>
@@ -315,6 +414,379 @@ interface ProblemDetailsBody {
                                             >{{ i18n.t('orders.map.consigneeMissing') }}
                                         </p>
                                     }
+                                }
+                            </mat-card-content>
+                        </mat-card>
+
+                        <mat-card
+                            appearance="outlined"
+                            class="full-width"
+                            data-testid="order-tolls"
+                        >
+                            <mat-card-header>
+                                <mat-icon mat-card-avatar class="avatar">toll</mat-icon>
+                                <mat-card-title>{{ i18n.t('orders.tolls.title') }}</mat-card-title>
+                                @if (session.can('dispatch.write')) {
+                                    <button
+                                        mat-stroked-button
+                                        type="button"
+                                        class="card-action"
+                                        data-testid="order-toll-add"
+                                        (click)="openTollDialog(null)"
+                                    >
+                                        <mat-icon>add</mat-icon>
+                                        {{ i18n.t('orders.tolls.add') }}
+                                    </button>
+                                }
+                            </mat-card-header>
+                            <mat-card-content>
+                                @if (tollError(); as message) {
+                                    <p class="error-banner" data-testid="order-tolls-error">
+                                        <mat-icon aria-hidden="true">error_outline</mat-icon
+                                        >{{ message }}
+                                    </p>
+                                }
+                                @if (tolls().length > 0) {
+                                    <div class="table-scroll">
+                                        <table mat-table [dataSource]="tolls()">
+                                            <ng-container matColumnDef="category">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('orders.tolls.category') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let t"
+                                                    data-testid="order-toll-category"
+                                                >
+                                                    {{ tollCategoryName(t) }}
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef>
+                                                    {{ i18n.t('orders.sum') }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="emptyKm">
+                                                <th mat-header-cell *matHeaderCellDef class="num">
+                                                    {{ i18n.t('orders.tolls.emptyKm') }}
+                                                </th>
+                                                <td mat-cell *matCellDef="let t" class="num">
+                                                    {{ t.emptyKm | number: '1.0-1' }}
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef class="num">
+                                                    {{ tollTotals().emptyKm | number: '1.0-1' }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="loadedKm">
+                                                <th mat-header-cell *matHeaderCellDef class="num">
+                                                    {{ i18n.t('orders.tolls.loadedKm') }}
+                                                </th>
+                                                <td mat-cell *matCellDef="let t" class="num">
+                                                    {{ t.loadedKm | number: '1.0-1' }}
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef class="num">
+                                                    {{ tollTotals().loadedKm | number: '1.0-1' }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="factorPerKm">
+                                                <th mat-header-cell *matHeaderCellDef class="num">
+                                                    {{ i18n.t('orders.tolls.factorPerKm') }}
+                                                </th>
+                                                <td mat-cell *matCellDef="let t" class="num">
+                                                    {{ t.factorPerKm | number: '1.2-4' }}
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef></td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="emptyAmount">
+                                                <th mat-header-cell *matHeaderCellDef class="num">
+                                                    {{ i18n.t('orders.tolls.emptyAmount') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let t"
+                                                    class="num"
+                                                    data-testid="order-toll-emptyAmount"
+                                                >
+                                                    {{ t.emptyAmount | number: '1.2-2' }} €
+                                                </td>
+                                                <td
+                                                    mat-footer-cell
+                                                    *matFooterCellDef
+                                                    class="num"
+                                                    data-testid="order-toll-emptyAmount-sum"
+                                                >
+                                                    {{ tollTotals().emptyAmount | number: '1.2-2' }} €
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="loadedAmount">
+                                                <th mat-header-cell *matHeaderCellDef class="num">
+                                                    {{ i18n.t('orders.tolls.loadedAmount') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let t"
+                                                    class="num"
+                                                    data-testid="order-toll-loadedAmount"
+                                                >
+                                                    {{ t.loadedAmount | number: '1.2-2' }} €
+                                                </td>
+                                                <td
+                                                    mat-footer-cell
+                                                    *matFooterCellDef
+                                                    class="num"
+                                                    data-testid="order-toll-loadedAmount-sum"
+                                                >
+                                                    {{ tollTotals().loadedAmount | number: '1.2-2' }} €
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="modified">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('orders.modified') }}
+                                                </th>
+                                                <td mat-cell *matCellDef="let t" class="modified">
+                                                    {{ modifiedText(t) }}
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef></td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="actions">
+                                                <th
+                                                    mat-header-cell
+                                                    *matHeaderCellDef
+                                                    class="actions-cell"
+                                                >
+                                                    <span class="cdk-visually-hidden">{{
+                                                        i18n.t('common.actions')
+                                                    }}</span>
+                                                </th>
+                                                <td mat-cell *matCellDef="let t" class="actions-cell">
+                                                    <button
+                                                        mat-icon-button
+                                                        type="button"
+                                                        data-testid="order-toll-edit"
+                                                        [matTooltip]="i18n.t('common.edit')"
+                                                        [attr.aria-label]="
+                                                            i18n.t('common.edit') +
+                                                            ' ' +
+                                                            tollCategoryName(t)
+                                                        "
+                                                        (click)="openTollDialog(t)"
+                                                    >
+                                                        <mat-icon>edit</mat-icon>
+                                                    </button>
+                                                    <button
+                                                        mat-icon-button
+                                                        type="button"
+                                                        class="delete"
+                                                        data-testid="order-toll-delete"
+                                                        [matTooltip]="i18n.t('common.delete')"
+                                                        [attr.aria-label]="
+                                                            i18n.t('common.delete') +
+                                                            ' ' +
+                                                            tollCategoryName(t)
+                                                        "
+                                                        (click)="deleteToll(t)"
+                                                    >
+                                                        <mat-icon>delete</mat-icon>
+                                                    </button>
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef></td>
+                                            </ng-container>
+                                            <tr
+                                                mat-header-row
+                                                *matHeaderRowDef="tollColumns()"
+                                            ></tr>
+                                            <tr
+                                                mat-row
+                                                *matRowDef="let row; columns: tollColumns()"
+                                                data-testid="order-toll-row"
+                                            ></tr>
+                                            <tr
+                                                mat-footer-row
+                                                *matFooterRowDef="tollColumns()"
+                                                class="sum-row"
+                                            ></tr>
+                                        </table>
+                                    </div>
+                                } @else if (tollsLoaded()) {
+                                    <p class="hint" data-testid="order-tolls-empty">
+                                        <mat-icon aria-hidden="true">toll</mat-icon>
+                                        {{ i18n.t('orders.tolls.empty') }}
+                                    </p>
+                                }
+                            </mat-card-content>
+                        </mat-card>
+
+                        <mat-card
+                            appearance="outlined"
+                            class="full-width"
+                            data-testid="order-charges"
+                        >
+                            <mat-card-header>
+                                <mat-icon mat-card-avatar class="avatar">post_add</mat-icon>
+                                <mat-card-title>{{
+                                    i18n.t('orders.charges.title')
+                                }}</mat-card-title>
+                                @if (session.can('dispatch.write')) {
+                                    <button
+                                        mat-stroked-button
+                                        type="button"
+                                        class="card-action"
+                                        data-testid="order-charge-add"
+                                        (click)="openChargeDialog(null)"
+                                    >
+                                        <mat-icon>add</mat-icon>
+                                        {{ i18n.t('orders.charges.add') }}
+                                    </button>
+                                }
+                            </mat-card-header>
+                            <mat-card-content>
+                                @if (chargeError(); as message) {
+                                    <p class="error-banner" data-testid="order-charges-error">
+                                        <mat-icon aria-hidden="true">error_outline</mat-icon
+                                        >{{ message }}
+                                    </p>
+                                }
+                                @if (charges().length > 0) {
+                                    <div class="table-scroll">
+                                        <table mat-table [dataSource]="charges()">
+                                            <ng-container matColumnDef="description">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('orders.charges.description') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let c"
+                                                    data-testid="order-charge-description"
+                                                >
+                                                    {{ c.description }}
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef>
+                                                    {{ i18n.t('orders.sum') }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="quantity">
+                                                <th mat-header-cell *matHeaderCellDef class="num">
+                                                    {{ i18n.t('orders.charges.quantity') }}
+                                                </th>
+                                                <td mat-cell *matCellDef="let c" class="num">
+                                                    {{ c.quantity | number: '1.0-2' }}
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef></td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="unit">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('orders.charges.unit') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let c"
+                                                    data-testid="order-charge-unit"
+                                                >
+                                                    {{ unitName(c) }}
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef></td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="unitPrice">
+                                                <th mat-header-cell *matHeaderCellDef class="num">
+                                                    {{ i18n.t('orders.charges.unitPrice') }}
+                                                </th>
+                                                <td mat-cell *matCellDef="let c" class="num">
+                                                    {{ c.unitPrice | number: '1.2-2' }} €
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef></td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="total">
+                                                <th mat-header-cell *matHeaderCellDef class="num">
+                                                    {{ i18n.t('orders.charges.total') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let c"
+                                                    class="num"
+                                                    data-testid="order-charge-total"
+                                                >
+                                                    {{ c.total | number: '1.2-2' }} €
+                                                </td>
+                                                <td
+                                                    mat-footer-cell
+                                                    *matFooterCellDef
+                                                    class="num"
+                                                    data-testid="order-charge-total-sum"
+                                                >
+                                                    {{ chargeTotal() | number: '1.2-2' }} €
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="modified">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('orders.modified') }}
+                                                </th>
+                                                <td mat-cell *matCellDef="let c" class="modified">
+                                                    {{ modifiedText(c) }}
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef></td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="actions">
+                                                <th
+                                                    mat-header-cell
+                                                    *matHeaderCellDef
+                                                    class="actions-cell"
+                                                >
+                                                    <span class="cdk-visually-hidden">{{
+                                                        i18n.t('common.actions')
+                                                    }}</span>
+                                                </th>
+                                                <td mat-cell *matCellDef="let c" class="actions-cell">
+                                                    <button
+                                                        mat-icon-button
+                                                        type="button"
+                                                        data-testid="order-charge-edit"
+                                                        [matTooltip]="i18n.t('common.edit')"
+                                                        [attr.aria-label]="
+                                                            i18n.t('common.edit') +
+                                                            ' ' +
+                                                            c.description
+                                                        "
+                                                        (click)="openChargeDialog(c)"
+                                                    >
+                                                        <mat-icon>edit</mat-icon>
+                                                    </button>
+                                                    <button
+                                                        mat-icon-button
+                                                        type="button"
+                                                        class="delete"
+                                                        data-testid="order-charge-delete"
+                                                        [matTooltip]="i18n.t('common.delete')"
+                                                        [attr.aria-label]="
+                                                            i18n.t('common.delete') +
+                                                            ' ' +
+                                                            c.description
+                                                        "
+                                                        (click)="deleteCharge(c)"
+                                                    >
+                                                        <mat-icon>delete</mat-icon>
+                                                    </button>
+                                                </td>
+                                                <td mat-footer-cell *matFooterCellDef></td>
+                                            </ng-container>
+                                            <tr
+                                                mat-header-row
+                                                *matHeaderRowDef="chargeColumns()"
+                                            ></tr>
+                                            <tr
+                                                mat-row
+                                                *matRowDef="let row; columns: chargeColumns()"
+                                                data-testid="order-charge-row"
+                                            ></tr>
+                                            <tr
+                                                mat-footer-row
+                                                *matFooterRowDef="chargeColumns()"
+                                                class="sum-row"
+                                            ></tr>
+                                        </table>
+                                    </div>
+                                } @else if (chargesLoaded()) {
+                                    <p class="hint" data-testid="order-charges-empty">
+                                        <mat-icon aria-hidden="true">post_add</mat-icon>
+                                        {{ i18n.t('orders.charges.empty') }}
+                                    </p>
                                 }
                             </mat-card-content>
                         </mat-card>
@@ -349,6 +821,35 @@ interface ProblemDetailsBody {
                 color: var(--mat-sys-on-surface-variant);
                 font: var(--mat-sys-title-small);
             }
+
+            mat-form-field.block {
+                display: block;
+                width: 100%;
+            }
+
+            .flags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px 24px;
+                margin-top: 4px;
+            }
+
+            .num {
+                text-align: right;
+            }
+
+            td.num {
+                font-variant-numeric: tabular-nums;
+            }
+
+            .modified {
+                color: var(--mat-sys-on-surface-variant);
+                white-space: nowrap;
+            }
+
+            .sum-row td {
+                font-weight: 600;
+            }
         `,
     ],
 })
@@ -357,6 +858,8 @@ export class OrderFormComponent {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
+    private readonly dialog = inject(MatDialog);
+    private readonly catalogService = inject(VehicleCatalogService);
     private readonly locationService = inject(CustomerLocationService);
     // SessionService.ready is what guarantees angular-auth-oidc-client has rehydrated its
     // stored session before the first request goes out. A form reached by a DIRECT navigation -
@@ -376,11 +879,44 @@ export class OrderFormComponent {
 
     protected readonly orderId = this.route.snapshot.paramMap.get('id');
     protected readonly isEditMode = this.orderId !== null;
+    protected readonly notesMaxLength = NOTES_MAX_LENGTH;
     protected readonly formError = signal<string | null>(null);
     protected readonly locations = signal<OrderLocations | null>(null);
     protected readonly locationError = signal<string | null>(null);
     protected readonly locationOptions = signal<CustomerLocationOption[]>([]);
     protected readonly locationPickerError = signal<string | null>(null);
+
+    protected readonly tolls = signal<OrderToll[]>([]);
+    protected readonly tollsLoaded = signal(false);
+    protected readonly tollError = signal<string | null>(null);
+    protected readonly charges = signal<OrderCharge[]>([]);
+    protected readonly chargesLoaded = signal(false);
+    protected readonly chargeError = signal<string | null>(null);
+    protected readonly tollCategories = signal<VehicleCatalogEntry[]>([]);
+    protected readonly units = signal<VehicleCatalogEntry[]>([]);
+    private readonly tollCategoryIndex = computed(() => catalogIndex(this.tollCategories()));
+    private readonly unitIndex = computed(() => catalogIndex(this.units()));
+    protected readonly tollColumns = computed(() =>
+        this.session.can('dispatch.write') ? [...TOLL_COLUMNS, 'actions'] : [...TOLL_COLUMNS],
+    );
+    protected readonly chargeColumns = computed(() =>
+        this.session.can('dispatch.write') ? [...CHARGE_COLUMNS, 'actions'] : [...CHARGE_COLUMNS],
+    );
+    // The sums mirror the footer boxes of the old software's toll and charge grids.
+    protected readonly tollTotals = computed(() =>
+        this.tolls().reduce(
+            (sums, toll) => ({
+                emptyKm: sums.emptyKm + toll.emptyKm,
+                loadedKm: sums.loadedKm + toll.loadedKm,
+                emptyAmount: sums.emptyAmount + toll.emptyAmount,
+                loadedAmount: sums.loadedAmount + toll.loadedAmount,
+            }),
+            { emptyKm: 0, loadedKm: 0, emptyAmount: 0, loadedAmount: 0 },
+        ),
+    );
+    protected readonly chargeTotal = computed(() =>
+        this.charges().reduce((sum, charge) => sum + charge.total, 0),
+    );
     protected readonly mapMarkers = computed<MapMarker[]>(() => {
         const located = this.locations();
         if (!located) {
@@ -403,6 +939,10 @@ export class OrderFormComponent {
         deliveryFrom: ['', Validators.required],
         deliveryTo: ['', Validators.required],
         consigneeLocationId: [''],
+        notes: ['', Validators.maxLength(NOTES_MAX_LENGTH)],
+        confirmationNotes: ['', Validators.maxLength(NOTES_MAX_LENGTH)],
+        requiresPartitionWall: [false],
+        requiresDoubleDeck: [false],
     });
 
     constructor() {
@@ -420,6 +960,29 @@ export class OrderFormComponent {
                         ),
                 });
             this.loadLocations();
+            // Toll categories and units resolve codes to display names in the two grids; the
+            // full entry lists (including inactive ones) also feed the dialogs' selects.
+            this.session.ready
+                .pipe(
+                    switchMap(() =>
+                        forkJoin([
+                            this.catalogService.list('TollCategory'),
+                            this.catalogService.list('Unit'),
+                        ]),
+                    ),
+                )
+                .subscribe({
+                    next: ([tollCategories, units]) => {
+                        this.tollCategories.set(tollCategories);
+                        this.units.set(units);
+                    },
+                    error: (error: HttpErrorResponse) =>
+                        this.formError.set(
+                            `${this.i18n.t('orders.error.catalogs')} (HTTP ${error.status})`,
+                        ),
+                });
+            this.loadTolls();
+            this.loadCharges();
         }
     }
 
@@ -511,6 +1074,10 @@ export class OrderFormComponent {
             deliveryFrom: this.toIso(value.deliveryFrom),
             deliveryTo: this.toIso(value.deliveryTo),
             consigneeLocationId: value.consigneeLocationId || null,
+            notes: value.notes.trim() === '' ? null : value.notes,
+            confirmationNotes: value.confirmationNotes.trim() === '' ? null : value.confirmationNotes,
+            requiresPartitionWall: value.requiresPartitionWall,
+            requiresDoubleDeck: value.requiresDoubleDeck,
         };
 
         const save$: Observable<Order> = this.session.ready.pipe(
@@ -553,6 +1120,10 @@ export class OrderFormComponent {
             deliveryFrom: this.toLocalInput(order.deliveryFrom),
             deliveryTo: this.toLocalInput(order.deliveryTo),
             consigneeLocationId: order.consigneeLocationId ?? '',
+            notes: order.notes ?? '',
+            confirmationNotes: order.confirmationNotes ?? '',
+            requiresPartitionWall: order.requiresPartitionWall,
+            requiresDoubleDeck: order.requiresDoubleDeck,
         });
     }
 
@@ -610,5 +1181,158 @@ export class OrderFormComponent {
         const problem = error.error as ProblemDetailsBody | null;
         const message = problem?.detail ?? problem?.title ?? fallback;
         return `${message} (HTTP ${error.status})`;
+    }
+
+    protected tollCategoryName(toll: OrderToll): string {
+        return catalogName(this.tollCategoryIndex(), toll.tollCategory) ?? toll.tollCategory;
+    }
+
+    protected unitName(charge: OrderCharge): string {
+        return catalogName(this.unitIndex(), charge.unit) ?? '';
+    }
+
+    protected modifiedText(entry: OrderToll | OrderCharge): string {
+        return this.i18n.t('orders.modifiedValue', {
+            date: formatDateTime(entry.modifiedAt, this.i18n.locale()),
+            user: entry.modifiedBy ?? '–',
+        });
+    }
+
+    // Tolls and charges are saved on their own endpoints right from the dialog, independent of
+    // the order's Save button - unsaved edits in the form are neither sent nor lost.
+    protected openTollDialog(toll: OrderToll | null): void {
+        this.tollError.set(null);
+        this.dialog
+            .open<OrderTollDialogComponent, OrderTollDialogData, OrderToll>(
+                OrderTollDialogComponent,
+                {
+                    data: {
+                        orderId: this.orderId!,
+                        toll,
+                        tollCategories: this.tollCategories(),
+                    },
+                    width: '520px',
+                    autoFocus: 'first-tabbable',
+                },
+            )
+            .afterClosed()
+            .pipe(filter((saved) => !!saved))
+            .subscribe(() => this.loadTolls());
+    }
+
+    protected deleteToll(toll: OrderToll): void {
+        this.tollError.set(null);
+        const data: ConfirmDialogData = {
+            title: this.i18n.t('orders.tolls.deleteTitle'),
+            message: this.i18n.t('orders.tolls.deleteConfirm', {
+                category: this.tollCategoryName(toll),
+            }),
+            confirmLabel: this.i18n.t('common.delete'),
+            cancelLabel: this.i18n.t('common.cancel'),
+            confirmTestId: 'order-toll-delete-confirm',
+            cancelTestId: 'order-toll-delete-cancel',
+            icon: 'delete',
+        };
+        this.dialog
+            .open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
+                data,
+                width: '440px',
+            })
+            .afterClosed()
+            .pipe(
+                filter((confirmed) => confirmed === true),
+                switchMap(() => this.session.ready),
+                switchMap(() => this.service.removeToll(this.orderId!, toll.id)),
+            )
+            .subscribe({
+                next: () => this.loadTolls(),
+                error: (error: HttpErrorResponse) =>
+                    this.tollError.set(
+                        this.describeFailure(error, this.i18n.t('orders.tolls.error.delete')),
+                    ),
+            });
+    }
+
+    protected openChargeDialog(charge: OrderCharge | null): void {
+        this.chargeError.set(null);
+        this.dialog
+            .open<OrderChargeDialogComponent, OrderChargeDialogData, OrderCharge>(
+                OrderChargeDialogComponent,
+                {
+                    data: {
+                        orderId: this.orderId!,
+                        charge,
+                        units: this.units(),
+                    },
+                    width: '520px',
+                    autoFocus: 'first-tabbable',
+                },
+            )
+            .afterClosed()
+            .pipe(filter((saved) => !!saved))
+            .subscribe(() => this.loadCharges());
+    }
+
+    protected deleteCharge(charge: OrderCharge): void {
+        this.chargeError.set(null);
+        const data: ConfirmDialogData = {
+            title: this.i18n.t('orders.charges.deleteTitle'),
+            message: this.i18n.t('orders.charges.deleteConfirm', {
+                description: charge.description,
+            }),
+            confirmLabel: this.i18n.t('common.delete'),
+            cancelLabel: this.i18n.t('common.cancel'),
+            confirmTestId: 'order-charge-delete-confirm',
+            cancelTestId: 'order-charge-delete-cancel',
+            icon: 'delete',
+        };
+        this.dialog
+            .open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
+                data,
+                width: '440px',
+            })
+            .afterClosed()
+            .pipe(
+                filter((confirmed) => confirmed === true),
+                switchMap(() => this.session.ready),
+                switchMap(() => this.service.removeCharge(this.orderId!, charge.id)),
+            )
+            .subscribe({
+                next: () => this.loadCharges(),
+                error: (error: HttpErrorResponse) =>
+                    this.chargeError.set(
+                        this.describeFailure(error, this.i18n.t('orders.charges.error.delete')),
+                    ),
+            });
+    }
+
+    private loadTolls(): void {
+        this.session.ready
+            .pipe(switchMap(() => this.service.listTolls(this.orderId!)))
+            .subscribe({
+                next: (tolls) => {
+                    this.tolls.set(tolls);
+                    this.tollsLoaded.set(true);
+                },
+                error: (error: HttpErrorResponse) =>
+                    this.tollError.set(
+                        this.describeFailure(error, this.i18n.t('orders.tolls.error.list')),
+                    ),
+            });
+    }
+
+    private loadCharges(): void {
+        this.session.ready
+            .pipe(switchMap(() => this.service.listCharges(this.orderId!)))
+            .subscribe({
+                next: (charges) => {
+                    this.charges.set(charges);
+                    this.chargesLoaded.set(true);
+                },
+                error: (error: HttpErrorResponse) =>
+                    this.chargeError.set(
+                        this.describeFailure(error, this.i18n.t('orders.charges.error.list')),
+                    ),
+            });
     }
 }

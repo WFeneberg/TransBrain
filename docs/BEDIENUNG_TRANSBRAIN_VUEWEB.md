@@ -592,6 +592,8 @@ Erreichbar über `/orders`.
   eine fortlaufende Nummer innerhalb dieses Jahres. Sie kann nicht eingegeben oder
   geändert werden, auch nicht beim Bearbeiten.
 - Schaltfläche **„Add order“** oberhalb der Tabelle legt einen neuen Auftrag an.
+- Schaltfläche **„Master data lists“** öffnet die [Auftrags-Stammdaten](#auftrags-stammdaten)
+  (für alle angemeldeten Benutzer).
 - Das Auswahlfeld **„Status“** filtert die Liste. „All“ zeigt alle Aufträge; die übrigen
   Einträge entsprechen den fünf Status `Draft`, `Planned`, `InTransit`, `Delivered` und
   `Cancelled`.
@@ -621,7 +623,7 @@ Erreichbar über „Add order“ (`/orders/new`) oder das Stift-Symbol (`/orders
 
 ![Auftragsformular](img/vueweb/auftragsformular.png)
 
-Das Formular ist in fünf Abschnitte gegliedert:
+Das Formular ist in sechs Abschnitte gegliedert:
 
 | Abschnitt       | Felder                                   | Pflicht | Hinweise                                                     |
 |-----------------|------------------------------------------|:-------:|---------------------------------------------------------------|
@@ -630,6 +632,13 @@ Das Formular ist in fünf Abschnitte gegliedert:
 | Cargo           | Description, Weight (kg), Load meters    | ja      | Gewicht und Lademeter müssen größer als null sein. Lademeter dürfen Dezimalstellen haben (z. B. `8.4`). |
 | Pickup window   | From, To                                 | ja      | Datum **und** Uhrzeit; „From“ muss vor „To“ liegen            |
 | Delivery window | From, To                                 | ja      | Datum **und** Uhrzeit; „From“ muss vor „To“ liegen            |
+| Special remarks | zwei Textfelder, zwei Häkchen            | nein    | siehe unten                                                   |
+
+- **Special remarks (Besonderes):** Wie im Altsystem gibt es zwei getrennte Bemerkungsfelder
+  (je bis 2000 Zeichen): **„Special remarks (internal)“** ist nur intern sichtbar,
+  **„Special remarks on the order confirmation“** ist der Text, der für die
+  Auftragsbestätigung gedacht ist. Darunter die beiden Ausstattungs-Häkchen
+  **„Partition wall“** (Trennwand) und **„Double deck“** (Doppelstock).
 
 - Die Zeitfenster werden in Ihrer lokalen Zeit eingegeben und angezeigt, intern aber in
   UTC gespeichert. Beim erneuten Öffnen zum Bearbeiten erscheinen wieder dieselben
@@ -652,6 +661,59 @@ nicht beim Anlegen eines neuen Auftrags.
   Schlüssel ist nicht nötig. Er kennt nur Adressen im geladenen Kartenausschnitt.
   Ist der Dienst nicht erreichbar oder noch im Aufbau, erscheint anstelle der Karte die
   Meldung „Der Karten- und Routingdienst ist nicht verfügbar …“. Das Formular bleibt voll nutzbar.
+
+### Mautdaten (Toll data)
+
+Beim Bearbeiten eines bestehenden Auftrags erscheint unterhalb der Karte die Tabelle
+**„Toll data“** — das Gegenstück zum Mautdaten-Reiter des Altsystems. Hier halten Sie fest,
+welche Mautstrecken für den Auftrag angefallen sind.
+
+- **„Add toll“** öffnet den Dialog „New toll record“: **Toll category** (Maut-Art, Pflicht,
+  Auswahlliste aus den [Auftrags-Stammdaten](#auftrags-stammdaten)), **Empty km** (Leer-km)
+  und **Loaded km** (Last-km, je 0 bis 100 000) sowie **Rate (€/km)** (Faktor, 0 bis 1 000,
+  bis zu vier Nachkommastellen).
+- Die Beträge rechnet der Server: **Empty amount** = Leer-km × Faktor, **Loaded amount** =
+  Last-km × Faktor. Sie erscheinen als Spalten in der Tabelle; die Summenzeile addiert
+  Kilometer und Beträge — wie die Summenfelder unter dem alten Mautdaten-Reiter.
+- Jede Zeile zeigt unter **Last modified**, wer sie zuletzt geändert hat und wann.
+  Stift- und Papierkorb-Symbol (mit Sicherheitsabfrage) erscheinen nur mit Schreibrecht
+  für die Disposition (`admin`, `disponent`).
+- **Mautdaten sind in jedem Auftragsstatus änderbar** — anders als die übrigen
+  Auftragsfelder, die nur im Status `Draft` bearbeitet werden können. Das ist Absicht:
+  Mautkosten werden oft erst bekannt, während die Tour unterwegs ist oder danach.
+
+### Zusatzpositionen (Additional charges)
+
+Darunter steht die Tabelle **„Additional charges“** — das Gegenstück zum
+Zusatzpositionen-Reiter des Altsystems. Hier erfassen Sie zusätzliche Leistungen, die mit
+dem Auftrag abgerechnet werden sollen (z. B. Standgeld, Palettentausch).
+
+- **„Add charge“** öffnet den Dialog „New additional charge“: **Description** (Bezeichnung,
+  Pflicht, bis 200 Zeichen), **Quantity** (Menge, größer null bis 1 000 000), **Unit**
+  (Einheit, optional, Auswahlliste aus den [Auftrags-Stammdaten](#auftrags-stammdaten) —
+  „No unit“ lässt sie weg) und **Unit price** (Einzelpreis in €, 0 bis 1 000 000).
+- **Total** (Gesamt = Menge × Einzelpreis) rechnet der Server; die Summenzeile addiert
+  alle Gesamtbeträge.
+- Bearbeiten, Löschen, die Spalte **Last modified** und die Statusregel verhalten sich wie
+  bei den Mautdaten: Änderungen sind in jedem Auftragsstatus möglich, Schreibrecht für die
+  Disposition vorausgesetzt.
+
+## Auftrags-Stammdaten
+
+Erreichbar über die Schaltfläche **„Master data lists“** oben in der Auftragsliste
+(`/order-catalog`). Hier pflegen Sie die Auswahllisten des Auftragsformulars in zwei
+Reitern: **Toll categories** (Maut-Arten) und **Units** (Einheiten). Beim ersten Start
+sind die Einträge des Altsystems bereits angelegt — 15 Maut-Arten (A 0,300; A 0,310; A1;
+A2; A-Tank; CH 0,55; D 0,124; D 0,15; D Tank; D3A EU 1/2; D3A EU 3/4; D3A EU 5;
+D4/5A EU 5; D4/5A EU 1/2; D4/5A EU 3/4) und 11 Einheiten (Meter, Zentimeter, Millimeter,
+Stück, Packung, Stunde, Minute, Tag, Liter, Tonnen, Kubikmeter). **„Back to the orders“** führt zurück zur Auftragsliste.
+
+Die Seite funktioniert genau wie die [Fahrzeug-Stammdaten](#fahrzeug-stammdaten): alle
+angemeldeten Benutzer sehen die Listen, ändern dürfen sie nur Administratoren; Code und
+Name werden im selben Dialog erfasst, der Code ist später nicht änderbar. Die Spalte
+**Used by** zählt die Aufträge, die einen Eintrag verwenden („2 orders“ — jeder Auftrag
+nur einmal), und ein Eintrag, den noch ein Auftrag verwendet, lässt sich nicht löschen,
+nur deaktivieren.
 
 ## Auftragsstatus: welche Schritte abgelehnt werden
 

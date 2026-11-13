@@ -26,6 +26,10 @@ public sealed class TransBrainDbContext(
 
     public DbSet<TransportOrder> TransportOrders => Set<TransportOrder>();
 
+    public DbSet<OrderTollCharge> OrderTollCharges => Set<OrderTollCharge>();
+
+    public DbSet<OrderAdditionalCharge> OrderAdditionalCharges => Set<OrderAdditionalCharge>();
+
     public DbSet<Tour> Tours => Set<Tour>();
 
     public DbSet<Customer> Customers => Set<Customer>();
@@ -56,6 +60,8 @@ public sealed class TransBrainDbContext(
         ApplyTenantFilter<VehicleDocument>(modelBuilder);
         ApplyTenantFilter<Driver>(modelBuilder);
         ApplyTenantFilter<TransportOrder>(modelBuilder);
+        ApplyTenantFilter<OrderTollCharge>(modelBuilder);
+        ApplyTenantFilter<OrderAdditionalCharge>(modelBuilder);
         ApplyTenantFilter<Tour>(modelBuilder);
         ApplyTenantFilter<Customer>(modelBuilder);
         ApplyTenantFilter<CustomerLocation>(modelBuilder);

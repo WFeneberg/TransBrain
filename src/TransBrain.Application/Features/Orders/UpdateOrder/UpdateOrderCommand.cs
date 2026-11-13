@@ -13,4 +13,8 @@ public sealed record UpdateOrderCommand(
     DateTimeOffset PickupTo,
     DateTimeOffset DeliveryFrom,
     DateTimeOffset DeliveryTo,
-    Guid? ConsigneeLocationId = null) : ICommand<OrderResponse>;
+    Guid? ConsigneeLocationId = null,
+    string? Notes = null,
+    string? ConfirmationNotes = null,
+    bool RequiresPartitionWall = false,
+    bool RequiresDoubleDeck = false) : ICommand<OrderResponse>;

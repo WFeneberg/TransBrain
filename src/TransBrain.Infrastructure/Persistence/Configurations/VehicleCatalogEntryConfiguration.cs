@@ -30,8 +30,10 @@ internal sealed class VehicleCatalogEntryConfiguration : IEntityTypeConfiguratio
         // names where one existed, so vehicles saved before the catalog existed keep resolving. The
         // carrier groups are those of the legacy vehicle screen too, and the phone types and driver
         // document types are the fixed dropdown values of the legacy driver screen ("Zusatz → Telefone"
-        // and "Zusatz → Sonderpapiere"). Seeded for the default tenant
-        // only: a newly onboarded tenant starts with an empty catalog and fills it via the admin UI.
+        // and "Zusatz → Sonderpapiere"). The toll categories and units are the dropdown values of the
+        // legacy order screen ("Mautdaten → Maut-Art" and "Entladedaten → Einheit"). Seeded for the
+        // default tenant only: a newly onboarded tenant starts with an empty catalog and fills it via
+        // the admin UI.
         builder.HasData(
             Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-00000000000b", "Other", "Sonstige"),
             Seed(VehicleCatalogKind.VehicleClass, "0199a6c0-0000-7000-8000-000000000004", "Tank", "Tank"),
@@ -68,7 +70,33 @@ internal sealed class VehicleCatalogEntryConfiguration : IEntityTypeConfiguratio
             Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000505", "SpecialApproval", "besondere Zulassung"),
             Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000506", "SpecialPermit", "besondere Genehmigung"),
             Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000507", "BoilerPressure", "Kesseldruckbescheinigung"),
-            Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000508", "ServiceInterval", "Service - Intervall"));
+            Seed(VehicleCatalogKind.DriverDocumentType, "0199a6c0-0000-7000-8000-000000000508", "ServiceInterval", "Service - Intervall"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-000000000601", "A-0300", "A 0,300"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-000000000602", "A-0310", "A 0,310"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-000000000603", "A1", "A1"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-000000000604", "A2", "A2"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-000000000605", "A-Tank", "A-Tank"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-000000000606", "CH-055", "CH 0,55"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-000000000607", "D-0124", "D 0,124"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-000000000608", "D-015", "D 0,15"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-000000000609", "D-Tank", "D Tank"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-00000000060a", "D3A-EU12", "D3A EU 1/2"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-00000000060b", "D3A-EU34", "D3A EU 3/4"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-00000000060c", "D3A-EU5", "D3A EU 5"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-00000000060d", "D45A-EU5", "D4/5A EU 5"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-00000000060e", "D45A-EU12", "D4/5A EU 1/2"),
+            Seed(VehicleCatalogKind.TollCategory, "0199a6c0-0000-7000-8000-00000000060f", "D45A-EU34", "D4/5A EU 3/4"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-000000000701", "m", "Meter"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-000000000702", "cm", "Zentimeter"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-000000000703", "mm", "Millimeter"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-000000000704", "Stk", "Stück"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-000000000705", "Pck", "Packung"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-000000000706", "Std", "Stunde"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-000000000707", "min", "Minute"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-000000000708", "Tg", "Tag"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-000000000709", "ltr", "Liter"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-00000000070a", "to", "Tonnen"),
+            Seed(VehicleCatalogKind.Unit, "0199a6c0-0000-7000-8000-00000000070b", "cbm", "Kubikmeter"));
     }
 
     private static object Seed(VehicleCatalogKind kind, string id, string code, string name) => new

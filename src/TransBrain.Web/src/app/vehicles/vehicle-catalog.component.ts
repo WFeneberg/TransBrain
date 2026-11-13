@@ -31,6 +31,7 @@ import {
 import {
     CUSTOMER_CATALOG_KINDS,
     DRIVER_CATALOG_KINDS,
+    ORDER_CATALOG_KINDS,
     VEHICLE_CATALOG_KINDS,
     VehicleCatalogEntry,
     VehicleCatalogKind,
@@ -47,12 +48,15 @@ const KIND_ICONS: Record<VehicleCatalogKind, string> = {
     CustomerClass: 'star_outline',
     PhoneType: 'call',
     DriverDocumentType: 'badge',
+    TollCategory: 'toll',
+    Unit: 'straighten',
 };
 
 /**
- * The page serves three routes: 'vehicle-catalog' with the lists behind the vehicle form,
- * 'customer-catalog' (route data `catalogScope: 'customer'`) with those behind the customer form
- * and 'driver-catalog' (`catalogScope: 'driver'`) with those behind the driver form.
+ * The page serves four routes: 'vehicle-catalog' with the lists behind the vehicle form,
+ * 'customer-catalog' (route data `catalogScope: 'customer'`) with those behind the customer form,
+ * 'driver-catalog' (`catalogScope: 'driver'`) with those behind the driver form and
+ * 'order-catalog' (`catalogScope: 'order'`) with those behind the order form.
  */
 interface CatalogScope {
     kinds: readonly VehicleCatalogKind[];
@@ -64,7 +68,7 @@ interface CatalogScope {
     testIdPrefix: string;
 }
 
-const SCOPES: Record<'vehicle' | 'customer' | 'driver', CatalogScope> = {
+const SCOPES: Record<'vehicle' | 'customer' | 'driver' | 'order', CatalogScope> = {
     vehicle: {
         kinds: VEHICLE_CATALOG_KINDS,
         title: 'vehicleCatalog.title',
@@ -92,6 +96,15 @@ const SCOPES: Record<'vehicle' | 'customer' | 'driver', CatalogScope> = {
         usage: 'driverCatalog.usage',
         testIdPrefix: 'driver-catalog',
     },
+    order: {
+        kinds: ORDER_CATALOG_KINDS,
+        title: 'orderCatalog.title',
+        subtitle: 'orderCatalog.subtitle',
+        back: 'orderCatalog.back',
+        backLink: '/orders',
+        usage: 'orderCatalog.usage',
+        testIdPrefix: 'order-catalog',
+    },
 };
 
 function toKind(scope: CatalogScope, value: string | null): VehicleCatalogKind {
@@ -100,7 +113,7 @@ function toKind(scope: CatalogScope, value: string | null): VehicleCatalogKind {
 }
 
 function toScopeKey(value: unknown): keyof typeof SCOPES {
-    return value === 'customer' || value === 'driver' ? value : 'vehicle';
+    return value === 'customer' || value === 'driver' || value === 'order' ? value : 'vehicle';
 }
 
 @Component({

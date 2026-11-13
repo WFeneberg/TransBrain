@@ -7,10 +7,12 @@ namespace TransBrain.Application.Tests.Fakes;
 /// <param name="vehicles">Source of the vehicle usage counts; without it every entry counts as unused.</param>
 /// <param name="customers">Source of the customer class usage counts.</param>
 /// <param name="drivers">Source of the phone type and driver document type usage counts.</param>
+/// <param name="orders">Source of the toll category and unit usage counts.</param>
 public sealed class InMemoryVehicleCatalogRepository(
     InMemoryVehicleRepository? vehicles = null,
     InMemoryCustomerRepository? customers = null,
-    InMemoryDriverRepository? drivers = null)
+    InMemoryDriverRepository? drivers = null,
+    InMemoryTransportOrderRepository? orders = null)
     : IVehicleCatalogRepository
 {
     private readonly List<VehicleCatalogEntry> _entries = [];
@@ -85,6 +87,11 @@ public sealed class InMemoryVehicleCatalogRepository(
             // Same rule for special papers of the same type.
             VehicleCatalogKind.DriverDocumentType => (drivers?.Drivers ?? []).SelectMany(
                 d => d.SpecialDocuments.Select(s => s.Type).Distinct()),
+            // An order listing two toll records of the same category counts once, like the real repository.
+            VehicleCatalogKind.TollCategory => (orders?.Tolls ?? []).GroupBy(t => t.OrderId).SelectMany(
+                g => g.Select(t => t.TollCategory).Distinct()),
+            VehicleCatalogKind.Unit => (orders?.Charges ?? []).GroupBy(c => c.OrderId).SelectMany(
+                g => g.Select(c => c.Unit).OfType<string>().Distinct()),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
         };
 

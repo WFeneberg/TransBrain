@@ -42,5 +42,7 @@ public sealed class UpdateOrderCommandValidator : AbstractValidator<UpdateOrderC
         RuleFor(c => c.CargoDescription).NotEmpty();
         RuleFor(c => c.CargoWeightKg).GreaterThan(0);
         RuleFor(c => c.CargoLoadMeters).GreaterThan(0m);
+        RuleFor(c => c.Notes).MaximumLength(Domain.Orders.TransportOrder.MaxNotesLength);
+        RuleFor(c => c.ConfirmationNotes).MaximumLength(Domain.Orders.TransportOrder.MaxNotesLength);
     }
 }

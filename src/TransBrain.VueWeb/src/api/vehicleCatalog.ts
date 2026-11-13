@@ -3,8 +3,9 @@ import { userManager } from '../auth/userManager';
 
 /**
  * The maintainable selection lists - see VehicleCatalog.vue. Despite the name the API also keeps
- * the customer classes here, maintained on '/customer-catalog', and the driver phone types,
- * maintained on '/driver-catalog'.
+ * the customer classes here, maintained on '/customer-catalog', the driver phone types,
+ * maintained on '/driver-catalog', and the order toll categories and units, maintained on
+ * '/order-catalog'.
  */
 export type VehicleCatalogKind =
     | 'VehicleClass'
@@ -13,7 +14,9 @@ export type VehicleCatalogKind =
     | 'DocumentType'
     | 'CustomerClass'
     | 'PhoneType'
-    | 'DriverDocumentType';
+    | 'DriverDocumentType'
+    | 'TollCategory'
+    | 'Unit';
 
 /** The kinds behind the vehicle form, shown on '/vehicle-catalog'. */
 export const VEHICLE_CATALOG_KINDS: readonly VehicleCatalogKind[] = [
@@ -28,6 +31,9 @@ export const CUSTOMER_CATALOG_KINDS: readonly VehicleCatalogKind[] = ['CustomerC
 
 /** The kinds behind the driver form, shown on '/driver-catalog'. */
 export const DRIVER_CATALOG_KINDS: readonly VehicleCatalogKind[] = ['PhoneType', 'DriverDocumentType'];
+
+/** The kinds behind the order form (toll categories and units), shown on '/order-catalog'. */
+export const ORDER_CATALOG_KINDS: readonly VehicleCatalogKind[] = ['TollCategory', 'Unit'];
 
 export interface VehicleCatalogEntry {
     id: string;
