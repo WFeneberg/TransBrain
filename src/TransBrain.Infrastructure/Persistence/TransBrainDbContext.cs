@@ -4,10 +4,12 @@ using TransBrain.Application.Abstractions;
 using TransBrain.Domain.Billing;
 using TransBrain.Domain.Customers;
 using TransBrain.Domain.Drivers;
+using TransBrain.Domain.Imports;
 using TransBrain.Domain.Orders;
 using TransBrain.Domain.Routing;
 using TransBrain.Domain.Tours;
 using TransBrain.Domain.Vehicles;
+using TransBrain.Infrastructure.Persistence.Imports;
 using TransBrain.Infrastructure.Persistence.Tenancy;
 
 namespace TransBrain.Infrastructure.Persistence;
@@ -36,6 +38,8 @@ public sealed class TransBrainDbContext(
 
     public DbSet<GeoOverride> GeoOverrides => Set<GeoOverride>();
 
+    public DbSet<ImportSession> ImportSessions => Set<ImportSession>();
+
     /// <summary>
     /// The tenant the current scope runs for. Referenced from the query filters below, which EF
     /// re-evaluates per query, so one cached model serves every tenant. Deliberately lazy:
@@ -61,6 +65,8 @@ public sealed class TransBrainDbContext(
         ApplyTenantFilter<CustomerLocation>(modelBuilder);
         ApplyTenantFilter<Invoice>(modelBuilder);
         ApplyTenantFilter<GeoOverride>(modelBuilder);
+        ApplyTenantFilter<ImportSession>(modelBuilder);
+        ApplyTenantFilter<ImportSessionData>(modelBuilder);
 
         base.OnModelCreating(modelBuilder);
     }

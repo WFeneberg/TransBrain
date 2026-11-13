@@ -12,9 +12,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="MySqlConnector" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="PDFsharp-MigraDoc" />
     <PackageReference Include="StackExchange.Redis" />
+    <PackageReference Include="System.Data.Odbc" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
   </ItemGroup>
 

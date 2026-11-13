@@ -236,6 +236,65 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.ToTable("drivers", (string)null);
                 });
 
+            modelBuilder.Entity("TransBrain.Domain.Imports.ImportSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ImportedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SourceName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("TableName")
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)");
+
+                    b.Property<string>("TargetEntity")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("import_sessions", (string)null);
+                });
+
             modelBuilder.Entity("TransBrain.Domain.Orders.TransportOrder", b =>
                 {
                     b.Property<Guid>("Id")
@@ -837,6 +896,26 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("vehicle_documents", (string)null);
+                });
+
+            modelBuilder.Entity("TransBrain.Infrastructure.Persistence.Imports.ImportSessionData", b =>
+                {
+                    b.Property<Guid>("ImportSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Payload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("ImportSessionId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("import_session_data", (string)null);
                 });
 
             modelBuilder.Entity("TransBrain.Domain.Billing.Invoice", b =>
@@ -1965,6 +2044,15 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.HasOne("TransBrain.Domain.Vehicles.Vehicle", null)
                         .WithMany()
                         .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TransBrain.Infrastructure.Persistence.Imports.ImportSessionData", b =>
+                {
+                    b.HasOne("TransBrain.Domain.Imports.ImportSession", null)
+                        .WithOne()
+                        .HasForeignKey("TransBrain.Infrastructure.Persistence.Imports.ImportSessionData", "ImportSessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
