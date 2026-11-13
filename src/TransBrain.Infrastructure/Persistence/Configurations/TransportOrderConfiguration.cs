@@ -64,6 +64,11 @@ internal sealed class TransportOrderConfiguration : IEntityTypeConfiguration<Tra
 
         builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(o => o.CreatedAt).IsRequired();
+
+        builder.Property(o => o.Notes).HasMaxLength(TransportOrder.MaxNotesLength);
+        builder.Property(o => o.ConfirmationNotes).HasMaxLength(TransportOrder.MaxNotesLength);
+        builder.Property(o => o.RequiresPartitionWall).IsRequired();
+        builder.Property(o => o.RequiresDoubleDeck).IsRequired();
     }
 
     private static Action<OwnedNavigationBuilder<TransportOrder, Domain.Common.Address>> ConfigureAddress(

@@ -236,11 +236,105 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.ToTable("drivers", (string)null);
                 });
 
+            modelBuilder.Entity("TransBrain.Domain.Orders.OrderAdditionalCharge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("order_additional_charges", (string)null);
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Orders.OrderTollCharge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("EmptyKm")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("FactorPerKm")
+                        .HasPrecision(8, 4)
+                        .HasColumnType("numeric(8,4)");
+
+                    b.Property<int>("LoadedKm")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TollCategory")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("order_toll_charges", (string)null);
+                });
+
             modelBuilder.Entity("TransBrain.Domain.Orders.TransportOrder", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ConfirmationNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<Guid?>("ConsigneeLocationId")
                         .HasColumnType("uuid");
@@ -248,12 +342,22 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("OrderNumber")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("order_number")
                         .UseCollation("C");
+
+                    b.Property<bool>("RequiresDoubleDeck")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequiresPartitionWall")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -790,6 +894,240 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                             IsActive = true,
                             Kind = "DriverDocumentType",
                             Name = "Service - Intervall",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000601"),
+                            Code = "A-0300",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "A 0,300",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000602"),
+                            Code = "A-0310",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "A 0,310",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000603"),
+                            Code = "A1",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "A1",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000604"),
+                            Code = "A2",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "A2",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000605"),
+                            Code = "A-Tank",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "A-Tank",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000606"),
+                            Code = "CH-055",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "CH 0,55",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000607"),
+                            Code = "D-0124",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "D 0,124",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000608"),
+                            Code = "D-015",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "D 0,15",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000609"),
+                            Code = "D-Tank",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "D Tank",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000060a"),
+                            Code = "D3A-EU12",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "D3A EU 1/2",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000060b"),
+                            Code = "D3A-EU34",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "D3A EU 3/4",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000060c"),
+                            Code = "D3A-EU5",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "D3A EU 5",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000060d"),
+                            Code = "D45A-EU5",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "D4/5A EU 5",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000060e"),
+                            Code = "D45A-EU12",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "D4/5A EU 1/2",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000060f"),
+                            Code = "D45A-EU34",
+                            IsActive = true,
+                            Kind = "TollCategory",
+                            Name = "D4/5A EU 3/4",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000701"),
+                            Code = "m",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Meter",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000702"),
+                            Code = "cm",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Zentimeter",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000703"),
+                            Code = "mm",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Millimeter",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000704"),
+                            Code = "Stk",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Stück",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000705"),
+                            Code = "Pck",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Packung",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000706"),
+                            Code = "Std",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Stunde",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000707"),
+                            Code = "min",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Minute",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000708"),
+                            Code = "Tg",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Tag",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-000000000709"),
+                            Code = "ltr",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Liter",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000070a"),
+                            Code = "to",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Tonnen",
+                            TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("0199a6c0-0000-7000-8000-00000000070b"),
+                            Code = "cbm",
+                            IsActive = true,
+                            Kind = "Unit",
+                            Name = "Kubikmeter",
                             TenantId = new Guid("0199c0de-0000-7000-8000-000000000001")
                         });
                 });
@@ -1449,6 +1787,24 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("SpecialDocuments");
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Orders.OrderAdditionalCharge", b =>
+                {
+                    b.HasOne("TransBrain.Domain.Orders.TransportOrder", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Orders.OrderTollCharge", b =>
+                {
+                    b.HasOne("TransBrain.Domain.Orders.TransportOrder", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TransBrain.Domain.Orders.TransportOrder", b =>

@@ -20,6 +20,8 @@ internal static class VehicleCatalogErrors
         VehicleCatalogKind.CustomerClass => "customer class",
         VehicleCatalogKind.PhoneType => "phone type",
         VehicleCatalogKind.DriverDocumentType => "driver document type",
+        VehicleCatalogKind.TollCategory => "toll category",
+        VehicleCatalogKind.Unit => "unit",
         _ => kind.ToString()
     };
 
@@ -29,6 +31,8 @@ internal static class VehicleCatalogErrors
         VehicleCatalogKind.CustomerClass => "customer(s)",
         VehicleCatalogKind.PhoneType => "driver(s)",
         VehicleCatalogKind.DriverDocumentType => "driver(s)",
+        VehicleCatalogKind.TollCategory => "order(s)",
+        VehicleCatalogKind.Unit => "order(s)",
         _ => "vehicle(s)"
     };
 }

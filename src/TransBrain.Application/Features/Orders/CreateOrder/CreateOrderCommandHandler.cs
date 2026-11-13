@@ -77,7 +77,11 @@ internal sealed class CreateOrderCommandHandler(
             pickup.Value,
             delivery.Value,
             now,
-            command.ConsigneeLocationId);
+            command.ConsigneeLocationId,
+            command.Notes,
+            command.ConfirmationNotes,
+            command.RequiresPartitionWall,
+            command.RequiresDoubleDeck);
 
         if (!order.IsSuccess)
         {

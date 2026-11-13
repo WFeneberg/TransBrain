@@ -57,14 +57,22 @@ const BASE_COLUMNS = ['orderNumber', 'consignor', 'consignee', 'cargo', 'pickup'
                             {{ i18n.t('orders.count', { count: filteredCount() }) }}
                         </p>
                     </div>
-                    @if (session.can('dispatch.write')) {
-                        <div class="header-actions">
+                    <div class="header-actions">
+                        <a
+                            mat-stroked-button
+                            routerLink="/order-catalog"
+                            data-testid="order-catalog-link"
+                        >
+                            <mat-icon>tune</mat-icon>
+                            {{ i18n.t('orders.catalogLink') }}
+                        </a>
+                        @if (session.can('dispatch.write')) {
                             <a mat-flat-button routerLink="/orders/new" data-testid="order-add">
                                 <mat-icon>add</mat-icon>
                                 {{ i18n.t('orders.add') }}
                             </a>
-                        </div>
-                    }
+                        }
+                    </div>
                 </header>
 
                 @if (actionError(); as message) {

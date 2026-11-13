@@ -47,8 +47,30 @@ internal sealed class VehicleCatalogRepository(TransBrainDbContext context) : IV
             CountCodesAsync(context.Customers.Select(c => c.Additional.CustomerClass), cancellationToken),
         VehicleCatalogKind.PhoneType => CountPhoneTypeUsageAsync(cancellationToken),
         VehicleCatalogKind.DriverDocumentType => CountDriverDocumentTypeUsageAsync(cancellationToken),
+        // An order charged twice under the same category counts once, mirroring the driver lists.
+        VehicleCatalogKind.TollCategory =>
+            CountDistinctPerOrderAsync(
+                context.OrderTollCharges.Select(t => new OrderCode(t.OrderId, t.TollCategory)), cancellationToken),
+        VehicleCatalogKind.Unit =>
+            CountDistinctPerOrderAsync(
+                context.OrderAdditionalCharges
+                    .Where(c => c.Unit != null)
+                    .Select(c => new OrderCode(c.OrderId, c.Unit!)),
+                cancellationToken),
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
     };
+
+    private sealed record OrderCode(Guid OrderId, string Code);
+
+    private static async Task<IReadOnlyDictionary<string, int>> CountDistinctPerOrderAsync(
+        IQueryable<OrderCode> codesPerOrder, CancellationToken cancellationToken)
+    {
+        List<OrderCode> rows = await codesPerOrder.Distinct().ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(row => row.Code, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+    }
 
     private static async Task<IReadOnlyDictionary<string, int>> CountCodesAsync(
         IQueryable<string?> codes, CancellationToken cancellationToken)

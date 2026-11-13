@@ -78,6 +78,12 @@ export const routes: Routes = [
         canActivate: [requireAuthentication],
         data: { catalogScope: 'driver' },
     },
+    {
+        path: 'order-catalog',
+        loadComponent: loadVehicleCatalog,
+        canActivate: [requireAuthentication],
+        data: { catalogScope: 'order' },
+    },
     { path: 'drivers', loadComponent: loadDriverList, canActivate: [requireAuthentication] },
     {
         path: 'drivers/new',

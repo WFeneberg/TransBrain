@@ -25,6 +25,12 @@ export interface Order {
     status: string;
     createdAt: string;
     consigneeLocationId: string | null;
+    /** Special remarks for dispatch ("Besonderes"). */
+    notes: string | null;
+    /** Special remarks printed on the order confirmation. */
+    confirmationNotes: string | null;
+    requiresPartitionWall: boolean;
+    requiresDoubleDeck: boolean;
 }
 
 /** Body shared by create and update - the API takes the id from the route on update, not the payload. */
@@ -39,6 +45,55 @@ export interface OrderWriteRequest {
     deliveryFrom: string;
     deliveryTo: string;
     consigneeLocationId: string | null;
+    notes: string | null;
+    confirmationNotes: string | null;
+    requiresPartitionWall: boolean;
+    requiresDoubleDeck: boolean;
+}
+
+/** One toll record ("Mautdaten") of an order; the amounts are computed by the API. */
+export interface OrderToll {
+    id: string;
+    orderId: string;
+    /** Code of a TollCategory entry of the catalog; the UI shows the entry's name. */
+    tollCategory: string;
+    emptyKm: number;
+    loadedKm: number;
+    factorPerKm: number;
+    emptyAmount: number;
+    loadedAmount: number;
+    modifiedAt: string;
+    modifiedBy: string | null;
+}
+
+/** Body shared by toll create and update - the ids come from the route. */
+export interface OrderTollWriteRequest {
+    tollCategory: string;
+    emptyKm: number;
+    loadedKm: number;
+    factorPerKm: number;
+}
+
+/** One additional charge position ("Zusatzposition") of an order; the total is computed by the API. */
+export interface OrderCharge {
+    id: string;
+    orderId: string;
+    description: string;
+    quantity: number;
+    /** Code of a Unit entry of the catalog, or null for a bare quantity. */
+    unit: string | null;
+    unitPrice: number;
+    total: number;
+    modifiedAt: string;
+    modifiedBy: string | null;
+}
+
+/** Body shared by charge create and update - the ids come from the route. */
+export interface OrderChargeWriteRequest {
+    description: string;
+    quantity: number;
+    unit: string | null;
+    unitPrice: number;
 }
 
 /** One party's location; `null` in OrderLocations means its address could not be geocoded. */
@@ -110,5 +165,47 @@ export class OrderService {
      */
     cancel(id: string): Observable<Order> {
         return this.http.post<Order>(`/api/orders/${id}/cancel`, null);
+    }
+
+    /** Oldest first. Toll records stay editable after dispatch: the km arrive after the trip. */
+    listTolls(orderId: string): Observable<OrderToll[]> {
+        return this.http.get<OrderToll[]>(`/api/orders/${orderId}/tolls`);
+    }
+
+    createToll(orderId: string, request: OrderTollWriteRequest): Observable<OrderToll> {
+        return this.http.post<OrderToll>(`/api/orders/${orderId}/tolls`, request);
+    }
+
+    updateToll(
+        orderId: string,
+        tollId: string,
+        request: OrderTollWriteRequest,
+    ): Observable<OrderToll> {
+        return this.http.put<OrderToll>(`/api/orders/${orderId}/tolls/${tollId}`, request);
+    }
+
+    removeToll(orderId: string, tollId: string): Observable<void> {
+        return this.http.delete<void>(`/api/orders/${orderId}/tolls/${tollId}`);
+    }
+
+    /** Oldest first, like the tolls. */
+    listCharges(orderId: string): Observable<OrderCharge[]> {
+        return this.http.get<OrderCharge[]>(`/api/orders/${orderId}/charges`);
+    }
+
+    createCharge(orderId: string, request: OrderChargeWriteRequest): Observable<OrderCharge> {
+        return this.http.post<OrderCharge>(`/api/orders/${orderId}/charges`, request);
+    }
+
+    updateCharge(
+        orderId: string,
+        chargeId: string,
+        request: OrderChargeWriteRequest,
+    ): Observable<OrderCharge> {
+        return this.http.put<OrderCharge>(`/api/orders/${orderId}/charges/${chargeId}`, request);
+    }
+
+    removeCharge(orderId: string, chargeId: string): Observable<void> {
+        return this.http.delete<void>(`/api/orders/${orderId}/charges/${chargeId}`);
     }
 }

@@ -8,6 +8,16 @@ using TransBrain.Application.Features.Orders.CreateOrder;
 using TransBrain.Application.Features.Orders.GetOrderById;
 using TransBrain.Application.Features.Orders.GetOrderLocations;
 using TransBrain.Application.Features.Orders.ListOrders;
+using TransBrain.Application.Features.Orders.OrderCharges;
+using TransBrain.Application.Features.Orders.OrderCharges.AddOrderCharge;
+using TransBrain.Application.Features.Orders.OrderCharges.DeleteOrderCharge;
+using TransBrain.Application.Features.Orders.OrderCharges.ListOrderCharges;
+using TransBrain.Application.Features.Orders.OrderCharges.UpdateOrderCharge;
+using TransBrain.Application.Features.Orders.OrderTolls;
+using TransBrain.Application.Features.Orders.OrderTolls.AddOrderToll;
+using TransBrain.Application.Features.Orders.OrderTolls.DeleteOrderToll;
+using TransBrain.Application.Features.Orders.OrderTolls.ListOrderTolls;
+using TransBrain.Application.Features.Orders.OrderTolls.UpdateOrderToll;
 using TransBrain.Application.Features.Orders.UpdateOrder;
 using TransBrain.Domain.Common;
 
@@ -87,7 +97,11 @@ public sealed class OrderEndpoints : IEndpointGroup
                         request.PickupTo,
                         request.DeliveryFrom,
                         request.DeliveryTo,
-                        request.ConsigneeLocationId),
+                        request.ConsigneeLocationId,
+                        request.Notes,
+                        request.ConfirmationNotes,
+                        request.RequiresPartitionWall,
+                        request.RequiresDoubleDeck),
                     ct);
                 return result.ToHttpResult();
             })
@@ -110,6 +124,121 @@ public sealed class OrderEndpoints : IEndpointGroup
             .Produces<OrderResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        MapTolls(group);
+        MapCharges(group);
+    }
+
+    private static void MapTolls(RouteGroupBuilder group)
+    {
+        group.MapGet("/{id:guid}/tolls", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                Result<OrderTollResponse[]> result = await sender.Send(new ListOrderTollsQuery(id), ct);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.Read)
+            .WithName("ListOrderTolls")
+            .WithSummary("Lists the order's toll records (\"Mautdaten\").")
+            .Produces<OrderTollResponse[]>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/tolls", async (
+                Guid id, OrderTollRequest request, ISender sender, CancellationToken ct) =>
+            {
+                Result<OrderTollResponse> result = await sender.Send(
+                    new AddOrderTollCommand(
+                        id, request.TollCategory, request.EmptyKm, request.LoadedKm, request.FactorPerKm),
+                    ct);
+                return result.ToHttpResult(toll =>
+                    Results.Created($"/api/orders/{id}/tolls/{toll.Id}", toll));
+            })
+            .RequireAuthorization(Policies.DispatchWrite)
+            .WithName("AddOrderToll")
+            .Produces<OrderTollResponse>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/tolls/{tollId:guid}", async (
+                Guid id, Guid tollId, OrderTollRequest request, ISender sender, CancellationToken ct) =>
+            {
+                Result<OrderTollResponse> result = await sender.Send(
+                    new UpdateOrderTollCommand(
+                        id, tollId, request.TollCategory, request.EmptyKm, request.LoadedKm, request.FactorPerKm),
+                    ct);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.DispatchWrite)
+            .WithName("UpdateOrderToll")
+            .Produces<OrderTollResponse>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/{id:guid}/tolls/{tollId:guid}", async (
+                Guid id, Guid tollId, ISender sender, CancellationToken ct) =>
+            {
+                Result<Unit> result = await sender.Send(new DeleteOrderTollCommand(id, tollId), ct);
+                return result.ToHttpResult(_ => Results.NoContent());
+            })
+            .RequireAuthorization(Policies.DispatchWrite)
+            .WithName("DeleteOrderToll")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+    }
+
+    private static void MapCharges(RouteGroupBuilder group)
+    {
+        group.MapGet("/{id:guid}/charges", async (Guid id, ISender sender, CancellationToken ct) =>
+            {
+                Result<OrderChargeResponse[]> result = await sender.Send(new ListOrderChargesQuery(id), ct);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.Read)
+            .WithName("ListOrderCharges")
+            .WithSummary("Lists the order's additional charge positions (\"Zusatzpositionen\").")
+            .Produces<OrderChargeResponse[]>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/charges", async (
+                Guid id, OrderChargeRequest request, ISender sender, CancellationToken ct) =>
+            {
+                Result<OrderChargeResponse> result = await sender.Send(
+                    new AddOrderChargeCommand(
+                        id, request.Description, request.Quantity, request.Unit, request.UnitPrice),
+                    ct);
+                return result.ToHttpResult(charge =>
+                    Results.Created($"/api/orders/{id}/charges/{charge.Id}", charge));
+            })
+            .RequireAuthorization(Policies.DispatchWrite)
+            .WithName("AddOrderCharge")
+            .Produces<OrderChargeResponse>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/charges/{chargeId:guid}", async (
+                Guid id, Guid chargeId, OrderChargeRequest request, ISender sender, CancellationToken ct) =>
+            {
+                Result<OrderChargeResponse> result = await sender.Send(
+                    new UpdateOrderChargeCommand(
+                        id, chargeId, request.Description, request.Quantity, request.Unit, request.UnitPrice),
+                    ct);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.DispatchWrite)
+            .WithName("UpdateOrderCharge")
+            .Produces<OrderChargeResponse>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/{id:guid}/charges/{chargeId:guid}", async (
+                Guid id, Guid chargeId, ISender sender, CancellationToken ct) =>
+            {
+                Result<Unit> result = await sender.Send(new DeleteOrderChargeCommand(id, chargeId), ct);
+                return result.ToHttpResult(_ => Results.NoContent());
+            })
+            .RequireAuthorization(Policies.DispatchWrite)
+            .WithName("DeleteOrderCharge")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound);
     }
 }
 
@@ -124,4 +253,22 @@ public sealed record UpdateOrderRequest(
     DateTimeOffset PickupTo,
     DateTimeOffset DeliveryFrom,
     DateTimeOffset DeliveryTo,
-    Guid? ConsigneeLocationId = null);
+    Guid? ConsigneeLocationId = null,
+    string? Notes = null,
+    string? ConfirmationNotes = null,
+    bool RequiresPartitionWall = false,
+    bool RequiresDoubleDeck = false);
+
+/// <summary>Body of a toll record write. Order and record ids come from the route.</summary>
+public sealed record OrderTollRequest(
+    string TollCategory,
+    int EmptyKm = 0,
+    int LoadedKm = 0,
+    decimal FactorPerKm = 0m);
+
+/// <summary>Body of an additional charge write. Order and charge ids come from the route.</summary>
+public sealed record OrderChargeRequest(
+    string Description,
+    decimal Quantity,
+    string? Unit = null,
+    decimal UnitPrice = 0m);

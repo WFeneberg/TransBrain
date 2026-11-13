@@ -28,7 +28,11 @@ public sealed record OrderResponse(
     DateTimeOffset DeliveryTo,
     string Status,
     DateTimeOffset CreatedAt,
-    Guid? ConsigneeLocationId)
+    Guid? ConsigneeLocationId,
+    string? Notes,
+    string? ConfirmationNotes,
+    bool RequiresPartitionWall,
+    bool RequiresDoubleDeck)
 {
     public static OrderResponse From(TransportOrder order) => new(
         order.Id,
@@ -44,5 +48,9 @@ public sealed record OrderResponse(
         order.DeliveryWindow.To,
         order.Status.ToString(),
         order.CreatedAt,
-        order.ConsigneeLocationId);
+        order.ConsigneeLocationId,
+        order.Notes,
+        order.ConfirmationNotes,
+        order.RequiresPartitionWall,
+        order.RequiresDoubleDeck);
 }
