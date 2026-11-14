@@ -1133,9 +1133,60 @@ nicht an; ein direkter API-Aufruf wird abgelehnt mit „An invoice in status 'Dr
 exported; only issued or paid invoices can. (HTTP 409)“.
 
 Die Absenderangaben des PDFs und der XRechnung (Firmenname, Anschrift, USt-IdNr., IBAN)
-stammen aus dem Abschnitt `InvoiceSeller` der API-Konfiguration (`appsettings.json`) und
-sind im Auslieferungszustand mit Beispieldaten der TransBrain Logistik GmbH belegt — vor dem
-Echtbetrieb anpassen.
+sowie Logo, Farbe und Freitexte stammen aus dem **Rechnungsdesign** des Mandanten (siehe
+nächstes Kapitel). Solange dort noch nie gespeichert wurde, gelten die Beispieldaten der
+TransBrain Logistik GmbH aus dem Abschnitt `InvoiceSeller` der API-Konfiguration
+(`appsettings.json`) — vor dem Echtbetrieb das Rechnungsdesign ausfüllen.
+
+## Rechnungsdesign
+
+Erreichbar über den Menüpunkt **Rechnungsdesign** (`/invoice-design`). Menüpunkt und Seite
+gibt es nur für Administratoren, denn hier werden die Stammdaten der eigenen Firma gepflegt;
+andere Rollen leitet die Adresszeile zur Startseite um.
+
+Hintergrund: Jeder Mandant ist eine eigene Firma mit eigenem Briefkopf, eigener
+USt-IdNr. und eigener Bankverbindung. Diese Seite legt fest, wie die Rechnungs-PDFs und
+XRechnungen **dieses** Mandanten aussehen und welche Absenderdaten sie tragen. Die Angaben
+werden je Mandant in der Datenbank gespeichert; andere Mandanten sehen und ändern sie nie.
+
+![Rechnungsdesign](img/web/rechnungsdesign.png)
+
+Die Seite gliedert sich in drei Bereiche:
+
+- **Firmendaten** — Firmenname, Straße, PLZ, Ort, Land (zweibuchstabiger ISO-Code wie
+  `DE`), USt-IdNr., Steuernummer (optional), E-Mail und Telefon (optional). Diese Angaben
+  erscheinen im Briefkopf des PDFs und als Verkäufer in der XRechnung.
+- **Bankverbindung** — IBAN (Pflicht), BIC und Bankname (optional). Die IBAN steht in der
+  Zahlungsaufforderung offener Rechnungen und in der XRechnung.
+- **Gestaltung** — das eigentliche Design:
+  - **Logo**: eine PNG- oder JPEG-Datei bis 1 MB, wahlweise **links** oder **rechts** im
+    Briefkopf. Das hochgeladene Logo wird auf der Seite angezeigt und lässt sich jederzeit
+    wieder entfernen; ohne Logo erscheint nur der Firmenname.
+  - **Akzentfarbe**: eine Farbe im Format `#RRGGBB` (Farbwähler). Sie färbt den Firmennamen,
+    den Rechnungstitel und die Kopfzeile der Positionstabelle; die Schriftfarbe darauf
+    (schwarz oder weiß) wählt das System automatisch nach Helligkeit.
+  - **Schriftgröße**: die Grundschrift des PDFs, 8–14 Punkt (Standard 10).
+  - **Kopftext**: Freitext bis 1.000 Zeichen, gedruckt zwischen Rechnungstitel und
+    Positionstabelle — etwa „Wir erlauben uns, folgende Leistungen zu berechnen:".
+  - **Fußtext**: Freitext bis 1.000 Zeichen, gedruckt unter dem Zahlungshinweis — etwa ein
+    Dank oder Pflichtangaben.
+
+Solange der Mandant noch nie gespeichert hat, zeigt die Seite einen Hinweis, dass noch die
+**Standardwerte** der Auslieferung gelten — das Formular ist dann mit ihnen vorbelegt, damit
+der erste Speichervorgang von einem funktionierenden Stand ausgeht.
+
+- **Vorschau** erzeugt eine Musterrechnung als PDF mit den **aktuellen Formularwerten** —
+  auch ungespeicherten — und zeigt sie direkt auf der Seite an. So lässt sich jede Änderung
+  prüfen, bevor sie gilt. Die Musterrechnung verwendet erkennbar fiktive Daten
+  („Musterkunde Handels GmbH") und verändert nichts.
+- **Speichern** übernimmt das Design dauerhaft. Ab sofort verwenden alle PDF- und
+  XRechnung-Exporte des Mandanten diese Angaben; bereits heruntergeladene Dateien ändern
+  sich nicht.
+
+Pflichtfelder sind Firmenname, Straße, PLZ, Ort, Land, USt-IdNr., E-Mail, IBAN und eine
+gültige Akzentfarbe. Fehlende oder ungültige Werte lehnt der Server mit einer
+Validierungsmeldung am jeweiligen Feld ab; ein Logo im falschen Format oder über 1 MB weist
+schon die Seite beim Auswählen der Datei ab.
 
 ## Geodaten-Wartung
 

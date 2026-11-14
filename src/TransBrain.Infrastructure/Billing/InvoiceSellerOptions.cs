@@ -1,9 +1,12 @@
 namespace TransBrain.Infrastructure.Billing;
 
 /// <summary>
-/// The issuing haulier's own company data as printed on invoice documents and embedded in
-/// XRechnung exports. Configured under "InvoiceSeller" in appsettings; an invoice document
-/// without a proper sender is not a usable commercial document.
+/// The deployment's default company data for invoice documents and XRechnung exports,
+/// configured under "InvoiceSeller" in appsettings. Since the invoice designer, this is only
+/// the bootstrap: a tenant that saved its own <see cref="TransBrain.Domain.Billing.InvoiceDesign"/>
+/// renders with the data from the database instead, because every tenant (Mandant) is its own
+/// company. Tenants without a saved design keep falling back to these values — an invoice
+/// document without a proper sender is not a usable commercial document.
 /// </summary>
 public sealed class InvoiceSellerOptions
 {

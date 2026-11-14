@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderNumberGenerator, SequentialOrderNumberGenerator>();
         services.AddScoped<ITourRepository, TourRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+        services.AddScoped<IInvoiceDesignRepository, InvoiceDesignRepository>();
         services.AddScoped<IInvoiceNumberGenerator, SequentialInvoiceNumberGenerator>();
         services.AddSingleton<IInvoicePdfRenderer, MigraDocInvoicePdfRenderer>();
         services.AddSingleton<IXRechnungWriter, UblXRechnungWriter>();

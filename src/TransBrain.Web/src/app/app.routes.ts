@@ -33,6 +33,8 @@ const loadInvoiceForm = () =>
     import('./invoices/invoice-form.component').then((m) => m.InvoiceFormComponent);
 const loadInvoiceDetail = () =>
     import('./invoices/invoice-detail.component').then((m) => m.InvoiceDetailComponent);
+const loadInvoiceDesign = () =>
+    import('./invoice-design/invoice-design.component').then((m) => m.InvoiceDesignComponent);
 const loadHome = () => import('./home/home.component').then((m) => m.HomeComponent);
 const loadGeodataList = () =>
     import('./geodata/geodata-list.component').then((m) => m.GeodataListComponent);
@@ -159,6 +161,13 @@ export const routes: Routes = [
     },
     // Readable by every signed-in role; the write controls inside are gated on masterData.write.
     { path: 'geodata', loadComponent: loadGeodataList, canActivate: [requireAuthentication] },
+    // The design page is an editor through and through - saving and previewing both need the
+    // API's MasterDataWrite policy - so it is guarded like the other admin-only editors.
+    {
+        path: 'invoice-design',
+        loadComponent: loadInvoiceDesign,
+        canActivate: [requireCapability('masterData.write')],
+    },
     // The global Wartung area is system-admin territory: the shell asks which tenant to work
     // on, then offers backup/restore, the import wizard, its history and the data export — all
     // acting on the chosen tenant through the cross-tenant /api/system endpoints.

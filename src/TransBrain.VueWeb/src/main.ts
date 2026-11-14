@@ -27,6 +27,7 @@ import TourDetail from './views/TourDetail.vue';
 import InvoiceList from './views/InvoiceList.vue';
 import InvoiceForm from './views/InvoiceForm.vue';
 import InvoiceDetail from './views/InvoiceDetail.vue';
+import InvoiceDesign from './views/InvoiceDesign.vue';
 import Geodata from './views/Geodata.vue';
 import ImportWizard from './views/ImportWizard.vue';
 import ImportHistory from './views/ImportHistory.vue';
@@ -74,6 +75,9 @@ const router = createRouter({
         // No capability: a viewer may look. The issue/pay/cancel buttons inside are gated
         // individually on dispatch.write.
         { path: '/invoices/:id', component: InvoiceDetail },
+        // The designer edits the tenant's company data and letterhead - master data maintenance,
+        // admin-only like the export (the API's PUT and preview demand MasterDataWrite).
+        { path: '/invoice-design', component: InvoiceDesign, meta: { capability: 'masterData.write' } },
         // Readable by every signed-in role; the write controls inside are gated on masterData.write.
         { path: '/geodata', component: Geodata },
         // The global Wartung area bundles the system tooling under one tab bar: backup/restore

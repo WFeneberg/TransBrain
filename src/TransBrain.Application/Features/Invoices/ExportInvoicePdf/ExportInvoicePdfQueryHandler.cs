@@ -7,6 +7,7 @@ namespace TransBrain.Application.Features.Invoices.ExportInvoicePdf;
 
 internal sealed class ExportInvoicePdfQueryHandler(
     IInvoiceRepository repository,
+    IInvoiceDesignRepository designs,
     IInvoicePdfRenderer renderer)
     : IQueryHandler<ExportInvoicePdfQuery, InvoiceDocumentResponse>
 {
@@ -25,10 +26,12 @@ internal sealed class ExportInvoicePdfQueryHandler(
             return NotADocument(invoice);
         }
 
+        InvoiceDesign design = await designs.GetEffectiveAsync(cancellationToken);
+
         return new InvoiceDocumentResponse(
             $"{invoice.InvoiceNumber.Value}.pdf",
             "application/pdf",
-            renderer.Render(invoice));
+            renderer.Render(invoice, design));
     }
 
     internal static Error NotADocument(Invoice invoice) => Error.Conflict(

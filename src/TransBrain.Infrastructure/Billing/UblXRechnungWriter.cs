@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-using Microsoft.Extensions.Options;
 using TransBrain.Application.Abstractions;
 using TransBrain.Domain.Billing;
 
@@ -12,19 +11,19 @@ namespace TransBrain.Infrastructure.Billing;
 /// Writes an invoice as XRechnung 3.0 — the German profile of EN 16931 — in UBL 2.1 syntax.
 /// The XML is built by hand: the structure is a fixed tree over data this aggregate already
 /// carries, and a schema-generated object model would be a far bigger dependency than the
-/// document warrants. Buyer reference (BT-10) falls back to the customer id because TransBrain
-/// has no Leitweg-ID field; B2B recipients routinely accept such references.
+/// document warrants. The seller party comes from the tenant's <see cref="InvoiceDesign"/>,
+/// because each tenant is its own legal entity. Buyer reference (BT-10) falls back to the
+/// customer id because TransBrain has no Leitweg-ID field; B2B recipients routinely accept
+/// such references.
 /// </summary>
-internal sealed class UblXRechnungWriter(IOptions<InvoiceSellerOptions> options) : IXRechnungWriter
+internal sealed class UblXRechnungWriter : IXRechnungWriter
 {
     private static readonly XNamespace Inv = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
     private static readonly XNamespace Cac = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
     private static readonly XNamespace Cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
 
-    public byte[] Write(Invoice invoice)
+    public byte[] Write(Invoice invoice, InvoiceDesign design)
     {
-        InvoiceSellerOptions seller = options.Value;
-
         var root = new XElement(
             Inv + "Invoice",
             new XAttribute(XNamespace.Xmlns + "cac", Cac),
@@ -39,9 +38,9 @@ internal sealed class UblXRechnungWriter(IOptions<InvoiceSellerOptions> options)
             new XElement(Cbc + "InvoiceTypeCode", "380"),
             new XElement(Cbc + "DocumentCurrencyCode", "EUR"),
             new XElement(Cbc + "BuyerReference", invoice.CustomerId.ToString("D")),
-            SupplierParty(seller),
+            SupplierParty(design),
             CustomerParty(invoice),
-            PaymentMeans(seller),
+            PaymentMeans(design),
             new XElement(
                 Cac + "PaymentTerms",
                 new XElement(Cbc + "Note", $"Zahlbar innerhalb von {invoice.PaymentTermDays} Tagen ohne Abzug.")),
@@ -53,29 +52,29 @@ internal sealed class UblXRechnungWriter(IOptions<InvoiceSellerOptions> options)
         return Serialize(root);
     }
 
-    private static XElement SupplierParty(InvoiceSellerOptions seller) => new(
+    private static XElement SupplierParty(InvoiceDesign design) => new(
         Cac + "AccountingSupplierParty",
         new XElement(
             Cac + "Party",
-            new XElement(Cbc + "EndpointID", new XAttribute("schemeID", "EM"), seller.Email),
+            new XElement(Cbc + "EndpointID", new XAttribute("schemeID", "EM"), design.Email),
             new XElement(
                 Cac + "PostalAddress",
-                new XElement(Cbc + "StreetName", seller.Street),
-                new XElement(Cbc + "CityName", seller.City),
-                new XElement(Cbc + "PostalZone", seller.PostalCode),
-                new XElement(Cac + "Country", new XElement(Cbc + "IdentificationCode", seller.CountryCode))),
+                new XElement(Cbc + "StreetName", design.Street),
+                new XElement(Cbc + "CityName", design.City),
+                new XElement(Cbc + "PostalZone", design.PostalCode),
+                new XElement(Cac + "Country", new XElement(Cbc + "IdentificationCode", design.CountryCode))),
             new XElement(
                 Cac + "PartyTaxScheme",
-                new XElement(Cbc + "CompanyID", seller.VatId),
+                new XElement(Cbc + "CompanyID", design.VatId),
                 new XElement(Cac + "TaxScheme", new XElement(Cbc + "ID", "VAT"))),
             new XElement(
                 Cac + "PartyLegalEntity",
-                new XElement(Cbc + "RegistrationName", seller.Name)),
+                new XElement(Cbc + "RegistrationName", design.CompanyName)),
             new XElement(
                 Cac + "Contact",
-                new XElement(Cbc + "Name", seller.Name),
-                seller.Phone is { } phone ? new XElement(Cbc + "Telephone", phone) : null,
-                new XElement(Cbc + "ElectronicMail", seller.Email))));
+                new XElement(Cbc + "Name", design.CompanyName),
+                design.Phone is { } phone ? new XElement(Cbc + "Telephone", phone) : null,
+                new XElement(Cbc + "ElectronicMail", design.Email))));
 
     private static XElement CustomerParty(Invoice invoice) => new(
         Cac + "AccountingCustomerParty",
@@ -104,14 +103,14 @@ internal sealed class UblXRechnungWriter(IOptions<InvoiceSellerOptions> options)
                 Cac + "PartyLegalEntity",
                 new XElement(Cbc + "RegistrationName", invoice.CustomerName))));
 
-    private static XElement PaymentMeans(InvoiceSellerOptions seller) => new(
+    private static XElement PaymentMeans(InvoiceDesign design) => new(
         Cac + "PaymentMeans",
         new XElement(Cbc + "PaymentMeansCode", "58"), // SEPA credit transfer
         new XElement(
             Cac + "PayeeFinancialAccount",
-            new XElement(Cbc + "ID", seller.Iban),
-            seller.BankName is { } bank ? new XElement(Cbc + "Name", bank) : null,
-            seller.Bic is { } bic
+            new XElement(Cbc + "ID", design.Iban),
+            design.BankName is { } bank ? new XElement(Cbc + "Name", bank) : null,
+            design.Bic is { } bic
                 ? new XElement(Cac + "FinancialInstitutionBranch", new XElement(Cbc + "ID", bic))
                 : null));
 

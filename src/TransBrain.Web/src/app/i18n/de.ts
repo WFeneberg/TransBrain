@@ -615,7 +615,8 @@ export const de: Record<keyof typeof en, string> = {
     'maintenance.restore.table': 'Tabelle',
     'maintenance.restore.rows': 'Zeilen',
     'maintenance.restore.invalidFile': 'Die Datei ist kein TransBrain-Backup.',
-    'maintenance.restore.error': 'Die Wiederherstellung ist fehlgeschlagen. Es wurden keine Daten verändert.',
+    'maintenance.restore.error':
+        'Die Wiederherstellung ist fehlgeschlagen. Es wurden keine Daten verändert.',
     'export.title': 'Datenexport',
     'export.subtitle': 'Stammdaten des gewählten Mandanten als Datei herunterladen.',
     'export.description':
@@ -627,6 +628,48 @@ export const de: Record<keyof typeof en, string> = {
     'export.hint':
         'Exportierte Dateien lassen sich über den Reiter „Import“ wieder einspielen – die Spalten werden dabei automatisch zugeordnet.',
     'export.error': 'Der Export ist fehlgeschlagen.',
+    'nav.invoiceDesign': 'Rechnungsdesign',
+    'invoiceDesign.title': 'Rechnungsdesign',
+    'invoiceDesign.subtitle':
+        'Firmendaten und Gestaltung der Rechnungsdokumente dieses Mandanten – gilt für jedes PDF und jede XRechnung.',
+    'invoiceDesign.defaultsHint':
+        'Es gelten noch die Standardwerte – dieser Mandant hat noch kein eigenes Design gespeichert.',
+    'invoiceDesign.section.company': 'Firmendaten',
+    'invoiceDesign.section.bank': 'Bankverbindung',
+    'invoiceDesign.section.design': 'Gestaltung',
+    'invoiceDesign.companyName': 'Firmenname',
+    'invoiceDesign.taxNumber': 'Steuernummer',
+    'invoiceDesign.iban': 'IBAN',
+    'invoiceDesign.bic': 'BIC',
+    'invoiceDesign.bankName': 'Kreditinstitut',
+    'invoiceDesign.accentColor': 'Akzentfarbe',
+    'invoiceDesign.fontSize': 'Schriftgröße (pt)',
+    'invoiceDesign.fontSizeHint': '8–14 Punkt',
+    'invoiceDesign.logoPosition': 'Logo-Position',
+    'invoiceDesign.logoPosition.Left': 'Links',
+    'invoiceDesign.logoPosition.Right': 'Rechts',
+    'invoiceDesign.logo.alt': 'Aktuelles Logo',
+    'invoiceDesign.logo.choose': 'Logo auswählen',
+    'invoiceDesign.logo.remove': 'Logo entfernen',
+    'invoiceDesign.logo.hint':
+        'PNG oder JPEG, höchstens 1 MiB. Erscheint im Briefkopf jeder Rechnung.',
+    'invoiceDesign.logo.wrongType': 'Nur PNG- oder JPEG-Dateien sind erlaubt.',
+    'invoiceDesign.logo.tooLarge': 'Die Datei ist größer als 1 MiB.',
+    'invoiceDesign.logo.readFailed': 'Die Datei konnte nicht gelesen werden.',
+    'invoiceDesign.headerText': 'Kopftext',
+    'invoiceDesign.headerTextHint':
+        'Erscheint unter dem Rechnungstitel, z. B. eine Anrede oder Referenz.',
+    'invoiceDesign.footerText': 'Fußtext',
+    'invoiceDesign.footerTextHint': 'Erscheint am Ende der Rechnung, z. B. rechtliche Hinweise.',
+    'invoiceDesign.preview': 'Vorschau',
+    'invoiceDesign.previewTitle': 'PDF-Vorschau',
+    'invoiceDesign.previewEmpty':
+        '„Vorschau“ erzeugt eine Beispielrechnung mit den aktuellen Eingaben – auch ungespeichert.',
+    'invoiceDesign.updatedAt': 'Zuletzt gespeichert am {date}',
+    'invoiceDesign.saved': 'Das Rechnungsdesign wurde gespeichert.',
+    'invoiceDesign.error.load': 'Das Rechnungsdesign konnte nicht geladen werden.',
+    'invoiceDesign.error.save': 'Das Rechnungsdesign konnte nicht gespeichert werden.',
+    'invoiceDesign.error.preview': 'Die Vorschau konnte nicht erstellt werden.',
     'geodata.title': 'Geodaten-Wartung',
     'geodata.subtitle':
         'Koordinaten aller bekannten Adressen – falsche Positionen korrigieren oder fehlende manuell ergänzen',

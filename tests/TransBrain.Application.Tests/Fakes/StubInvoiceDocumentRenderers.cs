@@ -3,26 +3,32 @@ using TransBrain.Domain.Billing;
 
 namespace TransBrain.Application.Tests.Fakes;
 
-/// <summary>Returns a fixed byte payload and records which invoice was rendered.</summary>
+/// <summary>Returns a fixed byte payload and records which invoice and design were rendered.</summary>
 internal sealed class StubInvoicePdfRenderer : IInvoicePdfRenderer
 {
     public Invoice? Rendered { get; private set; }
 
-    public byte[] Render(Invoice invoice)
+    public InvoiceDesign? RenderedWith { get; private set; }
+
+    public byte[] Render(Invoice invoice, InvoiceDesign design)
     {
         Rendered = invoice;
+        RenderedWith = design;
         return [0x25, 0x50, 0x44, 0x46];
     }
 }
 
-/// <summary>Returns a fixed byte payload and records which invoice was written.</summary>
+/// <summary>Returns a fixed byte payload and records which invoice and design were written.</summary>
 internal sealed class StubXRechnungWriter : IXRechnungWriter
 {
     public Invoice? Written { get; private set; }
 
-    public byte[] Write(Invoice invoice)
+    public InvoiceDesign? WrittenWith { get; private set; }
+
+    public byte[] Write(Invoice invoice, InvoiceDesign design)
     {
         Written = invoice;
+        WrittenWith = design;
         return [0x3C, 0x3F, 0x78, 0x6D];
     }
 }

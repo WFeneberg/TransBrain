@@ -40,6 +40,8 @@ public sealed class TransBrainDbContext(
 
     public DbSet<Invoice> Invoices => Set<Invoice>();
 
+    public DbSet<InvoiceDesign> InvoiceDesigns => Set<InvoiceDesign>();
+
     public DbSet<GeoOverride> GeoOverrides => Set<GeoOverride>();
 
     public DbSet<ImportSession> ImportSessions => Set<ImportSession>();
@@ -70,6 +72,7 @@ public sealed class TransBrainDbContext(
         ApplyTenantFilter<Customer>(modelBuilder);
         ApplyTenantFilter<CustomerLocation>(modelBuilder);
         ApplyTenantFilter<Invoice>(modelBuilder);
+        ApplyTenantFilter<InvoiceDesign>(modelBuilder);
         ApplyTenantFilter<GeoOverride>(modelBuilder);
         ApplyTenantFilter<ImportSession>(modelBuilder);
         ApplyTenantFilter<ImportSessionData>(modelBuilder);

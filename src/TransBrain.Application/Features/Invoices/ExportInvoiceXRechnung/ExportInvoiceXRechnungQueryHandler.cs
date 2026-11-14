@@ -8,6 +8,7 @@ namespace TransBrain.Application.Features.Invoices.ExportInvoiceXRechnung;
 
 internal sealed class ExportInvoiceXRechnungQueryHandler(
     IInvoiceRepository repository,
+    IInvoiceDesignRepository designs,
     IXRechnungWriter writer)
     : IQueryHandler<ExportInvoiceXRechnungQuery, InvoiceDocumentResponse>
 {
@@ -26,9 +27,11 @@ internal sealed class ExportInvoiceXRechnungQueryHandler(
             return ExportInvoicePdfQueryHandler.NotADocument(invoice);
         }
 
+        InvoiceDesign design = await designs.GetEffectiveAsync(cancellationToken);
+
         return new InvoiceDocumentResponse(
             $"{invoice.InvoiceNumber.Value}-xrechnung.xml",
             "application/xml",
-            writer.Write(invoice));
+            writer.Write(invoice, design));
     }
 }
