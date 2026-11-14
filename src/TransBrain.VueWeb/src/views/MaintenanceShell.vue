@@ -14,15 +14,18 @@ const tab = computed(() => {
     if (route.path.startsWith('/maintenance/import/verlauf')) {
         return 'history';
     }
+    if (route.path.startsWith('/maintenance/export')) {
+        return 'export';
+    }
     return route.path.startsWith('/maintenance/import') ? 'import' : 'backup';
 });
 </script>
 
 <!--
     Shell of the Wartung (maintenance) area: one tab bar over the admin tooling - backup/restore,
-    the import wizard and the import history. The tabs mirror the route guards: Datensicherung
-    needs the maintenance capability, both import tabs need masterData.write. In practice only
-    admins hold either, so the whole area is admin territory.
+    the import wizard, the import history and the data export. The tabs mirror the route guards:
+    Datensicherung needs the maintenance capability, the import and export tabs need
+    masterData.write. In practice only admins hold either, so the whole area is admin territory.
 -->
 <template>
     <div v-if="auth.isAuthenticated">
@@ -48,6 +51,13 @@ const tab = computed(() => {
                     to="/maintenance/import/verlauf"
                     data-testid="maintenance-tab-history"
                     >{{ t('maintenance.tabs.history') }}</v-tab
+                >
+                <v-tab
+                    v-if="auth.can('masterData.write')"
+                    value="export"
+                    to="/maintenance/export"
+                    data-testid="maintenance-tab-export"
+                    >{{ t('maintenance.tabs.export') }}</v-tab
                 >
             </v-tabs>
             <v-divider />

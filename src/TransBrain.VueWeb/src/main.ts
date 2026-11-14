@@ -30,6 +30,7 @@ import InvoiceDetail from './views/InvoiceDetail.vue';
 import Geodata from './views/Geodata.vue';
 import ImportWizard from './views/ImportWizard.vue';
 import ImportHistory from './views/ImportHistory.vue';
+import ExportPage from './views/ExportPage.vue';
 import Maintenance from './views/Maintenance.vue';
 import MaintenanceShell from './views/MaintenanceShell.vue';
 import AuthCallback from './views/AuthCallback.vue';
@@ -77,8 +78,8 @@ const router = createRouter({
         { path: '/geodata', component: Geodata },
         // The Wartung area bundles the admin tooling under one tab bar: backup/restore plus the
         // import wizard and its history. Each child keeps the capability its API demands
-        // (Maintenance for backup/restore, MasterDataWrite for the import - the import API
-        // itself is admin-only, so unlike the list routes there is nothing a read-only role
+        // (Maintenance for backup/restore, MasterDataWrite for import and export - those APIs
+        // are admin-only, so unlike the list routes there is nothing a read-only role
         // could see here). Only admins hold either capability in practice.
         {
             path: '/maintenance',
@@ -87,6 +88,7 @@ const router = createRouter({
                 { path: '', component: Maintenance, meta: { capability: 'maintenance' } },
                 { path: 'import', component: ImportWizard, meta: { capability: 'masterData.write' } },
                 { path: 'import/verlauf', component: ImportHistory, meta: { capability: 'masterData.write' } },
+                { path: 'export', component: ExportPage, meta: { capability: 'masterData.write' } },
             ],
         },
         // The import pages lived at the top level before they moved into the Wartung area; keep

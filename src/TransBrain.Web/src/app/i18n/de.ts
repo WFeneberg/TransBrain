@@ -581,6 +581,7 @@ export const de: Record<keyof typeof en, string> = {
     'maintenance.tabs.backup': 'Datensicherung',
     'maintenance.tabs.import': 'Import',
     'maintenance.tabs.history': 'Import-Verlauf',
+    'maintenance.tabs.export': 'Export',
     'maintenance.subtitle':
         'Datensicherung für diesen Mandanten: Backup als Datei herunterladen oder einen früheren Stand wiederherstellen.',
     'maintenance.backup.title': 'Backup erstellen',
@@ -602,6 +603,17 @@ export const de: Record<keyof typeof en, string> = {
     'maintenance.restore.rows': 'Zeilen',
     'maintenance.restore.invalidFile': 'Die Datei ist kein TransBrain-Backup.',
     'maintenance.restore.error': 'Die Wiederherstellung ist fehlgeschlagen. Es wurden keine Daten verändert.',
+    'export.title': 'Datenexport',
+    'export.subtitle': 'Stammdaten dieses Mandanten als Datei herunterladen.',
+    'export.description':
+        'Exportiert einen Datenbereich vollständig als Datei. CSV und Excel verwenden dieselben Spaltenüberschriften wie der Import, JSON die technischen Feldnamen.',
+    'export.target': 'Datenbereich',
+    'export.format': 'Dateiformat',
+    'export.rows': '{rows} Zeilen',
+    'export.download': 'Exportieren',
+    'export.hint':
+        'Exportierte Dateien lassen sich über den Reiter „Import“ wieder einspielen – die Spalten werden dabei automatisch zugeordnet.',
+    'export.error': 'Der Export ist fehlgeschlagen.',
     'geodata.title': 'Geodaten-Wartung',
     'geodata.subtitle':
         'Koordinaten aller bekannten Adressen – falsche Positionen korrigieren oder fehlende manuell ergänzen',

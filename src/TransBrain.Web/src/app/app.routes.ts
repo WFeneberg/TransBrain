@@ -44,6 +44,8 @@ const loadImportWizard = () =>
     import('./imports/import-wizard.component').then((m) => m.ImportWizardComponent);
 const loadImportHistory = () =>
     import('./imports/import-history.component').then((m) => m.ImportHistoryComponent);
+const loadExportPage = () =>
+    import('./exports/export.component').then((m) => m.ExportPageComponent);
 
 export const routes: Routes = [
     // angular-auth-oidc-client's checkAuth() detects the OIDC callback by comparing the
@@ -158,9 +160,9 @@ export const routes: Routes = [
     // Readable by every signed-in role; the write controls inside are gated on masterData.write.
     { path: 'geodata', loadComponent: loadGeodataList, canActivate: [requireAuthentication] },
     // The Wartung area bundles the admin tooling under one tab bar: backup/restore plus the
-    // import wizard and its history. The shell only requires a signed-in user; each child keeps
-    // the capability its API demands (Maintenance for backup/restore, MasterDataWrite for the
-    // import, both admin-only in practice).
+    // import wizard, its history and the data export. The shell only requires a signed-in user;
+    // each child keeps the capability its API demands (Maintenance for backup/restore,
+    // MasterDataWrite for import and export, both admin-only in practice).
     {
         path: 'maintenance',
         loadComponent: loadMaintenanceShell,
@@ -180,6 +182,11 @@ export const routes: Routes = [
             {
                 path: 'import/verlauf',
                 loadComponent: loadImportHistory,
+                canActivate: [requireCapability('masterData.write')],
+            },
+            {
+                path: 'export',
+                loadComponent: loadExportPage,
                 canActivate: [requireCapability('masterData.write')],
             },
         ],

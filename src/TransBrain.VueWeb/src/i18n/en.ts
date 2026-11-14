@@ -563,6 +563,7 @@ export const en = {
     'maintenance.tabs.backup': 'Backup & restore',
     'maintenance.tabs.import': 'Import',
     'maintenance.tabs.history': 'Import history',
+    'maintenance.tabs.export': 'Export',
     'maintenance.subtitle':
         'Data safety for this tenant: download a backup file or restore an earlier state.',
     'maintenance.backup.title': 'Create backup',
@@ -584,6 +585,17 @@ export const en = {
     'maintenance.restore.rows': 'Rows',
     'maintenance.restore.invalidFile': 'The file is not a TransBrain backup.',
     'maintenance.restore.error': 'The restore failed. No data has been changed.',
+    'export.title': 'Data export',
+    'export.subtitle': "Download this tenant's master data as a file.",
+    'export.description':
+        'Exports one data set completely as a file. CSV and Excel use the same column headers as the import, JSON uses the technical field names.',
+    'export.target': 'Data set',
+    'export.format': 'File format',
+    'export.rows': '{rows} rows',
+    'export.download': 'Export',
+    'export.hint':
+        'Exported files can be played back through the Import tab – the columns are matched automatically.',
+    'export.error': 'The export failed.',
     'geodata.title': 'Geodata maintenance',
     'geodata.subtitle':
         'Coordinates for every known address - fix wrong positions or add missing ones manually',

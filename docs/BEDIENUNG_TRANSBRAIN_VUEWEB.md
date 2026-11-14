@@ -1322,11 +1322,42 @@ importierten Datensätze bleiben selbstverständlich bestehen.
 - Die eingelesenen Daten gehören zum angemeldeten Mandanten; ein anderer Mandant sieht
   weder die Sitzungen noch die importierten Datensätze.
 
+## Datenexport
+
+Der Datenexport ist das Gegenstück zum Datenimport und ebenfalls Teil des Wartungsbereichs:
+Menüpunkt **Wartung**, Reiter **Export** (`/maintenance/export`, nur Rolle `admin`). Er lädt
+einen Stammdatenbereich vollständig als Datei herunter — etwa um Daten in Excel zu prüfen,
+weiterzugeben oder in einen anderen Mandanten zu übernehmen.
+
+![Export im Wartungsbereich](img/vueweb/export.png)
+
+So gehen Sie vor:
+
+1. **Datenbereich** wählen: **Kunden**, **Fahrer** oder **Fahrzeuge**. Jeder Eintrag zeigt
+   die aktuelle Zeilenzahl an.
+2. **Dateiformat** wählen: **CSV** (Semikolon-getrennt, UTF-8), **Excel (XLSX)** oder
+   **JSON**.
+3. **Exportieren** lädt die Datei herunter
+   (`transbrain-export-<bereich>-<datum>-<uhrzeit>.<endung>`).
+
+Die Spalten entsprechen genau den Feldern des Imports: CSV- und Excel-Dateien tragen die
+deutschen Spaltenüberschriften des Import-Assistenten (z. B. **Name**, **Straße**, **PLZ**),
+JSON-Dateien die technischen Feldnamen. Eine exportierte Datei lässt sich deshalb über den
+Reiter **Import** unverändert wieder einspielen — die Spalten werden dort automatisch
+zugeordnet. Beim Wieder-Einspielen gelten die üblichen Import-Regeln; insbesondere lehnt die
+Duplikatprüfung Datensätze ab, die es im Mandanten bereits gibt (z. B. einen Kunden mit
+demselben Namen).
+
+Exportiert werden Stammdaten: Kunden, Fahrer, Fahrzeuge. Aufträge, Touren und Rechnungen sind
+— wie beim Import — bewusst nicht enthalten. Die Datei enthält ausschließlich Daten des
+eigenen Mandanten.
+
 ## Wartung (Datensicherung)
 
 Erreichbar über den Menüpunkt **Wartung** (`/maintenance`). Der Wartungsbereich bündelt
-die Administrator-Werkzeuge unter einer Reiterleiste: **Datensicherung** (dieser Abschnitt)
-sowie **Import** und **Import-Verlauf** (Abschnitt „Datenimport“). Menüpunkt und Seiten stehen
+die Administrator-Werkzeuge unter einer Reiterleiste: **Datensicherung** (dieser Abschnitt),
+**Import** und **Import-Verlauf** (Abschnitt „Datenimport“) sowie **Export** (Abschnitt
+„Datenexport“). Menüpunkt und Seiten stehen
 ausschließlich Administratoren zur Verfügung — anders als bei der Geodaten-Wartung ist hier
 auch das Ansehen auf die Rolle `admin` beschränkt; andere Rollen werden zur Startseite
 umgeleitet, und die API lehnt ihre Anfragen ab.
@@ -1402,8 +1433,9 @@ und abschließen — siehe Abschnitt „Touren als Fahrer“.
 `disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Der
 Menüpunkt **Geodata** und die Änderungen der Geodaten-Wartung („Add coordinates“,
 „Set coordinates“, „Remove manual coordinates“) sind ebenfalls `admin` vorbehalten. Der
-Menüpunkt **Maintenance** — mit den Reitern **Backup & restore** (Datensicherung) sowie
-**Import** und **Import history** (Datenimport) — ist zur Gänze — einschließlich des
+Menüpunkt **Maintenance** — mit den Reitern **Backup & restore** (Datensicherung),
+**Import** und **Import history** (Datenimport) sowie **Export** (Datenexport) — ist zur
+Gänze — einschließlich des
 Ansehens — `admin` vorbehalten. Wer eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
 
 Das **Lesen** ist davon unberührt: alle vier Rollen dürfen alle Listen ansehen, mit der

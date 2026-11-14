@@ -6,9 +6,9 @@ import { I18nService } from '../i18n/i18n.service';
 
 /**
  * Shell of the Wartung (maintenance) area: one tab bar over the admin tooling - backup/restore,
- * the import wizard and the import history. The tabs mirror the route guards: Datensicherung
- * needs the maintenance capability, both import tabs need masterData.write. In practice only
- * admins hold either, so the whole area is admin territory.
+ * the import wizard, the import history and the data export. The tabs mirror the route guards:
+ * Datensicherung needs the maintenance capability, the import and export tabs need
+ * masterData.write. In practice only admins hold either, so the whole area is admin territory.
  */
 @Component({
     selector: 'app-maintenance-shell',
@@ -52,6 +52,17 @@ import { I18nService } from '../i18n/i18n.service';
                         data-testid="maintenance-tab-history"
                     >
                         {{ i18n.t('maintenance.tabs.history') }}
+                    </a>
+                    <a
+                        mat-tab-link
+                        routerLink="/maintenance/export"
+                        routerLinkActive
+                        #exportLink="routerLinkActive"
+                        [routerLinkActiveOptions]="{ exact: true }"
+                        [active]="exportLink.isActive"
+                        data-testid="maintenance-tab-export"
+                    >
+                        {{ i18n.t('maintenance.tabs.export') }}
                     </a>
                 }
             </nav>
