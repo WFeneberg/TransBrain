@@ -11,7 +11,8 @@
       { "name": "admin", "description": "Full access including master data" },
       { "name": "disponent", "description": "Dispatcher: orders and tours" },
       { "name": "fahrer", "description": "Driver: own tours, status reporting" },
-      { "name": "viewer", "description": "Read-only access" }
+      { "name": "viewer", "description": "Read-only access" },
+      { "name": "system-admin", "description": "System administrator: cross-tenant maintenance (backup, restore, import, export)" }
     ]
   },
   "clients": [
@@ -214,6 +215,17 @@
       "attributes": { "tenant_id": [ "0199c0de-0000-7000-8000-000000000002" ] },
       "credentials": [ { "type": "password", "value": "fahrer2", "temporary": false } ],
       "realmRoles": [ "fahrer" ]
+    },
+    {
+      "id": "0199c0de-0000-7000-9000-000000000007",
+      "username": "system.user",
+      "enabled": true,
+      "email": "system.user@transbrain.local",
+      "emailVerified": true,
+      "firstName": "Sissi",
+      "lastName": "System",
+      "credentials": [ { "type": "password", "value": "system", "temporary": false } ],
+      "realmRoles": [ "system-admin" ]
     }
   ]
 }

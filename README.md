@@ -95,8 +95,9 @@ either sets `Database__MigrateOnStartup=true` (the Docker and Azure setups in
 
 ## Test users
 
-The imported realm defines six users: one per realm role in the default tenant, plus an
-admin and a driver of a second tenant (Mandant) for trying out tenant isolation:
+The imported realm defines seven users: one per tenant role in the default tenant, an
+admin and a driver of a second tenant (Mandant) for trying out tenant isolation, plus a
+tenant-less system administrator for the global maintenance area:
 
 | Username      | Password | Realm role  | Tenant         |
 |---------------|----------|-------------|----------------|
@@ -106,10 +107,14 @@ admin and a driver of a second tenant (Mandant) for trying out tenant isolation:
 | `viewer.user` | `viewer` | `viewer`    | default tenant |
 | `admin.zweite`| `zweite` | `admin`     | second tenant  |
 | `fahrer.zweite`| `fahrer2`| `fahrer`    | second tenant  |
+| `system.user` | `system` | `system-admin` | — (none)    |
 
-Every user carries a `tenant_id` attribute that Keycloak maps into the access token; the
+Every tenant user carries a `tenant_id` attribute that Keycloak maps into the access token; the
 API isolates all data per tenant based on that claim (see
-[docs/KEYCLOAK.md](docs/KEYCLOAK.md)). `admin.zweite` starts with an empty database view —
+[docs/KEYCLOAK.md](docs/KEYCLOAK.md)). `system.user` deliberately carries **no**
+`tenant_id`: its `system-admin` role only unlocks the cross-tenant maintenance area
+(backup/restore, import, export) under `/api/system/…`, where the target tenant is named
+in the URL. `admin.zweite` starts with an empty database view —
 including an empty vehicle catalog — because the migration-seeded catalog belongs to the default
 tenant; `scripts/seed-testdata.py` gives each of the two tenants its own test data.
 

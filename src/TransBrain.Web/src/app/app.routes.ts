@@ -159,35 +159,34 @@ export const routes: Routes = [
     },
     // Readable by every signed-in role; the write controls inside are gated on masterData.write.
     { path: 'geodata', loadComponent: loadGeodataList, canActivate: [requireAuthentication] },
-    // The Wartung area bundles the admin tooling under one tab bar: backup/restore plus the
-    // import wizard, its history and the data export. The shell only requires a signed-in user;
-    // each child keeps the capability its API demands (Maintenance for backup/restore,
-    // MasterDataWrite for import and export, both admin-only in practice).
+    // The global Wartung area is system-admin territory: the shell asks which tenant to work
+    // on, then offers backup/restore, the import wizard, its history and the data export — all
+    // acting on the chosen tenant through the cross-tenant /api/system endpoints.
     {
         path: 'maintenance',
         loadComponent: loadMaintenanceShell,
-        canActivate: [requireAuthentication],
+        canActivate: [requireCapability('system.maintenance')],
         children: [
             {
                 path: '',
                 pathMatch: 'full',
                 loadComponent: loadMaintenance,
-                canActivate: [requireCapability('maintenance')],
+                canActivate: [requireCapability('system.maintenance')],
             },
             {
                 path: 'import',
                 loadComponent: loadImportWizard,
-                canActivate: [requireCapability('masterData.write')],
+                canActivate: [requireCapability('system.maintenance')],
             },
             {
                 path: 'import/verlauf',
                 loadComponent: loadImportHistory,
-                canActivate: [requireCapability('masterData.write')],
+                canActivate: [requireCapability('system.maintenance')],
             },
             {
                 path: 'export',
                 loadComponent: loadExportPage,
-                canActivate: [requireCapability('masterData.write')],
+                canActivate: [requireCapability('system.maintenance')],
             },
         ],
     },

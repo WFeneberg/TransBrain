@@ -76,19 +76,18 @@ const router = createRouter({
         { path: '/invoices/:id', component: InvoiceDetail },
         // Readable by every signed-in role; the write controls inside are gated on masterData.write.
         { path: '/geodata', component: Geodata },
-        // The Wartung area bundles the admin tooling under one tab bar: backup/restore plus the
-        // import wizard and its history. Each child keeps the capability its API demands
-        // (Maintenance for backup/restore, MasterDataWrite for import and export - those APIs
-        // are admin-only, so unlike the list routes there is nothing a read-only role
-        // could see here). Only admins hold either capability in practice.
+        // The global Wartung area bundles the system tooling under one tab bar: backup/restore
+        // plus the import wizard, its history and the export. All of it is cross-tenant work on
+        // /api/system/... and demands the system.maintenance capability, which only the
+        // system-admin role grants; the shell inside additionally forces a tenant choice first.
         {
             path: '/maintenance',
             component: MaintenanceShell,
             children: [
-                { path: '', component: Maintenance, meta: { capability: 'maintenance' } },
-                { path: 'import', component: ImportWizard, meta: { capability: 'masterData.write' } },
-                { path: 'import/verlauf', component: ImportHistory, meta: { capability: 'masterData.write' } },
-                { path: 'export', component: ExportPage, meta: { capability: 'masterData.write' } },
+                { path: '', component: Maintenance, meta: { capability: 'system.maintenance' } },
+                { path: 'import', component: ImportWizard, meta: { capability: 'system.maintenance' } },
+                { path: 'import/verlauf', component: ImportHistory, meta: { capability: 'system.maintenance' } },
+                { path: 'export', component: ExportPage, meta: { capability: 'system.maintenance' } },
             ],
         },
         // The import pages lived at the top level before they moved into the Wartung area; keep

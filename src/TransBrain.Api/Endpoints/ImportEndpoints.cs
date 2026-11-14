@@ -1,4 +1,3 @@
-using TransBrain.Api.Authorization;
 using TransBrain.Api.Common;
 using TransBrain.Application.Common.Messaging;
 using TransBrain.Application.Features.Imports;
@@ -16,15 +15,14 @@ namespace TransBrain.Api.Endpoints;
 /// <summary>
 /// Data import from other programs: upload a file (CSV, JSON, XML, Excel, Access, SQLite) or
 /// connect to a live database, then map the analyzed tables onto TransBrain entities, preview,
-/// and execute. Everything is tenant-scoped and reserved for master-data administrators.
+/// and execute. Lives in the global system area: a system administrator picks the target tenant
+/// in the route, and everything below runs scoped to that tenant.
 /// </summary>
 public sealed class ImportEndpoints : IEndpointGroup
 {
     public void Map(IEndpointRouteBuilder app)
     {
-        RouteGroupBuilder group = app.MapGroup("/api/imports")
-            .WithTags("Imports")
-            .RequireAuthorization(Policies.MasterDataWrite);
+        RouteGroupBuilder group = app.MapSystemTenantGroup("/imports").WithTags("Imports");
 
         group.MapGet("/targets", async (ISender sender, CancellationToken ct) =>
             {
@@ -35,7 +33,7 @@ public sealed class ImportEndpoints : IEndpointGroup
             .WithName("GetImportTargets")
             .Produces<IReadOnlyList<ImportTargetResponse>>();
 
-        group.MapPost("/files", async (IFormFile file, ISender sender, CancellationToken ct) =>
+        group.MapPost("/files", async (Guid tenantId, IFormFile file, ISender sender, CancellationToken ct) =>
             {
                 if (file.Length > ImportLimits.MaxFileBytes)
                 {
@@ -54,7 +52,8 @@ public sealed class ImportEndpoints : IEndpointGroup
 
                 Result<ImportSessionResponse> result = await sender.Send(
                     new CreateFileImportSessionCommand(file.FileName, content), ct);
-                return result.ToHttpResult(session => Results.Created($"/api/imports/{session.Id}", session));
+                return result.ToHttpResult(session =>
+                    Results.Created($"/api/system/tenants/{tenantId}/imports/{session.Id}", session));
             })
             .DisableAntiforgery() // Token-authenticated JSON API; no cookie-based form posts.
             .WithName("CreateFileImportSession")
@@ -63,11 +62,12 @@ public sealed class ImportEndpoints : IEndpointGroup
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge);
 
         group.MapPost("/databases", async (
-                CreateDatabaseImportSessionRequest request, ISender sender, CancellationToken ct) =>
+                Guid tenantId, CreateDatabaseImportSessionRequest request, ISender sender, CancellationToken ct) =>
             {
                 Result<ImportSessionResponse> result = await sender.Send(
                     new CreateDatabaseImportSessionCommand(request.Provider, request.ConnectionString), ct);
-                return result.ToHttpResult(session => Results.Created($"/api/imports/{session.Id}", session));
+                return result.ToHttpResult(session =>
+                    Results.Created($"/api/system/tenants/{tenantId}/imports/{session.Id}", session));
             })
             .WithName("CreateDatabaseImportSession")
             .Produces<ImportSessionResponse>(StatusCodes.Status201Created)

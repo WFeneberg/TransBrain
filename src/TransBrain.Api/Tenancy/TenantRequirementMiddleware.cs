@@ -11,13 +11,16 @@ namespace TransBrain.Api.Tenancy;
 /// request would still fail (the query filters resolve the tenant and throw, see
 /// <see cref="HttpContextTenantContext"/>), but as a 500 instead of a response that names the
 /// actual problem: a user that is not assigned to any tenant. Anonymous endpoints (health,
-/// OpenAPI in Development) pass through untouched.
+/// OpenAPI in Development) pass through untouched, and so do endpoints that carry
+/// <see cref="SkipTenantRequirementAttribute"/>: the cross-tenant system endpoints are used by
+/// system administrators that deliberately have no tenant of their own.
 /// </remarks>
 internal sealed class TenantRequirementMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context, IProblemDetailsService problemDetails)
     {
         if (context.User.Identity?.IsAuthenticated == true
+            && context.GetEndpoint()?.Metadata.GetMetadata<SkipTenantRequirementAttribute>() is null
             && !HttpContextTenantContext.TryResolve(context.User, out _))
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;

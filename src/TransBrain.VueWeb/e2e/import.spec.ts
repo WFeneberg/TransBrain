@@ -1,12 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { signIn } from './login';
+import { selectSystemTenant, signIn } from './login';
 import { chooseOption } from './select';
 
-test('adminUser_importsCustomersFromCsv_throughTheWizard', async ({ page }) => {
-    await signIn(page, 'admin');
+test('systemUser_importsCustomersFromCsv_throughTheWizard', async ({ page }) => {
+    await signIn(page, 'system');
 
-    // The import lives inside the Wartung (maintenance) area since it moved off the top nav.
+    // The import lives inside the global Wartung (maintenance) area, which is system-admin
+    // territory: pick the tenant to work on first, only then do the tool tabs appear.
     await page.getByTestId('nav-maintenance').click();
+    await selectSystemTenant(page);
     await page.getByTestId('maintenance-tab-import').click();
     await expect(page.getByRole('heading', { name: 'Data import' })).toBeVisible();
 
@@ -76,7 +78,7 @@ test('adminUser_importsCustomersFromCsv_throughTheWizard', async ({ page }) => {
 test('viewerUser_cannotReachTheImportWizard', async ({ page }) => {
     await signIn(page, 'viewer');
 
-    // The import wizard sits in the Wartung area, which needs maintenance or masterData.write:
+    // The import wizard sits in the global Wartung area, which needs the system-admin role:
     // no nav entry for a viewer, and typing the URL (the old /import still redirects there) is
     // caught by the router guard, which bounces the viewer back to the home page.
     await expect(page.getByTestId('nav-maintenance')).toBeHidden();

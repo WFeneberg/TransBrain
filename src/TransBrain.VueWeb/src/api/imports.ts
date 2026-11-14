@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { userManager } from '../auth/userManager';
+import { systemApiBase } from './system';
 
 /** Mirrors ImportFileTypes on the API; the server is the authority, this only informs the picker. */
 export const IMPORT_FILE_EXTENSIONS = [
@@ -115,7 +116,7 @@ client.interceptors.request.use(async (config) => {
 });
 
 export async function listImportTargets(): Promise<ImportTarget[]> {
-    const response = await client.get<ImportTarget[]>('/imports/targets');
+    const response = await client.get<ImportTarget[]>(`${systemApiBase()}/imports/targets`);
     return response.data;
 }
 
@@ -123,7 +124,7 @@ export async function listImportTargets(): Promise<ImportTarget[]> {
 export async function createFileImportSession(file: File): Promise<ImportSession> {
     const form = new FormData();
     form.append('file', file);
-    const response = await client.post<ImportSession>('/imports/files', form);
+    const response = await client.post<ImportSession>(`${systemApiBase()}/imports/files`, form);
     return response.data;
 }
 
@@ -132,17 +133,17 @@ export async function createDatabaseImportSession(
     provider: ImportDatabaseProvider,
     connectionString: string,
 ): Promise<ImportSession> {
-    const response = await client.post<ImportSession>('/imports/databases', { provider, connectionString });
+    const response = await client.post<ImportSession>(`${systemApiBase()}/imports/databases`, { provider, connectionString });
     return response.data;
 }
 
 export async function listImportSessions(): Promise<ImportSession[]> {
-    const response = await client.get<ImportSession[]>('/imports');
+    const response = await client.get<ImportSession[]>(`${systemApiBase()}/imports`);
     return response.data;
 }
 
 export async function getImportSession(id: string): Promise<ImportSession> {
-    const response = await client.get<ImportSession>(`/imports/${id}`);
+    const response = await client.get<ImportSession>(`${systemApiBase()}/imports/${id}`);
     return response.data;
 }
 
@@ -153,7 +154,7 @@ export async function previewImport(
     mappings: ImportFieldMapping[],
     maxRows = 20,
 ): Promise<ImportPreview> {
-    const response = await client.post<ImportPreview>(`/imports/${id}/preview`, {
+    const response = await client.post<ImportPreview>(`${systemApiBase()}/imports/${id}/preview`, {
         tableName,
         targetEntity,
         mappings,
@@ -168,7 +169,7 @@ export async function executeImport(
     targetEntity: string,
     mappings: ImportFieldMapping[],
 ): Promise<ImportExecution> {
-    const response = await client.post<ImportExecution>(`/imports/${id}/execute`, {
+    const response = await client.post<ImportExecution>(`${systemApiBase()}/imports/${id}/execute`, {
         tableName,
         targetEntity,
         mappings,
@@ -177,5 +178,5 @@ export async function executeImport(
 }
 
 export async function deleteImportSession(id: string): Promise<void> {
-    await client.delete(`/imports/${id}`);
+    await client.delete(`${systemApiBase()}/imports/${id}`);
 }

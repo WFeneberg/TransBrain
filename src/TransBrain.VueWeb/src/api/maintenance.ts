@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { userManager } from '../auth/userManager';
+import { systemApiBase } from './system';
 
 /** Mirror of TenantBackupDocument in the API; the client treats the tables as opaque. */
 export interface TenantBackup {
@@ -35,9 +36,9 @@ client.interceptors.request.use(async (config) => {
     return config;
 });
 
-/** Downloads the tenant backup; the server names the file, the client honors it. */
+/** Downloads the chosen tenant's backup; the server names the file, the client honors it. */
 export async function downloadBackup(): Promise<BackupDownload> {
-    const response = await client.get<Blob>('/maintenance/backup', { responseType: 'blob' });
+    const response = await client.get<Blob>(`${systemApiBase()}/backup`, { responseType: 'blob' });
     const disposition = (response.headers['content-disposition'] as string | undefined) ?? '';
     const match = /filename\*?=(?:UTF-8''|")?([^";\n]+)/i.exec(disposition);
     const fileName = match
@@ -46,9 +47,9 @@ export async function downloadBackup(): Promise<BackupDownload> {
     return { blob: response.data, fileName };
 }
 
-/** Uploads a previously downloaded backup; the server replaces the tenant's data with it. */
+/** Uploads a previously downloaded backup; the server replaces the chosen tenant's data. */
 export async function restoreBackup(backup: TenantBackup): Promise<RestoreResult> {
-    const response = await client.post<RestoreResult>('/maintenance/restore', backup);
+    const response = await client.post<RestoreResult>(`${systemApiBase()}/restore`, backup);
     return response.data;
 }
 

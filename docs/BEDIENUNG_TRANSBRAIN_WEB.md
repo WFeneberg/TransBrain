@@ -1219,8 +1219,9 @@ Seite bleibt benutzbar, nur „Try geocoding“ und neue Routenberechnungen schl
 
 ## Datenimport
 
-Der Datenimport ist Teil des Wartungsbereichs: Menüpunkt **Wartung**, Reiter **Import**
-(`/maintenance/import`, nur für die Rolle `admin` sichtbar). Er übernimmt Stammdaten aus
+Der Datenimport ist Teil des globalen Wartungsbereichs: Menüpunkt **Wartung**, Reiter **Import**
+(`/maintenance/import`, nur für die Rolle `system-admin` sichtbar; zuvor den Mandanten wählen,
+siehe Abschnitt „Wartung“). Er übernimmt Stammdaten aus
 anderen Programmen nach TransBrain: Kunden, Fahrer oder Fahrzeuge. Ein Assistent führt in fünf
 Schritten von der Quelle bis zum Ergebnis; der Reiter **Import-Verlauf** daneben listet alle
 bisherigen Import-Sitzungen.
@@ -1322,7 +1323,7 @@ das Kennzeichen; Kunden und Fahrer haben kein solches Merkmal und würden erneut
 ### Verlauf
 
 Der Reiter **Import-Verlauf** (in der Reiterleiste des Wartungsbereichs neben **Import**)
-listet alle Import-Sitzungen des Mandanten, neueste zuerst: Quelle,
+listet alle Import-Sitzungen des gewählten Mandanten, neueste zuerst: Quelle,
 Status, Ziel, Anzahl importiert/fehlerhaft, wer sie wann angelegt hat. **Löschen** entfernt
 eine Sitzung samt der eingelesenen Daten endgültig (mit Sicherheitsabfrage); die bereits
 importierten Datensätze bleiben selbstverständlich bestehen.
@@ -1336,15 +1337,17 @@ importierten Datensätze bleiben selbstverständlich bestehen.
 - Importiert werden Stammdaten: Kunden, Fahrer, Fahrzeuge. Aufträge, Touren und Rechnungen
   sind bewusst nicht importierbar.
 - Access-Dateien benötigen auf dem **Server** einen ODBC-Treiber für Access.
-- Die eingelesenen Daten gehören zum angemeldeten Mandanten; ein anderer Mandant sieht
+- Die eingelesenen Daten gehören zum gewählten Mandanten; ein anderer Mandant sieht
   weder die Sitzungen noch die importierten Datensätze.
 
 ## Datenexport
 
-Der Datenexport ist das Gegenstück zum Datenimport und ebenfalls Teil des Wartungsbereichs:
-Menüpunkt **Wartung**, Reiter **Export** (`/maintenance/export`, nur Rolle `admin`). Er lädt
+Der Datenexport ist das Gegenstück zum Datenimport und ebenfalls Teil des globalen
+Wartungsbereichs: Menüpunkt **Wartung**, Reiter **Export** (`/maintenance/export`, nur Rolle
+`system-admin`; zuvor den Mandanten wählen). Er lädt
 einen Stammdatenbereich vollständig als Datei herunter — etwa um Daten in Excel zu prüfen,
-weiterzugeben oder in einen anderen Mandanten zu übernehmen.
+weiterzugeben oder in einen anderen Mandanten zu übernehmen (dazu nach dem Export einfach den
+gewählten Mandanten wechseln und die Datei über den Reiter **Import** einspielen).
 
 ![Export im Wartungsbereich](img/web/export.png)
 
@@ -1367,19 +1370,35 @@ demselben Namen).
 
 Exportiert werden Stammdaten: Kunden, Fahrer, Fahrzeuge. Aufträge, Touren und Rechnungen sind
 — wie beim Import — bewusst nicht enthalten. Die Datei enthält ausschließlich Daten des
-eigenen Mandanten.
+gewählten Mandanten.
 
-## Wartung (Datensicherung)
+## Wartung (globaler Systembereich)
 
-Erreichbar über den Menüpunkt **Wartung** (`/maintenance`). Der Wartungsbereich bündelt
-die Administrator-Werkzeuge unter einer Reiterleiste: **Datensicherung** (dieser Abschnitt),
-**Import** und **Import-Verlauf** (Abschnitt „Datenimport“) sowie **Export** (Abschnitt
-„Datenexport“). Menüpunkt und Seiten stehen
-ausschließlich Administratoren zur Verfügung — anders als bei der Geodaten-Wartung ist hier
-auch das Ansehen auf die Rolle `admin` beschränkt; andere Rollen werden zur Startseite
-umgeleitet, und die API lehnt ihre Anfragen ab.
+Erreichbar über den Menüpunkt **Wartung** (`/maintenance`). Der Wartungsbereich bündelt die
+mandantenübergreifenden System-Werkzeuge unter einer Reiterleiste: **Datensicherung** (dieser
+Abschnitt), **Import** und **Import-Verlauf** (Abschnitt „Datenimport“) sowie **Export**
+(Abschnitt „Datenexport“). Menüpunkt und Seiten stehen ausschließlich der Rolle
+**`system-admin`** zur Verfügung — einem technischen Systemverwalter, der selbst **keinem
+Mandanten angehört**. Alle anderen Rollen (auch `admin`) werden zur Startseite umgeleitet,
+und die API lehnt ihre Anfragen ab.
 
-Der Reiter **Datensicherung** sichert und wiederherstellt die Daten **des eigenen
+### Mandant auswählen
+
+Da ein System-Administrator keinen eigenen Mandanten hat, verlangt die Seite als Erstes die
+Wahl des Mandanten, dessen Daten gewartet werden sollen:
+
+- **Auswahlliste**: alle Mandanten, die bereits Daten besitzen, mit ihrer Gesamtzeilenzahl.
+- **Manuelle Eingabe**: eine Mandanten-ID (GUID) lässt sich auch direkt eintippen und mit
+  **Übernehmen** aktivieren — etwa für einen neuen, noch leeren Mandanten, in den eine
+  Sicherung oder ein Import eingespielt werden soll.
+
+Erst nach der Wahl erscheinen die Werkzeug-Reiter; jede Aktion wirkt ausschließlich auf den
+gewählten Mandanten, der oberhalb der Reiter angezeigt wird. Die Wahl gilt für die laufende
+Browser-Sitzung; eine neue Anmeldung beginnt neutral.
+
+### Datensicherung
+
+Der Reiter **Datensicherung** sichert und wiederherstellt die Daten **des gewählten
 Mandanten**: Fahrzeuge samt
 Katalogen und Dokumenten, Fahrer, Kunden mit Standorten, Aufträge, Touren, Rechnungen,
 manuelle Geo-Koordinaten sowie die Nummernkreise für Auftrags- und Rechnungsnummern. Daten
@@ -1389,7 +1408,7 @@ nicht berührt.
 ### Sicherung erstellen
 
 Die Karte **„Create backup"** lädt mit **„Download backup"** den kompletten Datenbestand des
-Mandanten als eine JSON-Datei herunter (`transbrain-backup-<Datum>-<Uhrzeit>.json`). Die Datei
+gewählten Mandanten als eine JSON-Datei herunter (`transbrain-backup-<Datum>-<Uhrzeit>.json`). Die Datei
 ist an den Mandanten und an den Datenbankstand gebunden, unter dem sie erstellt wurde.
 Bewahren Sie sie an einem sicheren Ort auf — sie enthält alle Geschäftsdaten.
 
@@ -1405,7 +1424,8 @@ Die Karte **„Restore backup"** spielt eine zuvor erstellte Sicherungsdatei zur
    be replaced."** ankreuzen — ohne Haken bleibt die Schaltfläche gesperrt.
 3. **„Restore now"** startet die Wiederherstellung.
 
-**Die Wiederherstellung ersetzt alle aktuellen Daten des Mandanten unwiderruflich** durch den
+**Die Wiederherstellung ersetzt alle aktuellen Daten des gewählten Mandanten unwiderruflich**
+durch den
 Stand aus der Datei. Sie läuft vollständig oder gar nicht: Schlägt ein Schritt fehl, bleibt
 der bisherige Datenbestand unverändert erhalten („The restore failed. No data has been
 changed."). Nach Erfolg zeigt eine Tabelle je Datenbanktabelle die Zahl der geschriebenen
@@ -1416,7 +1436,7 @@ Zwei Dateien werden mit einer Fehlermeldung abgewiesen:
 
 - Eine Sicherung **eines anderen Mandanten** („The backup belongs to a different
   tenant …"). Eine Sicherung lässt sich nur in den Mandanten zurückspielen, aus dem sie
-  stammt.
+  stammt — wählen Sie dazu oben den passenden Mandanten aus.
 - Eine Sicherung, die unter einem **anderen Datenbankstand** erstellt wurde („The backup was
   taken on database schema …"), etwa vor einem Software-Update. Spielen Sie
   solche Sicherungen in eine Installation mit passendem Stand zurück und erstellen Sie nach
@@ -1424,8 +1444,8 @@ Zwei Dateien werden mit einer Fehlermeldung abgewiesen:
 
 ## Rollen und Rechte
 
-Die Anmeldung erfolgt über Keycloak mit genau einer der vier Rollen `admin`,
-`disponent`, `fahrer` oder `viewer`.
+Die Anmeldung erfolgt über Keycloak mit genau einer der Rollen `admin`,
+`disponent`, `fahrer`, `viewer` oder `system-admin`.
 
 | Rolle       | Ansehen          | Fahrzeuge/Fahrer/Kunden pflegen | Aufträge pflegen | Touren planen | Tour starten/abschließen | Rechnungen pflegen |
 |-------------|------------------|:------------------------:|:----------------:|:-------------:|:------------------------:|:------------------:|
@@ -1442,6 +1462,12 @@ und Kunden (Stammdaten) darf er weiterhin nur lesen.
 **Der Fahrer ist die zweite Ausnahme:** Er darf nichts anlegen, aber seine eigenen Touren starten
 und abschließen — siehe Abschnitt „Touren als Fahrer“.
 
+**`system-admin` ist keine Mandanten-Rolle:** Der Systemverwalter gehört keinem Mandanten an
+und taucht deshalb in der Tabelle nicht auf. Er sieht ausschließlich den globalen
+Wartungsbereich (Datensicherung, Import, Export — Abschnitt „Wartung“) und wählt dort je
+Vorgang den Mandanten, auf den er wirkt; die fachlichen Bereiche (Fahrzeuge, Aufträge,
+Touren …) stehen ihm nicht zur Verfügung.
+
 
 **Die Oberfläche bietet nur an, was Ihre Rolle auch darf.** Die Schaltflächen
 „Add vehicle“/„Add driver“/„Add customer“, „Edit“ und „Delete“ erscheinen ausschließlich für die Rolle
@@ -1450,12 +1476,12 @@ und abschließen — siehe Abschnitt „Touren als Fahrer“.
 `disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Der
 Menüpunkt **Geodata** und die Änderungen der Geodaten-Wartung („Add coordinates“,
 „Set coordinates“, „Remove manual coordinates“) sind ebenfalls `admin` vorbehalten. Der
-Menüpunkt **Maintenance** — mit den Reitern **Backup & restore** (Datensicherung),
-**Import** und **Import history** (Datenimport) sowie **Export** (Datenexport) — ist zur
-Gänze — einschließlich des
-Ansehens — `admin` vorbehalten. Wer eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
+Menüpunkt **Maintenance** — mit der Mandantenwahl und den Reitern **Backup & restore**
+(Datensicherung), **Import** und **Import history** (Datenimport) sowie **Export**
+(Datenexport) — ist zur Gänze — einschließlich des
+Ansehens — `system-admin` vorbehalten. Wer eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
 
-Das **Lesen** ist davon unberührt: alle vier Rollen dürfen alle Listen ansehen, mit der
+Das **Lesen** ist davon unberührt: alle vier Mandanten-Rollen dürfen alle Listen ansehen, mit der
 einen Ausnahme, dass ein Fahrer in der Tourenliste nur seine eigenen Touren sieht. Die
 Navigation blendet für einen Fahrer die Bereiche Fahrzeuge, Fahrer, Kunden, Aufträge und
 Abrechnung aus, weil er sie für seine Arbeit nicht braucht — über die Adresszeile bleiben sie

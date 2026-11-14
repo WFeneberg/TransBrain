@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using AwesomeAssertions;
+using TransBrain.Application.Abstractions;
 using TransBrain.Application.Common.Pagination;
 using TransBrain.Application.Features.Customers;
 using TransBrain.Application.Features.Imports;
@@ -12,8 +13,17 @@ using TransBrain.Application.Features.Imports.PreviewImport;
 
 namespace TransBrain.Api.IntegrationTests;
 
+/// <summary>
+/// The import wizard behind the global system area: a system administrator imports into the
+/// tenant named in the route, and the created rows land in exactly that tenant — visible to its
+/// users through the regular endpoints.
+/// </summary>
 public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<TransBrainApiFactory>
 {
+    private static readonly Guid Tenant = TenantDefaults.DefaultTenantId;
+
+    private static string Url(string path = "") => $"/api/system/tenants/{Tenant}/imports{path}";
+
     private const string Csv =
         "Firma;Strasse;PLZ;Ort;Zahlungsziel\n"
         + "Import Kunde Eins GmbH;Hauptstr. 1;80331;München;30\n"
@@ -39,11 +49,12 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     [Fact]
     public async Task ImportFlow_UploadPreviewExecute_CreatesCustomersThroughTheRegularPipeline()
     {
-        HttpClient admin = factory.CreateClientAs("admin");
+        HttpClient system = factory.CreateSystemAdminClient();
 
         // 1. Upload + analysis
-        HttpResponseMessage upload = await admin.PostAsync("/api/imports/files", FileUpload("kunden.csv", Csv));
+        HttpResponseMessage upload = await system.PostAsync(Url("/files"), FileUpload("kunden.csv", Csv));
         upload.StatusCode.Should().Be(HttpStatusCode.Created);
+        upload.Headers.Location!.ToString().Should().StartWith($"/api/system/tenants/{Tenant}/imports/");
         ImportSessionResponse session = (await upload.Content.ReadFromJsonAsync<ImportSessionResponse>())!;
         session.SourceType.Should().Be("Csv");
         session.Status.Should().Be("Ready");
@@ -54,8 +65,8 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
         table.SampleRows.Should().NotBeEmpty();
 
         // 2. Preview: everything valid, nothing imported yet
-        HttpResponseMessage preview = await admin.PostAsJsonAsync(
-            $"/api/imports/{session.Id}/preview",
+        HttpResponseMessage preview = await system.PostAsJsonAsync(
+            Url($"/{session.Id}/preview"),
             new { tableName = "kunden", targetEntity = "Customers", mappings = Mappings });
         preview.StatusCode.Should().Be(HttpStatusCode.OK);
         ImportPreviewResponse previewBody = (await preview.Content.ReadFromJsonAsync<ImportPreviewResponse>())!;
@@ -66,8 +77,8 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
         previewBody.Rows[0].Values["country"].Should().Be("DE");
 
         // 3. Execute
-        HttpResponseMessage execute = await admin.PostAsJsonAsync(
-            $"/api/imports/{session.Id}/execute",
+        HttpResponseMessage execute = await system.PostAsJsonAsync(
+            Url($"/{session.Id}/execute"),
             new { tableName = "kunden", targetEntity = "Customers", mappings = Mappings });
         execute.StatusCode.Should().Be(HttpStatusCode.OK);
         ImportExecutionResponse result = (await execute.Content.ReadFromJsonAsync<ImportExecutionResponse>())!;
@@ -75,14 +86,15 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
         result.ImportedCount.Should().Be(2);
         result.FailedCount.Should().Be(0);
 
-        // 4. The customers exist, created through the very same path as manual entry
+        // 4. The customers exist in the target tenant, created through the very same path as
+        // manual entry — a viewer of that tenant sees them through the regular endpoint.
         HttpResponseMessage list = await factory.CreateClientAs("viewer").GetAsync("/api/customers?pageSize=100");
         PagedResult<CustomerResponse> page = (await list.Content.ReadFromJsonAsync<PagedResult<CustomerResponse>>())!;
         page.Items.Should().Contain(c => c.Name == "Import Kunde Eins GmbH" && c.PaymentTermDays == 30);
         page.Items.Should().Contain(c => c.Name == "Import Kunde Zwei KG");
 
         // 5. The session history reflects the execution
-        HttpResponseMessage get = await admin.GetAsync($"/api/imports/{session.Id}");
+        HttpResponseMessage get = await system.GetAsync(Url($"/{session.Id}"));
         ImportSessionResponse final = (await get.Content.ReadFromJsonAsync<ImportSessionResponse>())!;
         final.Status.Should().Be("Completed");
         final.TargetEntity.Should().Be("Customers");
@@ -93,17 +105,17 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     [Fact]
     public async Task ExecuteImport_WithPartiallyInvalidRows_ImportsTheValidOnesAndReportsRowErrors()
     {
-        HttpClient admin = factory.CreateClientAs("admin");
+        HttpClient system = factory.CreateSystemAdminClient();
         const string csv =
             "Firma;Strasse;PLZ;Ort;Zahlungsziel\n"
             + "Teilimport Gut GmbH;Weg 1;50667;Köln;30\n"
             + ";Weg 2;50667;Köln;30\n";
 
-        HttpResponseMessage upload = await admin.PostAsync("/api/imports/files", FileUpload("teil.csv", csv));
+        HttpResponseMessage upload = await system.PostAsync(Url("/files"), FileUpload("teil.csv", csv));
         ImportSessionResponse session = (await upload.Content.ReadFromJsonAsync<ImportSessionResponse>())!;
 
-        HttpResponseMessage execute = await admin.PostAsJsonAsync(
-            $"/api/imports/{session.Id}/execute",
+        HttpResponseMessage execute = await system.PostAsJsonAsync(
+            Url($"/{session.Id}/execute"),
             new { tableName = "teil", targetEntity = "Customers", mappings = Mappings });
 
         ImportExecutionResponse result = (await execute.Content.ReadFromJsonAsync<ImportExecutionResponse>())!;
@@ -114,9 +126,9 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     }
 
     [Fact]
-    public async Task GetImportTargets_AsAdmin_DescribesTheMappingVocabulary()
+    public async Task GetImportTargets_AsSystemAdmin_DescribesTheMappingVocabulary()
     {
-        HttpResponseMessage response = await factory.CreateClientAs("admin").GetAsync("/api/imports/targets");
+        HttpResponseMessage response = await factory.CreateSystemAdminClient().GetAsync(Url("/targets"));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         ImportTargetResponse[] targets = (await response.Content.ReadFromJsonAsync<ImportTargetResponse[]>())!;
@@ -127,10 +139,10 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     [Fact]
     public async Task ListImportSessions_AfterUpload_ContainsTheSessionWithoutTables()
     {
-        HttpClient admin = factory.CreateClientAs("admin");
-        await admin.PostAsync("/api/imports/files", FileUpload("verlauf.csv", Csv));
+        HttpClient system = factory.CreateSystemAdminClient();
+        await system.PostAsync(Url("/files"), FileUpload("verlauf.csv", Csv));
 
-        HttpResponseMessage list = await admin.GetAsync("/api/imports");
+        HttpResponseMessage list = await system.GetAsync(Url());
 
         list.StatusCode.Should().Be(HttpStatusCode.OK);
         ImportSessionResponse[] sessions = (await list.Content.ReadFromJsonAsync<ImportSessionResponse[]>())!;
@@ -140,24 +152,39 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     }
 
     [Fact]
-    public async Task DeleteImportSession_RemovesItFromTheHistory()
+    public async Task ImportSessions_BelongToTheTenantInTheRoute_NotToAnotherTenant()
     {
-        HttpClient admin = factory.CreateClientAs("admin");
-        HttpResponseMessage upload = await admin.PostAsync("/api/imports/files", FileUpload("weg.csv", Csv));
+        HttpClient system = factory.CreateSystemAdminClient();
+        Guid otherTenant = Guid.CreateVersion7();
+        HttpResponseMessage upload = await system.PostAsync(
+            $"/api/system/tenants/{otherTenant}/imports/files", FileUpload("getrennt.csv", Csv));
         ImportSessionResponse session = (await upload.Content.ReadFromJsonAsync<ImportSessionResponse>())!;
 
-        HttpResponseMessage delete = await admin.DeleteAsync($"/api/imports/{session.Id}");
+        // Visible under the tenant it was created for, invisible under the default tenant.
+        (await system.GetAsync($"/api/system/tenants/{otherTenant}/imports/{session.Id}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await system.GetAsync(Url($"/{session.Id}"))).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task DeleteImportSession_RemovesItFromTheHistory()
+    {
+        HttpClient system = factory.CreateSystemAdminClient();
+        HttpResponseMessage upload = await system.PostAsync(Url("/files"), FileUpload("weg.csv", Csv));
+        ImportSessionResponse session = (await upload.Content.ReadFromJsonAsync<ImportSessionResponse>())!;
+
+        HttpResponseMessage delete = await system.DeleteAsync(Url($"/{session.Id}"));
         delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        HttpResponseMessage get = await admin.GetAsync($"/api/imports/{session.Id}");
+        HttpResponseMessage get = await system.GetAsync(Url($"/{session.Id}"));
         get.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task UploadImportFile_WithUnsupportedExtension_ReturnsValidationProblem()
     {
-        HttpResponseMessage response = await factory.CreateClientAs("admin")
-            .PostAsync("/api/imports/files", FileUpload("bericht.pdf", "egal"));
+        HttpResponseMessage response = await factory.CreateSystemAdminClient()
+            .PostAsync(Url("/files"), FileUpload("bericht.pdf", "egal"));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -165,8 +192,8 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     [Fact]
     public async Task CreateDatabaseImport_WithUnknownProvider_ReturnsValidationProblem()
     {
-        HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync(
-            "/api/imports/databases", new { provider = "oracle", connectionString = "Host=x" });
+        HttpResponseMessage response = await factory.CreateSystemAdminClient().PostAsJsonAsync(
+            Url("/databases"), new { provider = "oracle", connectionString = "Host=x" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -174,8 +201,8 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     [Fact]
     public async Task CreateDatabaseImport_WithUnreachableServer_ReturnsServiceUnavailableWithoutLeakingSecrets()
     {
-        HttpResponseMessage response = await factory.CreateClientAs("admin").PostAsJsonAsync(
-            "/api/imports/databases",
+        HttpResponseMessage response = await factory.CreateSystemAdminClient().PostAsJsonAsync(
+            Url("/databases"),
             new
             {
                 provider = "PostgreSql",
@@ -188,15 +215,17 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     }
 
     [Theory]
-    [InlineData("viewer")]
+    [InlineData("admin")]
     [InlineData("disponent")]
-    public async Task ImportEndpoints_WithoutMasterDataWriteRole_ReturnForbidden(string role)
+    [InlineData("fahrer")]
+    [InlineData("viewer")]
+    public async Task ImportEndpoints_WithTenantRole_ReturnForbidden(string role)
     {
         HttpClient client = factory.CreateClientAs(role);
 
-        (await client.GetAsync("/api/imports")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await client.GetAsync("/api/imports/targets")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await client.PostAsync("/api/imports/files", FileUpload("kunden.csv", Csv)))
+        (await client.GetAsync(Url())).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.GetAsync(Url("/targets"))).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.PostAsync(Url("/files"), FileUpload("kunden.csv", Csv)))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
@@ -205,6 +234,6 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     {
         HttpClient anonymous = factory.CreateClient();
 
-        (await anonymous.GetAsync("/api/imports")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await anonymous.GetAsync(Url())).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { SystemTenantService } from '../system/system-tenant.service';
 
-/** The target entities the API offers for imports; mirrors GET /api/imports/targets. */
+/** The target entities the API offers for imports; mirrors GET .../imports/targets. */
 export type ImportFieldKind = 'Text' | 'Integer' | 'Decimal' | 'Date' | 'Boolean' | 'TextList';
 
 export interface ImportTargetField {
@@ -30,7 +31,7 @@ export interface ImportTable {
 
 export type ImportSessionStatus = 'Ready' | 'Completed' | 'CompletedWithErrors' | 'Failed';
 
-/** An import session. `tables` is null in list views (GET /api/imports). */
+/** An import session. `tables` is null in list views (GET .../imports). */
 export interface ImportSession {
     id: string;
     sourceType: string;
@@ -88,7 +89,7 @@ export interface ImportExecution {
     errors: ImportRowError[];
 }
 
-/** The file extensions POST /api/imports/files accepts. */
+/** The file extensions POST .../imports/files accepts. */
 export const IMPORT_FILE_EXTENSIONS = [
     '.csv',
     '.json',
@@ -106,47 +107,52 @@ export const IMPORT_MAX_FILE_BYTES = 25 * 1024 * 1024;
 @Injectable({ providedIn: 'root' })
 export class ImportService {
     private readonly http = inject(HttpClient);
+    private readonly tenant = inject(SystemTenantService);
+
+    private base(): string {
+        return `${this.tenant.apiBase()}/imports`;
+    }
 
     targets(): Observable<ImportTarget[]> {
-        return this.http.get<ImportTarget[]>('/api/imports/targets');
+        return this.http.get<ImportTarget[]>(`${this.base()}/targets`);
     }
 
     uploadFile(file: File): Observable<ImportSession> {
         const form = new FormData();
         form.append('file', file, file.name);
-        return this.http.post<ImportSession>('/api/imports/files', form);
+        return this.http.post<ImportSession>(`${this.base()}/files`, form);
     }
 
     connectDatabase(
         provider: ImportDatabaseProvider,
         connectionString: string,
     ): Observable<ImportSession> {
-        return this.http.post<ImportSession>('/api/imports/databases', {
+        return this.http.post<ImportSession>(`${this.base()}/databases`, {
             provider,
             connectionString,
         });
     }
 
     list(): Observable<ImportSession[]> {
-        return this.http.get<ImportSession[]>('/api/imports');
+        return this.http.get<ImportSession[]>(this.base());
     }
 
     getById(id: string): Observable<ImportSession> {
-        return this.http.get<ImportSession>(`/api/imports/${id}`);
+        return this.http.get<ImportSession>(`${this.base()}/${id}`);
     }
 
     preview(id: string, request: ImportMappingRequest, maxRows: number): Observable<ImportPreview> {
-        return this.http.post<ImportPreview>(`/api/imports/${id}/preview`, {
+        return this.http.post<ImportPreview>(`${this.base()}/${id}/preview`, {
             ...request,
             maxRows,
         });
     }
 
     execute(id: string, request: ImportMappingRequest): Observable<ImportExecution> {
-        return this.http.post<ImportExecution>(`/api/imports/${id}/execute`, request);
+        return this.http.post<ImportExecution>(`${this.base()}/${id}/execute`, request);
     }
 
     remove(id: string): Observable<void> {
-        return this.http.delete<void>(`/api/imports/${id}`);
+        return this.http.delete<void>(`${this.base()}/${id}`);
     }
 }

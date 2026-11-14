@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { userManager } from '../auth/userManager';
+import { systemApiBase } from './system';
 
 /** Mirror of ExportTargetResponse in the API. */
 export interface ExportTarget {
@@ -28,13 +29,13 @@ client.interceptors.request.use(async (config) => {
 
 /** The exportable master-data sets with their current row counts. */
 export async function getExportTargets(): Promise<ExportTarget[]> {
-    const response = await client.get<ExportTarget[]>('/exports/targets');
+    const response = await client.get<ExportTarget[]>(`${systemApiBase()}/exports/targets`);
     return response.data;
 }
 
 /** Downloads one data set in the chosen format; the server names the file. */
 export async function downloadExport(entity: string, format: ExportFormat): Promise<ExportDownload> {
-    const response = await client.get<Blob>(`/exports/${encodeURIComponent(entity)}`, {
+    const response = await client.get<Blob>(`${systemApiBase()}/exports/${encodeURIComponent(entity)}`, {
         params: { format },
         responseType: 'blob',
     });

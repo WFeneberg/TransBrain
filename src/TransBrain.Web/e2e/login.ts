@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-export type TestRole = 'admin' | 'dispo' | 'fahrer' | 'viewer';
+export type TestRole = 'admin' | 'dispo' | 'fahrer' | 'viewer' | 'system';
 
 /** Realm passwords are the username prefix, see docs/KEYCLOAK.md. */
 const PASSWORDS: Record<TestRole, string> = {
@@ -8,7 +8,22 @@ const PASSWORDS: Record<TestRole, string> = {
     dispo: 'dispo',
     fahrer: 'fahrer',
     viewer: 'viewer',
+    system: 'system',
 };
+
+/** Tenant 1 of the dev realm (TenantDefaults.DefaultTenantId); the seed data lives here. */
+export const DEFAULT_TENANT_ID = '0199c0de-0000-7000-8000-000000000001';
+
+/**
+ * Chooses the tenant the signed-in system administrator works on. The maintenance area shows
+ * its tool tabs only after this choice; the manual GUID field is used because it works whether
+ * or not the tenant already owns rows (the dropdown only lists tenants with data).
+ */
+export async function selectSystemTenant(page: Page, tenantId = DEFAULT_TENANT_ID): Promise<void> {
+    await page.getByTestId('system-tenant-manual').fill(tenantId);
+    await page.getByTestId('system-tenant-apply').click();
+    await expect(page.getByTestId('system-tenant-active')).toContainText(tenantId);
+}
 
 /**
  * Signs in through the real Keycloak login form and waits for the home page.

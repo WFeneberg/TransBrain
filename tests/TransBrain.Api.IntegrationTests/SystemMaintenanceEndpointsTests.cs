@@ -11,12 +11,18 @@ using TransBrain.Application.Features.Vehicles;
 namespace TransBrain.Api.IntegrationTests;
 
 /// <summary>
-/// The Wartung (maintenance) area end to end: only admins may reach it, a backup is a complete
-/// downloadable snapshot of the caller's tenant, and a restore replaces exactly that tenant's
-/// data — atomically, without leaking into or reading from any other tenant.
+/// The global Wartung (maintenance) area end to end: only system administrators may reach it —
+/// every tenant role including admin is refused — a backup is a complete downloadable snapshot
+/// of the tenant chosen in the route, and a restore replaces exactly that tenant's data,
+/// atomically, without leaking into or reading from any other tenant.
 /// </summary>
-public sealed class MaintenanceEndpointsTests(TransBrainApiFactory factory) : IClassFixture<TransBrainApiFactory>
+public sealed class SystemMaintenanceEndpointsTests(TransBrainApiFactory factory)
+    : IClassFixture<TransBrainApiFactory>
 {
+    private static string BackupUrl(Guid tenant) => $"/api/system/tenants/{tenant}/backup";
+
+    private static string RestoreUrl(Guid tenant) => $"/api/system/tenants/{tenant}/restore";
+
     private static object Vehicle(string licensePlate) => new
     {
         licensePlate,
@@ -54,36 +60,79 @@ public sealed class MaintenanceEndpointsTests(TransBrainApiFactory factory) : IC
     };
 
     [Theory]
+    [InlineData("admin")]
     [InlineData("disponent")]
     [InlineData("fahrer")]
     [InlineData("viewer")]
-    public async Task GetBackup_NonAdminRole_ReturnsForbidden(string role)
+    public async Task GetTenants_TenantRole_ReturnsForbidden(string role)
     {
-        HttpResponseMessage response = await factory.CreateClientAs(role).GetAsync("/api/maintenance/backup");
+        HttpResponseMessage response = await factory.CreateClientAs(role).GetAsync("/api/system/tenants");
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Theory]
+    [InlineData("admin")]
     [InlineData("disponent")]
     [InlineData("fahrer")]
     [InlineData("viewer")]
-    public async Task PostRestore_NonAdminRole_ReturnsForbidden(string role)
+    public async Task GetBackup_TenantRole_ReturnsForbidden(string role)
     {
         HttpResponseMessage response = await factory.CreateClientAs(role)
-            .PostAsJsonAsync("/api/maintenance/restore", new { });
+            .GetAsync(BackupUrl(Guid.CreateVersion7()));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Theory]
+    [InlineData("admin")]
+    [InlineData("disponent")]
+    [InlineData("fahrer")]
+    [InlineData("viewer")]
+    public async Task PostRestore_TenantRole_ReturnsForbidden(string role)
+    {
+        HttpResponseMessage response = await factory.CreateClientAs(role)
+            .PostAsJsonAsync(RestoreUrl(Guid.CreateVersion7()), new { });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
-    public async Task GetBackup_AdminWithData_ReturnsCompleteDownloadableSnapshot()
+    public async Task GetBackup_EmptyTenantIdInRoute_ReturnsBadRequest()
+    {
+        HttpResponseMessage response = await factory.CreateSystemAdminClient()
+            .GetAsync(BackupUrl(Guid.Empty));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("SystemTenant.Invalid");
+    }
+
+    [Fact]
+    public async Task GetTenants_SystemAdminWithoutTenantClaim_ListsTenantsWithCounts()
+    {
+        Guid tenant = Guid.CreateVersion7();
+        HttpClient admin = factory.CreateClientForTenant(tenant, "admin");
+        await admin.PostAsJsonAsync("/api/vehicles", Vehicle("M-LST 1"));
+        await admin.PostAsJsonAsync("/api/vehicles", Vehicle("M-LST 2"));
+
+        HttpResponseMessage response = await factory.CreateSystemAdminClient().GetAsync("/api/system/tenants");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        JsonElement tenants = await response.Content.ReadFromJsonAsync<JsonElement>();
+        JsonElement entry = tenants.EnumerateArray()
+            .Single(t => t.GetProperty("tenantId").GetGuid() == tenant);
+        entry.GetProperty("vehicles").GetInt32().Should().Be(2);
+        entry.GetProperty("totalRows").GetInt32().Should().BeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public async Task GetBackup_SystemAdminForTenantWithData_ReturnsCompleteDownloadableSnapshot()
     {
         Guid tenant = Guid.CreateVersion7();
         HttpClient admin = factory.CreateClientForTenant(tenant, "admin");
         await admin.PostAsJsonAsync("/api/vehicles", Vehicle("M-BK 100"));
 
-        HttpResponseMessage response = await admin.GetAsync("/api/maintenance/backup");
+        HttpResponseMessage response = await factory.CreateSystemAdminClient().GetAsync(BackupUrl(tenant));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Content.Headers.ContentDisposition!.FileName.Should().StartWith("transbrain-backup-");
@@ -109,6 +158,7 @@ public sealed class MaintenanceEndpointsTests(TransBrainApiFactory factory) : IC
     public async Task PostRestore_BackupTakenEarlier_RestoresExactlyThatState()
     {
         Guid tenant = Guid.CreateVersion7();
+        HttpClient system = factory.CreateSystemAdminClient();
         HttpClient admin = factory.CreateClientForTenant(tenant, "admin");
         HttpClient dispatcher = factory.CreateClientForTenant(tenant, "disponent", "admin");
 
@@ -138,15 +188,15 @@ public sealed class MaintenanceEndpointsTests(TransBrainApiFactory factory) : IC
             $"/api/tours/{tour.Id}/orders", new { transportOrderId = orderId });
         assigned.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        string backupJson = await (await admin.GetAsync("/api/maintenance/backup")).Content.ReadAsStringAsync();
+        string backupJson = await (await system.GetAsync(BackupUrl(tenant))).Content.ReadAsStringAsync();
 
         // Diverge from the snapshot in both directions: lose rows (the tour's stops), gain a row.
         HttpResponseMessage unassigned = await dispatcher.DeleteAsync($"/api/tours/{tour.Id}/orders/{orderId}");
         unassigned.StatusCode.Should().Be(HttpStatusCode.OK);
         await admin.PostAsJsonAsync("/api/vehicles", Vehicle("M-RST 999"));
 
-        HttpResponseMessage restore = await admin.PostAsync(
-            "/api/maintenance/restore", new StringContent(backupJson, Encoding.UTF8, "application/json"));
+        HttpResponseMessage restore = await system.PostAsync(
+            RestoreUrl(tenant), new StringContent(backupJson, Encoding.UTF8, "application/json"));
 
         restore.StatusCode.Should().Be(HttpStatusCode.OK);
         JsonElement result = await restore.Content.ReadFromJsonAsync<JsonElement>();
@@ -177,16 +227,16 @@ public sealed class MaintenanceEndpointsTests(TransBrainApiFactory factory) : IC
     public async Task PostRestore_AfterRestore_OrderNumberSequenceContinuesInsteadOfRestarting()
     {
         Guid tenant = Guid.CreateVersion7();
-        HttpClient admin = factory.CreateClientForTenant(tenant, "admin");
+        HttpClient system = factory.CreateSystemAdminClient();
         HttpClient dispatcher = factory.CreateClientForTenant(tenant, "disponent", "admin");
 
         JsonElement first = await (await dispatcher.PostAsJsonAsync("/api/orders", Order))
             .Content.ReadFromJsonAsync<JsonElement>();
         first.GetProperty("orderNumber").GetString().Should().EndWith("-00001");
 
-        string backupJson = await (await admin.GetAsync("/api/maintenance/backup")).Content.ReadAsStringAsync();
-        HttpResponseMessage restore = await admin.PostAsync(
-            "/api/maintenance/restore", new StringContent(backupJson, Encoding.UTF8, "application/json"));
+        string backupJson = await (await system.GetAsync(BackupUrl(tenant))).Content.ReadAsStringAsync();
+        HttpResponseMessage restore = await system.PostAsync(
+            RestoreUrl(tenant), new StringContent(backupJson, Encoding.UTF8, "application/json"));
         restore.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // The number sequence travels with the backup: a fresh order must NOT reuse -00001,
@@ -201,15 +251,17 @@ public sealed class MaintenanceEndpointsTests(TransBrainApiFactory factory) : IC
     {
         Guid ownerTenant = Guid.CreateVersion7();
         Guid victimTenant = Guid.CreateVersion7();
+        HttpClient system = factory.CreateSystemAdminClient();
         HttpClient owner = factory.CreateClientForTenant(ownerTenant, "admin");
         HttpClient victim = factory.CreateClientForTenant(victimTenant, "admin");
 
         await owner.PostAsJsonAsync("/api/vehicles", Vehicle("M-OWN 1"));
-        string foreignBackup = await (await owner.GetAsync("/api/maintenance/backup")).Content.ReadAsStringAsync();
+        string foreignBackup = await (await system.GetAsync(BackupUrl(ownerTenant))).Content.ReadAsStringAsync();
         await victim.PostAsJsonAsync("/api/vehicles", Vehicle("M-VIC 1"));
 
-        HttpResponseMessage response = await victim.PostAsync(
-            "/api/maintenance/restore", new StringContent(foreignBackup, Encoding.UTF8, "application/json"));
+        // The file was taken from ownerTenant, the route points at victimTenant: refused.
+        HttpResponseMessage response = await system.PostAsync(
+            RestoreUrl(victimTenant), new StringContent(foreignBackup, Encoding.UTF8, "application/json"));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync()).Should().Contain("Backup.TenantMismatch");
@@ -225,14 +277,14 @@ public sealed class MaintenanceEndpointsTests(TransBrainApiFactory factory) : IC
     public async Task PostRestore_BackupFromDifferentSchemaVersion_ReturnsConflict()
     {
         Guid tenant = Guid.CreateVersion7();
-        HttpClient admin = factory.CreateClientForTenant(tenant, "admin");
+        HttpClient system = factory.CreateSystemAdminClient();
 
-        string backupJson = await (await admin.GetAsync("/api/maintenance/backup")).Content.ReadAsStringAsync();
+        string backupJson = await (await system.GetAsync(BackupUrl(tenant))).Content.ReadAsStringAsync();
         JsonNode backup = JsonNode.Parse(backupJson)!;
         backup["schemaVersion"] = "19990101000000_SomeAncientSchema";
 
-        HttpResponseMessage response = await admin.PostAsync(
-            "/api/maintenance/restore", new StringContent(backup.ToJsonString(), Encoding.UTF8, "application/json"));
+        HttpResponseMessage response = await system.PostAsync(
+            RestoreUrl(tenant), new StringContent(backup.ToJsonString(), Encoding.UTF8, "application/json"));
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await response.Content.ReadAsStringAsync()).Should().Contain("Backup.SchemaMismatch");
@@ -241,10 +293,8 @@ public sealed class MaintenanceEndpointsTests(TransBrainApiFactory factory) : IC
     [Fact]
     public async Task PostRestore_ArbitraryJsonInsteadOfBackup_ReturnsValidationProblem()
     {
-        HttpClient admin = factory.CreateClientForTenant(Guid.CreateVersion7(), "admin");
-
-        HttpResponseMessage response = await admin.PostAsJsonAsync(
-            "/api/maintenance/restore", new { fileFormat = "not-a-backup", comment = "hello" });
+        HttpResponseMessage response = await factory.CreateSystemAdminClient().PostAsJsonAsync(
+            RestoreUrl(Guid.CreateVersion7()), new { fileFormat = "not-a-backup", comment = "hello" });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -254,19 +304,20 @@ public sealed class MaintenanceEndpointsTests(TransBrainApiFactory factory) : IC
     {
         Guid restoringTenant = Guid.CreateVersion7();
         Guid bystanderTenant = Guid.CreateVersion7();
+        HttpClient system = factory.CreateSystemAdminClient();
         HttpClient restorer = factory.CreateClientForTenant(restoringTenant, "admin");
         HttpClient bystander = factory.CreateClientForTenant(bystanderTenant, "admin");
 
         await restorer.PostAsJsonAsync("/api/vehicles", Vehicle("M-SELF 1"));
         await bystander.PostAsJsonAsync("/api/vehicles", Vehicle("M-BYST 1"));
 
-        string backupJson = await (await restorer.GetAsync("/api/maintenance/backup")).Content.ReadAsStringAsync();
-        HttpResponseMessage restore = await restorer.PostAsync(
-            "/api/maintenance/restore", new StringContent(backupJson, Encoding.UTF8, "application/json"));
+        string backupJson = await (await system.GetAsync(BackupUrl(restoringTenant))).Content.ReadAsStringAsync();
+        HttpResponseMessage restore = await system.PostAsync(
+            RestoreUrl(restoringTenant), new StringContent(backupJson, Encoding.UTF8, "application/json"));
         restore.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // The restore wipes and rewrites the restoring tenant only; the bystander's fleet
-        // must survive bit for bit.
+        // The restore wipes and rewrites the tenant named in the route only; the bystander's
+        // fleet must survive bit for bit.
         JsonElement vehicles = await (await bystander.GetAsync("/api/vehicles"))
             .Content.ReadFromJsonAsync<JsonElement>();
         vehicles.GetProperty("items").EnumerateArray()

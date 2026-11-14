@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddSingleton<IXRechnungWriter, UblXRechnungWriter>();
         services.AddScoped<IGeoOverrideRepository, GeoOverrideRepository>();
         services.AddScoped<ITenantDataMaintenance, PostgresTenantDataMaintenance>();
+        services.AddScoped<ITenantDirectory, PostgresTenantDirectory>();
         services.AddScoped<IImportSessionRepository, ImportSessionRepository>();
         services.AddSingleton<IImportSourceParser, ImportSourceParser>();
         services.AddScoped<ICacheService, RedisCacheService>();

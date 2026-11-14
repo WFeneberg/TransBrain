@@ -21,6 +21,10 @@
       {
         "name": "viewer",
         "description": "Read-only access"
+      },
+      {
+        "name": "system-admin",
+        "description": "System administrator: cross-tenant maintenance (backup, restore, import, export)"
       }
     ]
   },

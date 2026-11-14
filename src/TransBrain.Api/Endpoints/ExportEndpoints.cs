@@ -1,4 +1,3 @@
-using TransBrain.Api.Authorization;
 using TransBrain.Api.Common;
 using TransBrain.Application.Common.Messaging;
 using TransBrain.Application.Features.Exports;
@@ -11,16 +10,14 @@ namespace TransBrain.Api.Endpoints;
 /// <summary>
 /// Master-data export as a download: the same entities the import knows (customers, drivers,
 /// vehicles) written as CSV, JSON or Excel. The column vocabulary matches the import, so an
-/// exported file can be re-imported with every column auto-matched. Tenant-scoped and reserved
-/// for master-data administrators, like the import.
+/// exported file can be re-imported with every column auto-matched. Lives in the global system
+/// area, like the import: the system administrator picks the tenant in the route.
 /// </summary>
 public sealed class ExportEndpoints : IEndpointGroup
 {
     public void Map(IEndpointRouteBuilder app)
     {
-        RouteGroupBuilder group = app.MapGroup("/api/exports")
-            .WithTags("Exports")
-            .RequireAuthorization(Policies.MasterDataWrite);
+        RouteGroupBuilder group = app.MapSystemTenantGroup("/exports").WithTags("Exports");
 
         group.MapGet("/targets", async (ISender sender, CancellationToken ct) =>
             {

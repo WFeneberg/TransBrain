@@ -151,7 +151,7 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(Policies.DispatchWrite, policy => policy.RequireRole("admin", "disponent"))
     .AddPolicy(Policies.TourStatusWrite, policy => policy.RequireRole("admin", "disponent", "fahrer"))
     .AddPolicy(Policies.Read, policy => policy.RequireRole("admin", "disponent", "fahrer", "viewer"))
-    .AddPolicy(Policies.Maintenance, policy => policy.RequireRole("admin"));
+    .AddPolicy(Policies.SystemMaintenance, policy => policy.RequireRole("system-admin"));
 
 WebApplication app = builder.Build();
 

@@ -7,6 +7,10 @@ public static class Policies
     public const string TourStatusWrite = "TourStatusWrite";
     public const string Read = "Read";
 
-    /// <summary>Backup and restore of a tenant's data — strictly the admin's business.</summary>
-    public const string Maintenance = "Maintenance";
+    /// <summary>
+    /// The global maintenance area: backup/restore, import and export of ANY tenant's data.
+    /// Cross-tenant by nature, so it is strictly the system administrator's business — a
+    /// tenant admin has no access here.
+    /// </summary>
+    public const string SystemMaintenance = "SystemMaintenance";
 }

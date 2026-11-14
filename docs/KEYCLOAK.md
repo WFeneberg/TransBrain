@@ -61,7 +61,8 @@ at the top of the left-hand nav to see this project's users and clients.
 
 ## Test users (the `transbrain` realm)
 
-Defined in `transbrain-realm.json`, one per realm role plus a second-tenant admin and driver. These
+Defined in `transbrain-realm.json`, one per tenant role plus a second-tenant admin and driver
+and a tenant-less system administrator. These
 are what you log into the Angular (`http://localhost:4200`) and Vue
 (`http://localhost:4300`) frontends with.
 
@@ -73,6 +74,7 @@ are what you log into the Angular (`http://localhost:4200`) and Vue
 | `viewer.user` | `viewer` | `viewer`    | Read only                                                  |
 | `admin.zweite`| `zweite` | `admin`     | Everything — but only inside the **second tenant** (see below) |
 | `fahrer.zweite`| `fahrer2`| `fahrer`    | Like `fahrer.user` — but only inside the **second tenant** |
+| `system.user` | `system` | `system-admin` | Global maintenance area only (`SystemMaintenance`): cross-tenant backup/restore, import and export under `/api/system/…` — carries **no tenant** |
 
 A `fahrer` is tied to a `Driver` record through `externalUserId`, which stores the
 Keycloak `sub` claim. A driver row with no `externalUserId` belongs to nobody who can
@@ -96,7 +98,11 @@ access token**, never out of anything a caller can set freely:
   `deploy/keycloak/transbrain-realm.json`).
 - The API resolves the claim per request (`HttpContextTenantContext`) and fails closed:
   an authenticated request **without** a valid `tenant_id` claim is answered `403` before
-  any handler runs (`TenantRequirementMiddleware`).
+  any handler runs (`TenantRequirementMiddleware`). The one exception is the global
+  maintenance area `/api/system/…` (role `system-admin`, policy `SystemMaintenance`):
+  those endpoints skip the claim requirement and take the target tenant from the URL
+  (`/api/system/tenants/{tenantId}/…`) instead — which is why `system.user` carries no
+  `tenant_id` attribute at all.
 
 The dev realm ships two tenants:
 

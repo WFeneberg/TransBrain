@@ -1,15 +1,16 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { signIn } from './login';
+import { selectSystemTenant, signIn } from './login';
 
 /**
  * The Export tab of the Wartung area: pick the Kunden data set, keep the CSV default, and
  * download. The file is the mirror image of the import - German column labels in the header -
  * so re-importing it through the Import tab maps every column automatically.
  */
-test('adminUser_exportingCustomersAsCsv_downloadsAFileWithGermanHeaders', async ({ page }) => {
-    await signIn(page, 'admin');
+test('systemUser_exportingCustomersAsCsv_downloadsAFileWithGermanHeaders', async ({ page }) => {
+    await signIn(page, 'system');
     await page.getByTestId('nav-maintenance').click();
+    await selectSystemTenant(page);
     await page.getByTestId('maintenance-tab-export').click();
     await expect(page.getByRole('heading', { name: 'Data export' })).toBeVisible();
 
@@ -27,9 +28,19 @@ test('adminUser_exportingCustomersAsCsv_downloadsAFileWithGermanHeaders', async 
 });
 
 test('viewerUser_cannotReachTheExport', async ({ page }) => {
-    // The export sits in the Wartung area and needs masterData.write: no nav entry for a viewer,
-    // and typing the URL bounces back to the home page.
+    // The export sits in the global Wartung area and needs the system-admin role: no nav entry
+    // for a viewer, and typing the URL bounces back to the home page.
     await signIn(page, 'viewer');
+    await expect(page.getByTestId('nav-maintenance')).toBeHidden();
+    await page.goto('/maintenance/export');
+    await expect(page.getByTestId('home-greeting')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Data export' })).toBeHidden();
+});
+
+test('adminUser_cannotReachTheExport', async ({ page }) => {
+    // Backup, import and export moved from the tenant admin to the global system area: a plain
+    // admin no longer has the nav entry, and a typed URL bounces back to the home page.
+    await signIn(page, 'admin');
     await expect(page.getByTestId('nav-maintenance')).toBeHidden();
     await page.goto('/maintenance/export');
     await expect(page.getByTestId('home-greeting')).toBeVisible();

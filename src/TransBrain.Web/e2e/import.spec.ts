@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { signIn } from './login';
+import { selectSystemTenant, signIn } from './login';
 
 /**
  * Walks the import wizard end to end: upload a small CSV, map its columns onto the customer
@@ -7,10 +7,12 @@ import { signIn } from './login';
  * headers deliberately use the German field labels of the customer target so the wizard's
  * case-insensitive auto-mapping assigns every column without manual clicks.
  */
-test('adminUser_importingACustomerCsv_walksTheWizardToACompletedImport', async ({ page }) => {
-    await signIn(page, 'admin');
-    // The import lives inside the Wartung (maintenance) area since it moved off the top nav.
+test('systemUser_importingACustomerCsv_walksTheWizardToACompletedImport', async ({ page }) => {
+    await signIn(page, 'system');
+    // The import lives inside the global Wartung (maintenance) area, which is system-admin
+    // territory: pick the tenant to work on first, only then do the tool tabs appear.
     await page.getByTestId('nav-maintenance').click();
+    await selectSystemTenant(page);
     await page.getByTestId('maintenance-tab-import').click();
     await expect(page.getByRole('heading', { name: 'Data import' })).toBeVisible();
 
@@ -68,7 +70,7 @@ test('adminUser_importingACustomerCsv_walksTheWizardToACompletedImport', async (
 });
 
 test('viewerUser_navigatingToImport_isRedirectedHome', async ({ page }) => {
-    // The import wizard sits in the Wartung area, which needs maintenance or masterData.write:
+    // The import wizard sits in the global Wartung area, which needs the system-admin role:
     // a viewer has no nav entry, and a typed URL (the old /import still redirects there) bounces
     // back to the home page.
     await signIn(page, 'viewer');

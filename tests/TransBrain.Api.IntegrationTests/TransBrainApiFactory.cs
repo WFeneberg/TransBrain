@@ -54,6 +54,17 @@ public sealed class TransBrainApiFactory : WebApplicationFactory<Program>, IAsyn
         return client;
     }
 
+    /// <summary>
+    /// A client acting as a system administrator: the <c>system-admin</c> role and — like the
+    /// real system users — no tenant claim at all.
+    /// </summary>
+    public HttpClient CreateSystemAdminClient()
+    {
+        HttpClient client = CreateClientAs("system-admin");
+        client.DefaultRequestHeaders.Add(TestAuthHandler.TenantHeader, TestAuthHandler.NoTenant);
+        return client;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Environments.Development);

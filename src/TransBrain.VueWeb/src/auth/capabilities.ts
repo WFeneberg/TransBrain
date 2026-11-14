@@ -8,19 +8,20 @@ export type Capability =
     | 'masterData.write'
     | 'dispatch.write'
     | 'tourStatus.write'
-    | 'maintenance';
+    | 'system.maintenance';
 
 /** The realm roles defined in src/TransBrain.AppHost/realms/transbrain-realm.json. */
-export type AppRole = 'admin' | 'disponent' | 'fahrer' | 'viewer';
+export type AppRole = 'admin' | 'disponent' | 'fahrer' | 'viewer' | 'system-admin';
 
 /** The functional areas of the application. */
 export type Area = 'vehicles' | 'drivers' | 'customers' | 'orders' | 'tours' | 'invoices';
 
 const CAPABILITIES_BY_ROLE: Record<AppRole, readonly Capability[]> = {
-    admin: ['read', 'masterData.write', 'dispatch.write', 'tourStatus.write', 'maintenance'],
+    admin: ['read', 'masterData.write', 'dispatch.write', 'tourStatus.write'],
     disponent: ['read', 'dispatch.write', 'tourStatus.write'],
     fahrer: ['read', 'tourStatus.write'],
     viewer: ['read'],
+    'system-admin': ['system.maintenance'],
 };
 
 /**
@@ -34,6 +35,7 @@ const AREAS_BY_ROLE: Record<AppRole, readonly Area[]> = {
     disponent: ['vehicles', 'drivers', 'customers', 'orders', 'tours', 'invoices'],
     fahrer: ['tours'],
     viewer: ['vehicles', 'drivers', 'customers', 'orders', 'tours', 'invoices'],
+    'system-admin': [],
 };
 
 const ALL_ROLES = Object.keys(CAPABILITIES_BY_ROLE) as AppRole[];
