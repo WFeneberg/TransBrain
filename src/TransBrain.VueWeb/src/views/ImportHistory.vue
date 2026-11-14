@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import {
     deleteImportSession,
     listImportSessions,
@@ -15,7 +14,6 @@ import { useAuthStore } from '../stores/auth';
 import { useI18n } from '../i18n';
 
 const auth = useAuthStore();
-const router = useRouter();
 const { t, locale } = useI18n();
 
 const sessions = ref<ImportSession[]>([]);
@@ -117,15 +115,6 @@ function describe(error: unknown, fallback: string): string {
                 <div>
                     <h1 class="text-h4">{{ t('import.history.title') }}</h1>
                     <p class="text-medium-emphasis page-subtitle">{{ t('import.history.subtitle') }}</p>
-                </div>
-                <div class="header-actions">
-                    <v-btn
-                        color="primary"
-                        prepend-icon="mdi-import"
-                        data-testid="import-history-new"
-                        @click="router.push('/import')"
-                        >{{ t('import.result.newImport') }}</v-btn
-                    >
                 </div>
             </div>
 

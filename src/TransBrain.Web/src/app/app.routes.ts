@@ -38,6 +38,8 @@ const loadGeodataList = () =>
     import('./geodata/geodata-list.component').then((m) => m.GeodataListComponent);
 const loadMaintenance = () =>
     import('./maintenance/maintenance.component').then((m) => m.MaintenanceComponent);
+const loadMaintenanceShell = () =>
+    import('./maintenance/maintenance-shell.component').then((m) => m.MaintenanceShellComponent);
 const loadImportWizard = () =>
     import('./imports/import-wizard.component').then((m) => m.ImportWizardComponent);
 const loadImportHistory = () =>
@@ -155,22 +157,35 @@ export const routes: Routes = [
     },
     // Readable by every signed-in role; the write controls inside are gated on masterData.write.
     { path: 'geodata', loadComponent: loadGeodataList, canActivate: [requireAuthentication] },
-    // The import API is admin-only (MasterDataWrite policy), so the whole wizard is gated too.
-    {
-        path: 'import',
-        loadComponent: loadImportWizard,
-        canActivate: [requireCapability('masterData.write')],
-    },
-    {
-        path: 'import/verlauf',
-        loadComponent: loadImportHistory,
-        canActivate: [requireCapability('masterData.write')],
-    },
-    // Backup and restore of the tenant's data; the API's Maintenance policy admits only admins,
-    // so the route is capability-guarded instead of merely authenticated.
+    // The Wartung area bundles the admin tooling under one tab bar: backup/restore plus the
+    // import wizard and its history. The shell only requires a signed-in user; each child keeps
+    // the capability its API demands (Maintenance for backup/restore, MasterDataWrite for the
+    // import, both admin-only in practice).
     {
         path: 'maintenance',
-        loadComponent: loadMaintenance,
-        canActivate: [requireCapability('maintenance')],
+        loadComponent: loadMaintenanceShell,
+        canActivate: [requireAuthentication],
+        children: [
+            {
+                path: '',
+                pathMatch: 'full',
+                loadComponent: loadMaintenance,
+                canActivate: [requireCapability('maintenance')],
+            },
+            {
+                path: 'import',
+                loadComponent: loadImportWizard,
+                canActivate: [requireCapability('masterData.write')],
+            },
+            {
+                path: 'import/verlauf',
+                loadComponent: loadImportHistory,
+                canActivate: [requireCapability('masterData.write')],
+            },
+        ],
     },
+    // The import pages lived at the top level before they moved into the Wartung area; keep old
+    // bookmarks working. Order matters: 'import/verlauf' must match before 'import'.
+    { path: 'import/verlauf', redirectTo: '/maintenance/import/verlauf' },
+    { path: 'import', redirectTo: '/maintenance/import' },
 ];

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { StepperSelectionEvent } from '@angular/cdk/stepper';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -87,16 +87,6 @@ interface MappingRow {
                     <div>
                         <h1>{{ i18n.t('imports.title') }}</h1>
                         <p class="subtitle">{{ i18n.t('imports.subtitle') }}</p>
-                    </div>
-                    <div class="header-actions">
-                        <a
-                            mat-stroked-button
-                            routerLink="/import/verlauf"
-                            data-testid="import-history-link"
-                        >
-                            <mat-icon>history</mat-icon>
-                            {{ i18n.t('imports.historyLink') }}
-                        </a>
                     </div>
                 </header>
 
@@ -699,7 +689,7 @@ interface MappingRow {
                             <div class="step-actions">
                                 <a
                                     mat-stroked-button
-                                    routerLink="/import/verlauf"
+                                    routerLink="/maintenance/import/verlauf"
                                     data-testid="import-result-history"
                                 >
                                     <mat-icon>history</mat-icon>
@@ -877,6 +867,7 @@ export class ImportWizardComponent {
     private readonly service = inject(ImportService);
     protected readonly session = inject(SessionService);
     protected readonly i18n = inject(I18nService);
+    private readonly cdr = inject(ChangeDetectorRef);
 
     private readonly stepper = viewChild(MatStepper);
 
@@ -1112,6 +1103,10 @@ export class ImportWizardComponent {
         this.mappedFor = null;
         this.preview.set(null);
         this.previewError.set(null);
+        // The linear stepper reads the source step's [completed] binding when next() runs. This
+        // callback fires outside change detection (zoneless), so the binding would still be
+        // stale false and next() would silently refuse - refresh the view first.
+        this.cdr.detectChanges();
         this.stepper()?.next();
     }
 

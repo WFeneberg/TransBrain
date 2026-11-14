@@ -1202,10 +1202,11 @@ Seite bleibt benutzbar, nur „Try geocoding“ und neue Routenberechnungen schl
 
 ## Datenimport
 
-Der Menüpunkt **Import** (nur für die Rolle `admin` sichtbar) übernimmt Stammdaten aus anderen
-Programmen nach TransBrain: Kunden, Fahrer oder Fahrzeuge. Ein Assistent führt in fünf
-Schritten von der Quelle bis zum Ergebnis; zusätzlich gibt es einen Verlauf aller bisherigen
-Import-Sitzungen.
+Der Datenimport ist Teil des Wartungsbereichs: Menüpunkt **Wartung**, Reiter **Import**
+(`/maintenance/import`, nur für die Rolle `admin` sichtbar). Er übernimmt Stammdaten aus
+anderen Programmen nach TransBrain: Kunden, Fahrer oder Fahrzeuge. Ein Assistent führt in fünf
+Schritten von der Quelle bis zum Ergebnis; der Reiter **Import-Verlauf** daneben listet alle
+bisherigen Import-Sitzungen.
 
 ![Import-Assistent, Schritt Quelle](img/vueweb/import-quelle.png)
 
@@ -1303,7 +1304,8 @@ das Kennzeichen; Kunden und Fahrer haben kein solches Merkmal und würden erneut
 
 ### Verlauf
 
-Der Reiter **Verlauf** listet alle Import-Sitzungen des Mandanten, neueste zuerst: Quelle,
+Der Reiter **Import-Verlauf** (in der Reiterleiste des Wartungsbereichs neben **Import**)
+listet alle Import-Sitzungen des Mandanten, neueste zuerst: Quelle,
 Status, Ziel, Anzahl importiert/fehlerhaft, wer sie wann angelegt hat. **Löschen** entfernt
 eine Sitzung samt der eingelesenen Daten endgültig (mit Sicherheitsabfrage); die bereits
 importierten Datensätze bleiben selbstverständlich bestehen.
@@ -1322,12 +1324,15 @@ importierten Datensätze bleiben selbstverständlich bestehen.
 
 ## Wartung (Datensicherung)
 
-Erreichbar über den Menüpunkt **Maintenance** (`/maintenance`). Menüpunkt und Seite stehen
+Erreichbar über den Menüpunkt **Wartung** (`/maintenance`). Der Wartungsbereich bündelt
+die Administrator-Werkzeuge unter einer Reiterleiste: **Datensicherung** (dieser Abschnitt)
+sowie **Import** und **Import-Verlauf** (Abschnitt „Datenimport“). Menüpunkt und Seiten stehen
 ausschließlich Administratoren zur Verfügung — anders als bei der Geodaten-Wartung ist hier
 auch das Ansehen auf die Rolle `admin` beschränkt; andere Rollen werden zur Startseite
 umgeleitet, und die API lehnt ihre Anfragen ab.
 
-Die Seite sichert und wiederherstellt die Daten **des eigenen Mandanten**: Fahrzeuge samt
+Der Reiter **Datensicherung** sichert und wiederherstellt die Daten **des eigenen
+Mandanten**: Fahrzeuge samt
 Katalogen und Dokumenten, Fahrer, Kunden mit Standorten, Aufträge, Touren, Rechnungen,
 manuelle Geo-Koordinaten sowie die Nummernkreise für Auftrags- und Rechnungsnummern. Daten
 anderer Mandanten sind in der Sicherung nicht enthalten und werden bei einer Wiederherstellung
@@ -1396,10 +1401,10 @@ und abschließen — siehe Abschnitt „Touren als Fahrer“.
 „Ausstellen“, „Als bezahlt markieren“ und „Stornieren“ (Abrechnung) nur für `admin` und
 `disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Der
 Menüpunkt **Geodata** und die Änderungen der Geodaten-Wartung („Add coordinates“,
-„Set coordinates“, „Remove manual coordinates“) sowie der Menüpunkt **Import** (Datenimport)
-sind ebenfalls `admin` vorbehalten. Der
-Menüpunkt **Maintenance** (Datensicherung) ist zur Gänze — einschließlich des Ansehens —
-`admin` vorbehalten. Wer eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
+„Set coordinates“, „Remove manual coordinates“) sind ebenfalls `admin` vorbehalten. Der
+Menüpunkt **Maintenance** — mit den Reitern **Backup & restore** (Datensicherung) sowie
+**Import** und **Import history** (Datenimport) — ist zur Gänze — einschließlich des
+Ansehens — `admin` vorbehalten. Wer eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
 
 Das **Lesen** ist davon unberührt: alle vier Rollen dürfen alle Listen ansehen, mit der
 einen Ausnahme, dass ein Fahrer in der Tourenliste nur seine eigenen Touren sieht. Die

@@ -562,6 +562,9 @@ export const de: Record<MessageKey, string> = {
     'nav.geodata': 'Geodaten',
     'nav.maintenance': 'Wartung',
     'maintenance.title': 'Wartung',
+    'maintenance.tabs.backup': 'Datensicherung',
+    'maintenance.tabs.import': 'Import',
+    'maintenance.tabs.history': 'Import-Verlauf',
     'maintenance.subtitle':
         'Datensicherung für diesen Mandanten: Backup als Datei herunterladen oder einen früheren Stand wiederherstellen.',
     'maintenance.backup.title': 'Backup erstellen',
@@ -629,11 +632,9 @@ export const de: Record<MessageKey, string> = {
     'geodata.mapData.hint':
         'Beide Dienste lesen einen OpenStreetMap-Auszug auf dem Server. Das Aktualisieren oder Ersetzen des Kartenmaterials übernimmt die Administration — siehe Bedienungsanleitung.',
 
-    'nav.import': 'Import',
     'import.title': 'Datenimport',
     'import.subtitle': 'Daten aus anderen Programmen übernehmen: Datei hochladen oder Datenbank verbinden, Spalten zuordnen, prüfen und importieren.',
     'import.signInHint': 'Bitte melden Sie sich an, um den Datenimport zu nutzen.',
-    'import.historyLink': 'Verlauf',
     'import.back': 'Zurück',
     'import.continue': 'Weiter',
     'import.step.source': 'Quelle',

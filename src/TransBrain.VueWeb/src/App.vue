@@ -34,8 +34,7 @@ function toggleLocale(): void {
                 <v-btn v-if="auth.areas.has('tours')" to="/tours" data-testid="nav-tours">{{ t('nav.tours') }}</v-btn>
                 <v-btn v-if="auth.areas.has('invoices')" to="/invoices" data-testid="nav-invoices">{{ t('nav.invoices') }}</v-btn>
                 <v-btn v-if="auth.can('masterData.write')" to="/geodata" data-testid="nav-geodata">{{ t('nav.geodata') }}</v-btn>
-                <v-btn v-if="auth.can('masterData.write')" to="/import" data-testid="nav-import">{{ t('nav.import') }}</v-btn>
-                <v-btn v-if="auth.can('maintenance')" to="/maintenance" data-testid="nav-maintenance">{{ t('nav.maintenance') }}</v-btn>
+                <v-btn v-if="auth.can('maintenance') || auth.can('masterData.write')" to="/maintenance" data-testid="nav-maintenance">{{ t('nav.maintenance') }}</v-btn>
             </template>
             <v-spacer />
             <!-- Hidden on phone widths: the driver's home page is meant to be usable in

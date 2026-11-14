@@ -560,6 +560,9 @@ export const en = {
     'nav.geodata': 'Geodata',
     'nav.maintenance': 'Maintenance',
     'maintenance.title': 'Maintenance',
+    'maintenance.tabs.backup': 'Backup & restore',
+    'maintenance.tabs.import': 'Import',
+    'maintenance.tabs.history': 'Import history',
     'maintenance.subtitle':
         'Data safety for this tenant: download a backup file or restore an earlier state.',
     'maintenance.backup.title': 'Create backup',
@@ -627,11 +630,9 @@ export const en = {
     'geodata.mapData.hint':
         'Both services read an OpenStreetMap extract stored on the server. Updating or replacing the map material is an administrator task — see the operator guide.',
 
-    'nav.import': 'Import',
     'import.title': 'Data import',
     'import.subtitle': 'Take over data from other programs: upload a file or connect a database, map the columns, preview and import.',
     'import.signInHint': 'Please sign in to use the data import.',
-    'import.historyLink': 'History',
     'import.back': 'Back',
     'import.continue': 'Continue',
     'import.step.source': 'Source',

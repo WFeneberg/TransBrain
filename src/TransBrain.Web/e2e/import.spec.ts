@@ -9,7 +9,9 @@ import { signIn } from './login';
  */
 test('adminUser_importingACustomerCsv_walksTheWizardToACompletedImport', async ({ page }) => {
     await signIn(page, 'admin');
-    await page.goto('/import');
+    // The import lives inside the Wartung (maintenance) area since it moved off the top nav.
+    await page.getByTestId('nav-maintenance').click();
+    await page.getByTestId('maintenance-tab-import').click();
     await expect(page.getByRole('heading', { name: 'Data import' })).toBeVisible();
 
     // Schritt 1: Quelle - upload a CSV with two customers. Unique names per run, because the
@@ -66,10 +68,11 @@ test('adminUser_importingACustomerCsv_walksTheWizardToACompletedImport', async (
 });
 
 test('viewerUser_navigatingToImport_isRedirectedHome', async ({ page }) => {
-    // The wizard is gated on masterData.write like the geodata maintenance page: a viewer has
-    // no nav entry and a typed URL bounces back to the home page.
+    // The import wizard sits in the Wartung area, which needs maintenance or masterData.write:
+    // a viewer has no nav entry, and a typed URL (the old /import still redirects there) bounces
+    // back to the home page.
     await signIn(page, 'viewer');
-    await expect(page.getByTestId('nav-import')).toBeHidden();
+    await expect(page.getByTestId('nav-maintenance')).toBeHidden();
     await page.goto('/import');
     await expect(page.getByTestId('home-greeting')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Data import' })).toBeHidden();

@@ -31,6 +31,7 @@ import Geodata from './views/Geodata.vue';
 import ImportWizard from './views/ImportWizard.vue';
 import ImportHistory from './views/ImportHistory.vue';
 import Maintenance from './views/Maintenance.vue';
+import MaintenanceShell from './views/MaintenanceShell.vue';
 import AuthCallback from './views/AuthCallback.vue';
 import { useAuthStore } from './stores/auth';
 import { useI18n } from './i18n';
@@ -74,13 +75,24 @@ const router = createRouter({
         { path: '/invoices/:id', component: InvoiceDetail },
         // Readable by every signed-in role; the write controls inside are gated on masterData.write.
         { path: '/geodata', component: Geodata },
-        // The import API itself is admin-only (Policies.MasterDataWrite), so unlike the list
-        // routes there is nothing a read-only role could see here.
-        { path: '/import', component: ImportWizard, meta: { capability: 'masterData.write' } },
-        { path: '/import/verlauf', component: ImportHistory, meta: { capability: 'masterData.write' } },
-        // Backup and restore of the tenant's data; the API's Maintenance policy admits only
-        // admins, so this route carries the matching capability.
-        { path: '/maintenance', component: Maintenance, meta: { capability: 'maintenance' } },
+        // The Wartung area bundles the admin tooling under one tab bar: backup/restore plus the
+        // import wizard and its history. Each child keeps the capability its API demands
+        // (Maintenance for backup/restore, MasterDataWrite for the import - the import API
+        // itself is admin-only, so unlike the list routes there is nothing a read-only role
+        // could see here). Only admins hold either capability in practice.
+        {
+            path: '/maintenance',
+            component: MaintenanceShell,
+            children: [
+                { path: '', component: Maintenance, meta: { capability: 'maintenance' } },
+                { path: 'import', component: ImportWizard, meta: { capability: 'masterData.write' } },
+                { path: 'import/verlauf', component: ImportHistory, meta: { capability: 'masterData.write' } },
+            ],
+        },
+        // The import pages lived at the top level before they moved into the Wartung area; keep
+        // old bookmarks working.
+        { path: '/import', redirect: '/maintenance/import' },
+        { path: '/import/verlauf', redirect: '/maintenance/import/verlauf' },
         { path: '/callback', component: AuthCallback },
     ],
 });

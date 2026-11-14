@@ -5,7 +5,9 @@ import { chooseOption } from './select';
 test('adminUser_importsCustomersFromCsv_throughTheWizard', async ({ page }) => {
     await signIn(page, 'admin');
 
-    await page.getByTestId('nav-import').click();
+    // The import lives inside the Wartung (maintenance) area since it moved off the top nav.
+    await page.getByTestId('nav-maintenance').click();
+    await page.getByTestId('maintenance-tab-import').click();
     await expect(page.getByRole('heading', { name: 'Data import' })).toBeVisible();
 
     // Step 1: upload a small CSV. The "Land" column is deliberately missing so the mapping step
@@ -57,7 +59,7 @@ test('adminUser_importsCustomersFromCsv_throughTheWizard', async ({ page }) => {
 
     // History: the finished session appears with its status, and deleting it removes only the
     // session entry - cancelling first proves the confirmation actually guards the delete.
-    await page.goto('/import/verlauf');
+    await page.goto('/maintenance/import/verlauf');
     await expect(page.getByRole('heading', { name: 'Import history' })).toBeVisible();
     const row = page.locator('tr').filter({ hasText: fileName });
     await expect(row.getByTestId('import-history-status')).toHaveText('Completed');
@@ -74,9 +76,10 @@ test('adminUser_importsCustomersFromCsv_throughTheWizard', async ({ page }) => {
 test('viewerUser_cannotReachTheImportWizard', async ({ page }) => {
     await signIn(page, 'viewer');
 
-    // No nav entry without masterData.write, and typing the URL is caught by the router guard,
-    // which bounces the viewer back to the home page.
-    await expect(page.getByTestId('nav-import')).toBeHidden();
+    // The import wizard sits in the Wartung area, which needs maintenance or masterData.write:
+    // no nav entry for a viewer, and typing the URL (the old /import still redirects there) is
+    // caught by the router guard, which bounces the viewer back to the home page.
+    await expect(page.getByTestId('nav-maintenance')).toBeHidden();
     await page.goto('/import');
     await expect(page.getByTestId('home-greeting')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Data import' })).toBeHidden();

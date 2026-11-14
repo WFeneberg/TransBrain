@@ -7,7 +7,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RouterLink } from '@angular/router';
 import { filter, switchMap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { I18nService, TranslationKey } from '../i18n/i18n.service';
@@ -28,7 +27,6 @@ const COLUMNS = ['source', 'status', 'target', 'counts', 'createdBy', 'createdAt
         MatProgressBarModule,
         MatTableModule,
         MatTooltipModule,
-        RouterLink,
     ],
     styleUrl: '../shared/page-layout.scss',
     template: `
@@ -40,12 +38,6 @@ const COLUMNS = ['source', 'status', 'target', 'counts', 'createdBy', 'createdAt
                         <p class="subtitle" data-testid="import-history-count">
                             {{ i18n.t('imports.history.count', { count: sessions().length }) }}
                         </p>
-                    </div>
-                    <div class="header-actions">
-                        <a mat-flat-button routerLink="/import" data-testid="import-history-new">
-                            <mat-icon>upload_file</mat-icon>
-                            {{ i18n.t('imports.history.newImport') }}
-                        </a>
                     </div>
                 </header>
 

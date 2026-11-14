@@ -578,6 +578,9 @@ export const de: Record<keyof typeof en, string> = {
     'nav.geodata': 'Geodaten',
     'nav.maintenance': 'Wartung',
     'maintenance.title': 'Wartung',
+    'maintenance.tabs.backup': 'Datensicherung',
+    'maintenance.tabs.import': 'Import',
+    'maintenance.tabs.history': 'Import-Verlauf',
     'maintenance.subtitle':
         'Datensicherung für diesen Mandanten: Backup als Datei herunterladen oder einen früheren Stand wiederherstellen.',
     'maintenance.backup.title': 'Backup erstellen',
@@ -646,12 +649,10 @@ export const de: Record<keyof typeof en, string> = {
     'geodata.mapData.hint':
         'Beide Dienste lesen einen OpenStreetMap-Auszug auf dem Server. Das Aktualisieren oder Ersetzen des Kartenmaterials übernimmt die Administration — siehe Bedienungsanleitung.',
 
-    'nav.import': 'Import',
     'imports.title': 'Datenimport',
     'imports.subtitle':
         'Daten aus anderen Programmen übernehmen – Datei hochladen oder Datenbank verbinden, Felder zuordnen, Vorschau prüfen, importieren',
     'imports.signIn': 'Bitte anmelden, um Daten zu importieren.',
-    'imports.historyLink': 'Verlauf',
     'imports.back': 'Zurück',
     'imports.next': 'Weiter',
     'imports.step.source': 'Quelle',
@@ -713,7 +714,6 @@ export const de: Record<keyof typeof en, string> = {
     'imports.status.failed': 'Fehlgeschlagen',
     'imports.history.title': 'Importverlauf',
     'imports.history.count': '{count} Vorgänge',
-    'imports.history.newImport': 'Neuer Import',
     'imports.history.source': 'Quelle',
     'imports.history.target': 'Ziel',
     'imports.history.importedFailed': 'Importiert / Fehler',

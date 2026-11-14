@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import {
     createDatabaseImportSession,
     createFileImportSession,
@@ -42,7 +41,6 @@ interface MappingRow {
 const PREVIEW_MAX_ROWS = 20;
 
 const auth = useAuthStore();
-const router = useRouter();
 const { t } = useI18n();
 
 const step = ref(1);
@@ -319,15 +317,6 @@ function describeFailure(error: unknown, fallback: string): string {
                 <div>
                     <h1 class="text-h4">{{ t('import.title') }}</h1>
                     <p class="text-medium-emphasis page-subtitle">{{ t('import.subtitle') }}</p>
-                </div>
-                <div class="header-actions">
-                    <v-btn
-                        variant="tonal"
-                        prepend-icon="mdi-history"
-                        data-testid="import-history-link"
-                        @click="router.push('/import/verlauf')"
-                        >{{ t('import.historyLink') }}</v-btn
-                    >
                 </div>
             </div>
 
