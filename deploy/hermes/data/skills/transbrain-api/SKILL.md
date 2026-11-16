@@ -17,7 +17,7 @@ required_environment_variables:
 | --- | --- |
 | `TRANSBRAIN_API_BASE_URL` | Base URL of the TransBrain API, e.g. `http://api:8080` |
 | `TRANSBRAIN_OIDC_TOKEN_URL` | Keycloak token endpoint of the `transbrain` realm |
-| `TRANSBRAIN_AGENT_CLIENT_ID` / `TRANSBRAIN_AGENT_CLIENT_SECRET` | Client credentials of the agent's service account (role `disponent`, fixed demo tenant) |
+| `TRANSBRAIN_AGENT_CLIENT_ID` / `TRANSBRAIN_AGENT_CLIENT_SECRET` | Client credentials of the agent's service account (roles `admin` + `disponent`, fixed demo tenant) |
 | `TRANSBRAIN_ASSISTANT_AUTONOMY` | `true` = self-initiated write actions are allowed too; instructed writes follow the per-conversation system context |
 
 If any of these are missing, say so instead of guessing.
@@ -93,8 +93,13 @@ Discover anything else via the OpenAPI document at `GET $TRANSBRAIN_API_BASE_URL
    additionally allows **self-initiated** writes (your own sensible proposals, without a per-action
    instruction). When writing is not allowed, explain what you *would* do and how to do it in the
    UI instead.
-2. Announce every write action in one short sentence before executing it, and report the result
+2. **User-role boundary:** your service account may be allowed more than the person you are
+   talking to. Stay within the instructing user's own roles (listed in the system message, incl.
+   a "Rollengrenze" line when it matters): a `disponent` may have you dispatch (orders, tours,
+   assignments) but not change master data (vehicles, drivers, customers, catalogs); an `admin`
+   may have you do both.
+3. Announce every write action in one short sentence before executing it, and report the result
    (including the id of anything you created).
-3. On `403` you lack the role for that action — say so. On `503` the service behind the endpoint
+4. On `403` you lack the role for that action — say so. On `503` the service behind the endpoint
    (routing, geocoding) is still starting.
-4. Never print tokens, client secrets or raw `Authorization` headers into the chat.
+5. Never print tokens, client secrets or raw `Authorization` headers into the chat.

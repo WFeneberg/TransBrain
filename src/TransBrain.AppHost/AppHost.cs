@@ -108,9 +108,10 @@ var hermes = builder.AddContainer("hermes", "nousresearch/hermes-agent", "latest
     .WithEnvironment("API_SERVER_ENABLED", "true")
     .WithEnvironment("API_SERVER_HOST", "0.0.0.0")
     .WithEnvironment("API_SERVER_KEY", hermesApiServerKey)
-    // Credentials of the agent's Keycloak service account (realm client transbrain-agent, role
-    // disponent, fixed demo tenant): the transbrain-api skill exchanges them for a token, which
-    // is what lets the agent read live data and act autonomously when the admin allows it.
+    // Credentials of the agent's Keycloak service account (realm client transbrain-agent, roles
+    // admin + disponent, fixed demo tenant): the transbrain-api skill exchanges them for a token,
+    // which is what lets the agent read live data and perform the write actions users instruct.
+    // The system prompt scopes every action to the instructing user's own roles.
     .WithEnvironment("TRANSBRAIN_AGENT_CLIENT_ID", "transbrain-agent")
     .WithEnvironment("TRANSBRAIN_AGENT_CLIENT_SECRET", "transbrain-agent-dev-secret")
     .WithEnvironment("HERMES_TIMEZONE", "Europe/Berlin");

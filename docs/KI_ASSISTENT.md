@@ -26,7 +26,7 @@ flowchart LR
 | `Features/Assistant` (Application layer) | Chat proxy and settings slices. The chat handler prepends a server-built system message (user name, roles, current page, autonomy rule) and forwards the conversation. |
 | `/api/assistant/status`, `/api/assistant/chat` | For every tenant role (`admin`, `disponent`, `fahrer`, `viewer`; the tenant-less `system-admin` has no Read capability and therefore no chat). The frontends show a floating chat button on every page while the assistant is enabled. |
 | `/api/system/assistant-settings` | The "zentrale Verwaltung": system-admin-only GET/PUT that edits the agent's `.env` **in the volume** — there is deliberately no database copy of this configuration. |
-| `transbrain-agent` Keycloak client | Confidential client with a service account (role `disponent`, tenant 1 in dev) the agent uses for autonomous API calls via the checked-in `transbrain-api` skill. |
+| `transbrain-agent` Keycloak client | Confidential client with a service account (roles `admin` + `disponent`, tenant 1 in dev) the agent uses for API calls via the checked-in `transbrain-api` skill. The system prompt scopes every action to the instructing user's own roles. |
 
 ## The volume and what belongs in git
 
@@ -80,10 +80,13 @@ If `BaseUrl`/`DataDirectory` are absent the feature reports "not provisioned" in
   gateway server-to-server with the `API_SERVER_KEY`. Users cannot inject a `system` message —
   the API rejects that role.
 - **Write actions are role- and instruction-gated.** The agent can act on the API only with the
-  `transbrain-agent` service account (client-credentials flow, role `disponent`, pinned to one
-  tenant). Every system message tells the agent whether the signed-in user may instruct writes
+  `transbrain-agent` service account (client-credentials flow, roles `admin` + `disponent`, pinned
+  to one tenant — admin is needed because master-data writes such as creating a vehicle require
+  it). Every system message tells the agent whether the signed-in user may instruct writes
   (roles `admin`/`disponent` may; `fahrer`/`viewer` may not — for them the agent explains the UI
-  steps instead). Writes clearly instructed by a write-capable user are always allowed; the
+  steps instead) and pins the agent to the **instructing user's own role scope**: a `disponent`
+  gets a "Rollengrenze" line restricting the agent to dispatch writes (no master data). Writes
+  clearly instructed by a write-capable user are always allowed; the
   `TRANSBRAIN_ASSISTANT_AUTONOMY` switch **additionally** permits self-initiated actions (the
   agent acting on its own proposals without a per-action instruction) and is sent to the agent
   in every system message and in the skill's rules. The agent must announce every write action.

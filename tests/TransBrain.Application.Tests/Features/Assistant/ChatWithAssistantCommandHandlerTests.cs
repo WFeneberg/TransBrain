@@ -127,6 +127,32 @@ public class ChatWithAssistantCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_DispatcherUser_SystemContextRestrictsAgentToDispatchScope()
+    {
+        InMemoryAssistantConfigurationStore store = new InMemoryAssistantConfigurationStore().ProvisionedAndReady();
+        FakeAssistantGateway gateway = new();
+        ChatWithAssistantCommandHandler handler = new(store, gateway, new FakeAssistantFileDrop(), StubCurrentUser.Dispatcher());
+
+        await handler.Handle(ACommand(), CancellationToken.None);
+
+        gateway.LastTurn!.Messages[0].Content.Should().Contain("Rollengrenze",
+            "the service account outranks a dispatcher, so the prompt must pin the agent to the user's scope");
+    }
+
+    [Fact]
+    public async Task Handle_AdminUser_SystemContextHasNoRoleBoundary()
+    {
+        InMemoryAssistantConfigurationStore store = new InMemoryAssistantConfigurationStore().ProvisionedAndReady();
+        FakeAssistantGateway gateway = new();
+        ChatWithAssistantCommandHandler handler = new(store, gateway, new FakeAssistantFileDrop(), StubCurrentUser.Admin());
+
+        await handler.Handle(ACommand(), CancellationToken.None);
+
+        gateway.LastTurn!.Messages[0].Content.Should().NotContain("Rollengrenze",
+            "an admin may instruct everything the service account can do");
+    }
+
+    [Fact]
     public async Task Handle_CustomProvider_TranslatesToOpenAiApiProvider()
     {
         InMemoryAssistantConfigurationStore store =

@@ -144,7 +144,7 @@
     },
     {
       "clientId": "transbrain-agent",
-      "description": "Service account of the Hermes AI assistant: the transbrain-api skill exchanges these client credentials for tokens. Dispatcher role, pinned to the first demo tenant. DEVELOPMENT secret - replace outside local development.",
+      "description": "Service account of the Hermes AI assistant: the transbrain-api skill exchanges these client credentials for tokens. Admin + dispatcher roles (the system prompt scopes actions to the instructing user's own roles), pinned to the first demo tenant. DEVELOPMENT secret - replace outside local development.",
       "enabled": true,
       "publicClient": false,
       "secret": "transbrain-agent-dev-secret",
@@ -284,7 +284,7 @@
       "enabled": true,
       "serviceAccountClientId": "transbrain-agent",
       "attributes": { "tenant_id": [ "0199c0de-0000-7000-8000-000000000001" ] },
-      "realmRoles": [ "disponent" ]
+      "realmRoles": [ "admin", "disponent" ]
     }
   ]
 }

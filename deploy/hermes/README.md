@@ -49,9 +49,11 @@ commands stays active even with approvals off.
 ## Autonomy
 
 The Keycloak dev realm defines a confidential client `transbrain-agent` whose service account has
-the `disponent` role and a fixed demo tenant. The `transbrain-api` skill exchanges its client
-credentials for a token and calls the TransBrain REST API with it — that is how the agent reads
-live data and, when `TRANSBRAIN_ASSISTANT_AUTONOMY=true`, performs write actions on its own.
+the `admin` and `disponent` roles and a fixed demo tenant. The `transbrain-api` skill exchanges its
+client credentials for a token and calls the TransBrain REST API with it — that is how the agent
+reads live data and performs the write actions users instruct (master data included). The system
+message of every conversation pins the agent to the instructing user's own roles, and
+`TRANSBRAIN_ASSISTANT_AUTONOMY=true` additionally allows self-initiated actions.
 Remove the client (or the secret) to take that capability away entirely.
 
 See `docs/KI_ASSISTENT.md` for the full picture.

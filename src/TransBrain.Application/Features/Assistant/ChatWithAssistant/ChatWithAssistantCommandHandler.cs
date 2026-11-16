@@ -173,6 +173,16 @@ internal sealed class ChatWithAssistantCommandHandler(
                 "nur vor, statt sie auszuführen.");
         }
 
+        // The service account can do more than a dispatcher; the prompt pins the agent to the
+        // instructing user's own scope.
+        if (mayInstructWrites && !currentUser.IsInRole("admin"))
+        {
+            context.AppendLine(
+                "- Rollengrenze: Der Benutzer ist Disponent. Führe nur dispositive Schreibaktionen aus " +
+                "(Aufträge, Touren, Zuweisungen) — keine Stammdaten (Fahrzeuge, Fahrer, Kunden, Kataloge) " +
+                "und keine Einstellungen.");
+        }
+
         return context.ToString();
     }
 }
