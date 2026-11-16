@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TransBrain — Offene Dispositionssoftware für Speditionen</title>
+<meta name="description" content="TransBrain ist eine offene Dispositionssoftware für Speditionen: Fahrzeuge, Fahrer, Kunden, Transportaufträge, Touren mit LKW-Routing und Rechnungen — gebaut mit .NET 11, Angular, Vue und Flutter.">
+<meta property="og:title" content="TransBrain — Offene Dispositionssoftware für Speditionen">
+<meta property="og:description" content="Fahrzeuge, Fahrer, Kunden, Aufträge, Touren mit LKW-Routing und Rechnungen in einer Anwendung. Open Source, .NET 11, drei Oberflächen, eine API.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://wfeneberg.github.io/TransBrain/">
+<meta property="og:image" content="https://wfeneberg.github.io/TransBrain/img/web/startseite-admin.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7bff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 5h13v11H1z'/%3E%3Cpath d='M14 8h4l4 4v4h-8z'/%3E%3Ccircle cx='6' cy='18' r='2'/%3E%3Ccircle cx='18' cy='18' r='2'/%3E%3C/svg%3E">
+<style>
+:root{
+  --navy:#0b1220;--navy-2:#101a30;--ink:#15223b;--muted:#5b6b85;--line:#e3e9f4;
+  --blue:#1f6fe0;--blue-2:#38a7f2;--bg-soft:#f4f7fc;--card:#ffffff;
+  --radius:16px;--shadow:0 10px 30px rgba(16,36,80,.08);
+  --grad:linear-gradient(100deg,var(--blue-2),var(--blue));
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);background:#fff;line-height:1.6}
+img{max-width:100%;display:block}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1140px;margin:0 auto;padding:0 24px}
+section{padding:88px 0}
+.eyebrow{display:inline-block;font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:12px}
+h2{font-size:clamp(1.7rem,3.4vw,2.4rem);line-height:1.2;letter-spacing:-.02em;margin-bottom:14px}
+.lead{color:var(--muted);font-size:1.08rem;max-width:720px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:12px;font-weight:600;font-size:.98rem;transition:transform .15s ease,box-shadow .15s ease;cursor:pointer;border:0}
+.btn:hover{text-decoration:none;transform:translateY(-2px)}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 8px 22px rgba(31,111,224,.35)}
+.btn-ghost{background:rgba(255,255,255,.08);color:#eaf1ff;border:1px solid rgba(255,255,255,.25)}
+.btn-ghost:hover{background:rgba(255,255,255,.14)}
+.btn svg{width:18px;height:18px}
+
+/* Nav */
+header{position:sticky;top:0;z-index:50;background:rgba(11,18,32,.85);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
+.brand:hover{text-decoration:none}
+.brand svg{width:28px;height:28px;color:var(--blue-2)}
+.nav-links{display:flex;align-items:center;gap:26px}
+.nav-links a{color:#c6d3ea;font-size:.92rem;font-weight:500}
+.nav-links a:hover{color:#fff;text-decoration:none}
+.nav-gh{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:10px;background:rgba(255,255,255,.1);color:#fff!important;border:1px solid rgba(255,255,255,.18)}
+.nav-gh svg{width:17px;height:17px}
+@media(max-width:880px){.nav-links a:not(.nav-gh){display:none}}
+
+/* Hero */
+.hero{background:radial-gradient(1100px 500px at 75% -10%,rgba(56,167,242,.28),transparent 60%),radial-gradient(800px 420px at 10% 0%,rgba(31,111,224,.22),transparent 55%),var(--navy);color:#fff;padding:96px 0 0;overflow:hidden}
+.hero .eyebrow{color:var(--blue-2)}
+.hero h1{font-size:clamp(2.3rem,5.4vw,3.6rem);line-height:1.08;letter-spacing:-.03em;margin-bottom:20px}
+.hero h1 .accent{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.tagline{color:#aebcd6;font-size:1.14rem;max-width:640px;margin-bottom:30px}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:34px}
+.chips{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:56px}
+.chip{font-size:.8rem;font-weight:600;color:#cfe0fa;background:rgba(56,167,242,.12);border:1px solid rgba(56,167,242,.3);padding:5px 13px;border-radius:999px}
+.browser{border-radius:14px 14px 0 0;overflow:hidden;box-shadow:0 -10px 60px rgba(31,111,224,.3);border:1px solid rgba(255,255,255,.14);border-bottom:0;max-width:980px;margin:0 auto}
+.browser-bar{display:flex;align-items:center;gap:8px;background:#1a2742;padding:11px 16px}
+.browser-bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.browser-bar i:nth-child(1){background:#ff5f57}.browser-bar i:nth-child(2){background:#febc2e}.browser-bar i:nth-child(3){background:#28c840}
+.browser-bar span{margin-left:12px;font-size:.78rem;color:#8ea3c8;background:rgba(255,255,255,.07);border-radius:7px;padding:3px 14px}
+.browser img{width:100%}
+
+/* Features */
+.features{background:var(--bg-soft)}
+.grid{display:grid;gap:22px;margin-top:44px}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow);transition:transform .18s ease,box-shadow .18s ease}
+.card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(16,36,80,.12)}
+.card .ico{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,rgba(56,167,242,.14),rgba(31,111,224,.14));display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.card .ico svg{width:24px;height:24px;color:var(--blue)}
+.card h3{font-size:1.08rem;margin-bottom:8px;letter-spacing:-.01em}
+.card p{color:var(--muted);font-size:.93rem}
+
+/* Screenshots */
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:36px 0 26px}
+.tab{padding:10px 20px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-weight:600;font-size:.92rem;cursor:pointer;transition:all .15s ease}
+.tab:hover{border-color:var(--blue)}
+.tab[aria-selected="true"]{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 6px 18px rgba(31,111,224,.3)}
+.panel{display:none}
+.panel.active{display:grid;gap:22px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.shot{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);cursor:zoom-in;transition:transform .18s ease}
+.shot:hover{transform:translateY(-4px)}
+.shot img{width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top}
+.shot figcaption{padding:13px 17px;font-size:.88rem;font-weight:600;color:var(--ink);border-top:1px solid var(--line)}
+.gallery-note{margin-top:26px;font-size:.85rem;color:var(--muted)}
+dialog.lightbox{border:0;border-radius:14px;padding:0;max-width:min(94vw,1200px);max-height:92vh;background:#0b1220;box-shadow:0 30px 90px rgba(0,0,0,.5)}
+dialog.lightbox::backdrop{background:rgba(5,10,20,.82);backdrop-filter:blur(4px)}
+dialog.lightbox img{max-width:100%;max-height:calc(92vh - 52px);object-fit:contain;margin:0 auto}
+dialog.lightbox .lb-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 16px;color:#c6d3ea;font-size:.88rem}
+dialog.lightbox button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:5px 13px;cursor:pointer;font-size:.85rem}
+
+/* Frontends */
+.fronts{background:var(--bg-soft)}
+.front-card{display:flex;flex-direction:column}
+.front-card .tag{align-self:flex-start;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);background:rgba(31,111,224,.09);border-radius:999px;padding:4px 12px;margin-bottom:14px}
+.front-card ul{list-style:none;margin-top:12px}
+.front-card li{position:relative;padding-left:24px;color:var(--muted);font-size:.92rem;margin-bottom:7px}
+.front-card li::before{content:"";position:absolute;left:0;top:.52em;width:7px;height:7px;border-radius:50%;background:var(--grad)}
+
+/* Architecture */
+.arch-grid{display:grid;gap:48px;grid-template-columns:1fr 1fr;align-items:center;margin-top:44px}
+@media(max-width:880px){.arch-grid{grid-template-columns:1fr}}
+.layers{display:flex;flex-direction:column;gap:12px}
+.layer{border-radius:13px;padding:17px 22px;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow)}
+.layer b{display:block;font-size:.98rem}
+.layer span{font-size:.84rem;color:var(--muted)}
+.layer.l1{border-left:5px solid #38a7f2}
+.layer.l2{border-left:5px solid #1f6fe0;margin-left:18px}
+.layer.l3{border-left:5px solid #7c5cff;margin-left:36px}
+.layer.l4{border-left:5px solid #22b07d;margin-left:18px}
+.arch-list{list-style:none}
+.arch-list li{position:relative;padding:0 0 18px 34px}
+.arch-list li::before{content:"✓";position:absolute;left:0;top:-1px;width:23px;height:23px;border-radius:50%;background:var(--grad);color:#fff;font-size:.78rem;display:flex;align-items:center;justify-content:center;font-weight:700}
+.arch-list b{display:block;margin-bottom:2px}
+.arch-list p{color:var(--muted);font-size:.92rem}
+
+/* Quickstart */
+.quick{background:var(--navy);color:#fff}
+.quick .eyebrow{color:var(--blue-2)}
+.quick .lead{color:#aebcd6}
+.quick-grid{display:grid;gap:40px;grid-template-columns:1.15fr .85fr;align-items:start;margin-top:40px}
+@media(max-width:880px){.quick-grid{grid-template-columns:1fr}}
+.term{background:#0d1526;border:1px solid rgba(255,255,255,.12);border-radius:14px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.term-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08)}
+.term-bar span{font-size:.8rem;color:#8ea3c8}
+.term-bar button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#dbe6fa;font-size:.78rem;border-radius:7px;padding:4px 12px;cursor:pointer}
+.term pre{padding:20px 22px;overflow-x:auto;font-family:ui-monospace,SFMono-Regular,"Cascadia Code",Consolas,monospace;font-size:.88rem;line-height:1.75;color:#dbe6fa}
+.term .c{color:#64789c}
+.term .p{color:#38a7f2;user-select:none}
+.req{list-style:none;display:flex;flex-direction:column;gap:12px}
+.req li{display:flex;gap:13px;align-items:flex-start;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px 17px}
+.req svg{width:21px;height:21px;color:var(--blue-2);flex-shrink:0;margin-top:2px}
+.req b{display:block;font-size:.93rem}
+.req span{font-size:.83rem;color:#aebcd6}
+
+/* Docs */
+.doc-card{display:block;color:inherit}
+.doc-card:hover{text-decoration:none}
+.doc-card h3{display:flex;align-items:center;gap:9px;color:var(--blue);font-size:1.05rem;margin-bottom:8px}
+.doc-card h3 svg{width:18px;height:18px}
+.doc-card p{color:var(--muted);font-size:.93rem}
+
+/* Footer */
+footer{background:var(--navy);color:#8ea3c8;padding:46px 0;border-top:1px solid rgba(255,255,255,.08)}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;font-size:.88rem}
+.foot a{color:#c6d3ea}
+.foot .brand{font-size:1rem}
+
+/* Reveal */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="TransBrain">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5h13v11H1z"/><path d="M14 8h4l4 4v4h-8z"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      TransBrain
+    </a>
+    <nav class="nav-links">
+      <a href="#funktionen">Funktionen</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#oberflaechen">Oberflächen</a>
+      <a href="#technik">Technik</a>
+      <a href="#loslegen">Loslegen</a>
+      <a href="#doku">Doku</a>
+      <a class="nav-gh" href="https://github.com/WFeneberg/TransBrain" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ===== Hero ===== -->
+<div class="hero">
+  <div class="wrap">
+    <span class="eyebrow">Open Source · MIT-Lizenz · .NET 11</span>
+    <h1>Die offene Dispositions&shy;software<br>für <span class="accent">Speditionen</span></h1>
+    <p class="tagline">Fahrzeuge, Fahrer, Kunden, Transportaufträge, Touren mit LKW-Routing und Rechnungen — alles in einer Anwendung. Mandantenfähig, mit drei Oberflächen gegen eine API und einem optionalen KI-Assistenten.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#loslegen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        In 2 Minuten starten
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/WFeneberg/TransBrain" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        Quellcode auf GitHub
+      </a>
+    </div>
+    <div class="chips">
+      <span class="chip">.NET 11</span><span class="chip">Angular</span><span class="chip">Vue 3</span><span class="chip">Flutter</span><span class="chip">PostgreSQL</span><span class="chip">Redis</span><span class="chip">Keycloak</span><span class="chip">.NET Aspire</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar"><i></i><i></i><i></i><span>transbrain — Startseite der Disposition</span></div>
+      <img src="img/web/startseite-admin.png" alt="TransBrain-Startseite mit Kennzahlen zu Fahrzeugen, Fahrern, Aufträgen und Touren" width="1280" height="900" fetchpriority="high">
+    </div>
+  </div>
+</div>
+
+<!-- ===== Features ===== -->
+<section id="funktionen" class="features">
+  <div class="wrap">
+    <span class="eyebrow">Funktionen</span>
+    <h2>Alles, was eine Disposition täglich braucht</h2>
+    <p class="lead">Vom Fuhrpark über die Tourenplanung bis zur Rechnung: TransBrain bildet den kompletten Ablauf einer Spedition ab — nachvollziehbar, validiert und pro Mandant strikt getrennt.</p>
+    <div class="grid grid-3">
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5h13v11H1z"/><path d="M14 8h4l4 4v4h-8z"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg></div>
+        <h3>Fuhrparkverwaltung</h3>
+        <p>Fahrzeuge mit Ausstattung, kaufmännischen Daten, Sonderpapieren inklusive Ablaufwarnung und kompletter Wartungshistorie mit Fälligkeitsampel.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <h3>Digitale Fahrerakte</h3>
+        <p>Stammdaten, Führerscheinklassen mit Gültigkeitsprüfung, Dokumente und Sozialversicherungsdaten — Fahrer ohne gültige Lizenz kommen auf keine Tour.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 10h1M9 14h1M14 10h1M14 14h1"/></svg></div>
+        <h3>Kunden &amp; Anlieferorte</h3>
+        <p>Kundenstamm mit Ansprechpartnern, Anlieferorten und hinterlegten Geodaten — die Grundlage für Aufträge und Routenberechnung.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h3>Transportaufträge</h3>
+        <p>Vom Entwurf bis zur Zustellung mit klarem Status-Workflow. Stornierte Aufträge werden nie gelöscht — die Historie bleibt für Rückfragen und Abrechnung erhalten.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-9a3.5 3.5 0 0 1 0-7H12"/></svg></div>
+        <h3>Tourenplanung</h3>
+        <p>Aufträge mit Kapazitätsprüfung (Gewicht und Lademeter) auf Fahrzeuge planen; passende Aufträge werden vorgeschlagen. Doppelbuchungen von LKW oder Fahrer verhindert die Datenbank selbst.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div>
+        <h3>LKW-Routing &amp; Lenkzeiten</h3>
+        <p>Routenberechnung mit LKW-Profil auf OpenStreetMap-Karten, inklusive Lenk- und Ruhezeiten nach EU-Regeln, Routen-Optimierung und Verstoß-Warnungen.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8M8 17h5"/></svg></div>
+        <h3>Rechnungen &amp; XRechnung</h3>
+        <p>Rechnungen aus Touren erzeugen und als PDF mit mandantenspezifischem Briefpapier (eigener Rechnungsdesigner mit Logo, Farbe und Vorschau) oder als XRechnung exportieren.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M20 21H4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg></div>
+        <h3>Datenimport &amp; -export</h3>
+        <p>Altdaten aus CSV, Excel, JSON, XML, Access, SQLite, SQL-Datenbanken oder REST-APIs übernehmen — mit grafischem Zuordnungs-Assistenten und Vorab-Validierung. Dazu Export und Backup/Restore je Mandant.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <h3>Mandantenfähig &amp; sicher</h3>
+        <p>Anmeldung über Keycloak (OIDC), Rollen für Administration, Disposition, Fahrer und Leserechte — und strikte Datentrennung pro Mandant bis in jede Abfrage.</p>
+      </div>
+      <div class="card reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg></div>
+        <h3>KI-Assistent</h3>
+        <p>Optionaler Chat-Assistent auf jeder Seite erklärt Masken, Abläufe und die eigenen Daten auf Deutsch — auf Wunsch führt er Aktionen direkt aus. LLM-Anbieter frei wählbar, läuft im eigenen Container.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Screenshots ===== -->
+<section id="screenshots">
+  <div class="wrap">
+    <span class="eyebrow">Screenshots</span>
+    <h2>Ein Blick in die Anwendung</h2>
+    <p class="lead">Beide Web-Oberflächen bieten denselben Funktionsumfang gegen dieselbe API; die Fahrer-App bringt die Tour aufs Handy. Klicken zum Vergrößern.</p>
+
+    <div class="tabs" role="tablist" aria-label="Oberfläche wählen">
+      <button class="tab" role="tab" aria-selected="true" data-panel="panel-web">Web (Angular)</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="panel-vue">Web (Vue)</button>
+      <button class="tab" role="tab" aria-selected="false" data-panel="panel-app">Fahrer-App (Flutter)</button>
+    </div>
+
+    <div id="panel-web" class="panel active" role="tabpanel">
+      <figure class="shot reveal"><img loading="lazy" src="img/web/startseite-admin.png" alt="Startseite mit Kennzahlen"><figcaption>Startseite — der Tag auf einen Blick</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/web/tourendetail.png" alt="Tourdetail mit Stopps, Kapazität und Routenkarte"><figcaption>Tour mit Stopps, Kapazität, Route &amp; Lenkzeiten</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/web/auftragsliste.png" alt="Auftragsliste"><figcaption>Transportaufträge mit Status und Filtern</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/web/fahrzeugformular.png" alt="Fahrzeugformular"><figcaption>Fahrzeugakte mit Papieren &amp; Wartungen</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/web/fahrer-stammdaten.png" alt="Fahrer-Stammdaten"><figcaption>Digitale Fahrerakte</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/web/rechnungsdetail.png" alt="Rechnungsdetail"><figcaption>Rechnung mit PDF- und XRechnung-Export</figcaption></figure>
+    </div>
+
+    <div id="panel-vue" class="panel" role="tabpanel">
+      <figure class="shot reveal"><img loading="lazy" src="img/vueweb/startseite-admin.png" alt="Vue-Startseite"><figcaption>Startseite (Vue + Vuetify)</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/vueweb/tourendetail.png" alt="Vue-Tourdetail mit Routenkarte"><figcaption>Tour mit Route &amp; Lenkzeiten</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/vueweb/auftragsliste.png" alt="Vue-Auftragsliste"><figcaption>Transportaufträge</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/vueweb/kundenformular.png" alt="Vue-Kundenformular"><figcaption>Kunde mit Anlieferorten &amp; Kontakten</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/vueweb/import-zuordnung.png" alt="Import-Assistent Spaltenzuordnung"><figcaption>Datenimport — grafische Spaltenzuordnung</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/vueweb/rechnungsdesign.png" alt="Rechnungsdesigner"><figcaption>Rechnungsdesigner mit Live-Vorschau</figcaption></figure>
+    </div>
+
+    <div id="panel-app" class="panel" role="tabpanel">
+      <figure class="shot reveal"><img loading="lazy" src="img/driverapp/login.png" alt="Anmeldung der Fahrer-App"><figcaption>Anmeldung — auch als Demo ohne Backend</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/driverapp/touren.png" alt="Tourenliste der Fahrer-App"><figcaption>Meine Touren — geplant, unterwegs, fertig</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/driverapp/tourdetails.png" alt="Tourdetails der Fahrer-App"><figcaption>Tourdetails mit Stopps</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/driverapp/tour-gestartet.png" alt="Gestartete Tour"><figcaption>Tour starten und abschließen</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/driverapp/route.png" alt="Routenkarte der Fahrer-App"><figcaption>Routenkarte (OpenStreetMap)</figcaption></figure>
+      <figure class="shot reveal"><img loading="lazy" src="img/driverapp/profil.png" alt="Profil der Fahrer-App"><figcaption>Fahrerprofil</figcaption></figure>
+    </div>
+
+    <p class="gallery-note">Alle Screenshots zeigen den mitgelieferten Demo-Datenbestand der Entwicklungsumgebung.</p>
+  </div>
+</section>
+
+<!-- ===== Frontends ===== -->
+<section id="oberflaechen" class="fronts">
+  <div class="wrap">
+    <span class="eyebrow">Oberflächen</span>
+    <h2>Drei Oberflächen, eine API</h2>
+    <p class="lead">Jede Oberfläche spricht mit derselben .NET-11-API — gleiche Regeln, gleiche Rechte, gleiche Daten.</p>
+    <div class="grid grid-3">
+      <div class="card front-card reveal">
+        <span class="tag">TransBrain.Web</span>
+        <h3>Angular + Material</h3>
+        <p>Der Arbeitsplatz für Disposition und Verwaltung im Browser.</p>
+        <ul>
+          <li>Angular (aktuelle Version) mit Angular Material</li>
+          <li>Deutsch/Englisch umschaltbar</li>
+          <li>Playwright-E2E-Tests für alle Kernabläufe</li>
+        </ul>
+      </div>
+      <div class="card front-card reveal">
+        <span class="tag">TransBrain.VueWeb</span>
+        <h3>Vue 3 + Vuetify</h3>
+        <p>Identischer Funktionsumfang als zweite Referenz-Implementierung.</p>
+        <ul>
+          <li>Vue 3 Composition API, Pinia, Vue Router</li>
+          <li>Vuetify-Komponenten</li>
+          <li>Zeigt: Die API trägt jedes Frontend</li>
+        </ul>
+      </div>
+      <div class="card front-card reveal">
+        <span class="tag">TransBrain.DriverApp</span>
+        <h3>Flutter-Fahrer-App</h3>
+        <p>Für die Fahrerinnen und Fahrer unterwegs — Android, iOS und Web.</p>
+        <ul>
+          <li>Eigene Touren einsehen, starten, abschließen</li>
+          <li>Routenkarte auf OpenStreetMap</li>
+          <li>Demo-Modus ganz ohne Backend</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Architecture ===== -->
+<section id="technik">
+  <div class="wrap">
+    <span class="eyebrow">Technik</span>
+    <h2>Saubere Architektur, moderne Werkzeuge</h2>
+    <p class="lead">Clean Architecture in vier Schichten mit Vertical Slices — gebaut, um lange wartbar zu bleiben.</p>
+    <div class="arch-grid">
+      <div class="layers reveal">
+        <div class="layer l1"><b>TransBrain.Api</b><span>ASP.NET Minimal APIs · OpenAPI/Scalar · Keycloak-OIDC</span></div>
+        <div class="layer l2"><b>TransBrain.Application</b><span>Eigener CQRS-Mediator · Vertical Slices · FluentValidation</span></div>
+        <div class="layer l3"><b>TransBrain.Domain</b><span>Aggregate &amp; Geschäftsregeln · Result Pattern statt Exceptions</span></div>
+        <div class="layer l4"><b>TransBrain.Infrastructure</b><span>EF Core 10 · PostgreSQL · Redis-Cache · Geo-Dienste</span></div>
+      </div>
+      <ul class="arch-list reveal">
+        <li><b>.NET Aspire orchestriert alles</b><p>Ein Befehl startet API, Postgres, Redis, Keycloak, beide Web-Frontends und die Fahrer-App — inklusive Dashboard.</p></li>
+        <li><b>Handgerollter CQRS-Mediator</b><p>Bewusst ohne MediatR: kein kommerzieller Lizenzzwang, volle Kontrolle über Pipeline und Verhalten.</p></li>
+        <li><b>Fehler als Werte</b><p>Result Pattern durchgängig — Validierungsfehler kommen feldgenau beim Formular an, nicht als Stacktrace.</p></li>
+        <li><b>Ernsthaft getestet</b><p>xUnit, Testcontainers und WebApplicationFactory; die CI erzwingt mindestens 80&nbsp;% Zeilenabdeckung im Application-Layer. Playwright-E2E-Suiten für beide Frontends.</p></li>
+        <li><b>Selbst gehostete Kartendienste</b><p>Geocoding und LKW-Routing laufen auf Wunsch komplett lokal auf OpenStreetMap-Daten — keine Pflicht-Cloud.</p></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Quickstart ===== -->
+<section id="loslegen" class="quick">
+  <div class="wrap">
+    <span class="eyebrow">Loslegen</span>
+    <h2>Der ganze Stack mit einem Befehl</h2>
+    <p class="lead">.NET Aspire startet alle Dienste als Container bzw. Prozesse und zeigt im Dashboard, wo was läuft. Sieben Testbenutzer sind vorangelegt.</p>
+    <div class="quick-grid">
+      <div class="term reveal">
+        <div class="term-bar"><span>Terminal</span><button id="copy-btn" type="button">Kopieren</button></div>
+        <pre id="quick-code"><span class="c"># Repository holen</span>
+<span class="p">$</span> git clone https://github.com/WFeneberg/TransBrain.git
+<span class="p">$</span> cd TransBrain
+
+<span class="c"># Einmalig: Dev-Zertifikat vertrauen (für den Keycloak-Login)</span>
+<span class="p">$</span> dotnet dev-certs https --trust
+
+<span class="c"># Alles starten: API, Postgres, Redis, Keycloak, Frontends</span>
+<span class="p">$</span> dotnet run --project src/TransBrain.AppHost</pre>
+      </div>
+      <ul class="req reveal">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><div><b>.NET 11 SDK</b><span>Backend, AppHost und Tests</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><div><b>Node.js ≥ 26.4</b><span>Angular- und Vue-Frontend</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/></svg><div><b>Docker</b><span>Postgres, Redis und Keycloak laufen als Container</span></div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg><div><b>Flutter ≥ 3.50 (optional)</b><span>Nur für die Fahrer-App-Webdemo</span></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Docs ===== -->
+<section id="doku">
+  <div class="wrap">
+    <span class="eyebrow">Dokumentation</span>
+    <h2>Gut dokumentiert — für Betrieb und Entwicklung</h2>
+    <p class="lead">Von der Installation über Keycloak bis zu deutschen Bedienungsanleitungen für jede Oberfläche.</p>
+    <div class="grid grid-3">
+      <a class="card doc-card reveal" href="https://github.com/WFeneberg/TransBrain/blob/main/docs/INSTALLATION.md" target="_blank" rel="noopener">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Installation</h3>
+        <p>Lokal mit Aspire, per Docker Compose oder in Azure (Bicep) — Schritt für Schritt.</p>
+      </a>
+      <a class="card doc-card reveal" href="https://github.com/WFeneberg/TransBrain/blob/main/docs/DEVELOPER_GUIDE.md" target="_blank" rel="noopener">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Developer Guide</h3>
+        <p>Architektur, Konventionen, Erweitern und Testen — der Einstieg für Mitentwickler.</p>
+      </a>
+      <a class="card doc-card reveal" href="https://github.com/WFeneberg/TransBrain/blob/main/docs/KEYCLOAK.md" target="_blank" rel="noopener">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Keycloak &amp; Rollen</h3>
+        <p>Authentifizierung, Realm-Konfiguration, Mandanten-Claims und Testbenutzer.</p>
+      </a>
+      <a class="card doc-card reveal" href="https://github.com/WFeneberg/TransBrain/blob/main/docs/KI_ASSISTENT.md" target="_blank" rel="noopener">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>KI-Assistent</h3>
+        <p>Aufbau, Konfiguration, Anbieterwahl und Vertrauensmodell des Assistenten.</p>
+      </a>
+      <a class="card doc-card reveal" href="https://github.com/WFeneberg/TransBrain/blob/main/docs/ONLINE_KARTENDIENSTE.md" target="_blank" rel="noopener">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Kartendienste</h3>
+        <p>Geocoding und LKW-Routing: online oder komplett selbst gehostet.</p>
+      </a>
+      <div class="card doc-card reveal">
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Bedienungsanleitungen</h3>
+        <p>Deutsche Schritt-für-Schritt-Anleitungen für <a href="https://github.com/WFeneberg/TransBrain/blob/main/docs/BEDIENUNG_TRANSBRAIN_WEB.md" target="_blank" rel="noopener">Web (Angular)</a>, <a href="https://github.com/WFeneberg/TransBrain/blob/main/docs/BEDIENUNG_TRANSBRAIN_VUEWEB.md" target="_blank" rel="noopener">Web (Vue)</a> und die <a href="https://github.com/WFeneberg/TransBrain/blob/main/docs/BEDIENUNG_TRANSBRAIN_DRIVERAPP.md" target="_blank" rel="noopener">Fahrer-App</a>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;color:#38a7f2"><path d="M1 5h13v11H1z"/><path d="M14 8h4l4 4v4h-8z"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      TransBrain
+    </a>
+    <span>Open Source unter <a href="https://github.com/WFeneberg/TransBrain/blob/main/LICENSE" target="_blank" rel="noopener">MIT-Lizenz</a> · © <span id="year">2026</span></span>
+    <a href="https://github.com/WFeneberg/TransBrain" target="_blank" rel="noopener">github.com/WFeneberg/TransBrain</a>
+  </div>
+</footer>
+
+<dialog class="lightbox" id="lightbox">
+  <div class="lb-bar"><span id="lb-caption"></span><button type="button" id="lb-close">Schließen ✕</button></div>
+  <img id="lb-img" src="" alt="">
+</dialog>
+
+<script>
+(function(){
+  "use strict";
+
+  // Tabs
+  var tabs=document.querySelectorAll(".tab");
+  tabs.forEach(function(tab){
+    tab.addEventListener("click",function(){
+      tabs.forEach(function(t){t.setAttribute("aria-selected","false");});
+      document.querySelectorAll(".panel").forEach(function(p){p.classList.remove("active");});
+      tab.setAttribute("aria-selected","true");
+      document.getElementById(tab.dataset.panel).classList.add("active");
+    });
+  });
+
+  // Lightbox
+  var lb=document.getElementById("lightbox"),lbImg=document.getElementById("lb-img"),lbCap=document.getElementById("lb-caption");
+  document.querySelectorAll(".shot").forEach(function(fig){
+    fig.addEventListener("click",function(){
+      var img=fig.querySelector("img"),cap=fig.querySelector("figcaption");
+      lbImg.src=img.src;lbImg.alt=img.alt;lbCap.textContent=cap?cap.textContent:"";
+      lb.showModal();
+    });
+  });
+  document.getElementById("lb-close").addEventListener("click",function(){lb.close();});
+  lb.addEventListener("click",function(e){if(e.target===lb)lb.close();});
+
+  // Copy quickstart
+  var copyBtn=document.getElementById("copy-btn");
+  copyBtn.addEventListener("click",function(){
+    var lines=document.getElementById("quick-code").textContent.split("\n")
+      .filter(function(l){return l.indexOf("$ ")===0;})
+      .map(function(l){return l.slice(2);}).join("\n");
+    navigator.clipboard.writeText(lines).then(function(){
+      copyBtn.textContent="Kopiert ✓";
+      setTimeout(function(){copyBtn.textContent="Kopieren";},2000);
+    });
+  });
+
+  // Scroll reveal
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target);}});
+    },{threshold:.12});
+    document.querySelectorAll(".reveal").forEach(function(el){io.observe(el);});
+  }else{
+    document.querySelectorAll(".reveal").forEach(function(el){el.classList.add("in");});
+  }
+
+  document.getElementById("year").textContent=new Date().getFullYear();
+})();
+</script>
+</body>
+</html>
