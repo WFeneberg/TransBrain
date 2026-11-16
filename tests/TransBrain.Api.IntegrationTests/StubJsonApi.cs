@@ -33,6 +33,8 @@ public sealed class StubJsonApi(string json, int statusCode = 200) : IDisposable
 
     public string? LastAuthorization { get; private set; }
 
+    public string? LastBody { get; private set; }
+
     private async Task ServeAsync()
     {
         try
@@ -82,6 +84,7 @@ public sealed class StubJsonApi(string json, int statusCode = 200) : IDisposable
         // Drain a request body (POSTs) before answering: closing the socket while the client is
         // still sending would reset the connection instead of delivering the canned response.
         // The ASCII decoder maps one byte to one char, so byte counts work as char counts here.
+        var bodyText = new StringBuilder();
         if (chunked)
         {
             while ((line = await reader.ReadLineAsync()) is not null)
@@ -97,14 +100,16 @@ public sealed class StubJsonApi(string json, int statusCode = 200) : IDisposable
                     break;
                 }
 
-                await DrainAsync(reader, size);
+                bodyText.Append(await DrainAsync(reader, size));
                 await reader.ReadLineAsync(); // CRLF terminating this chunk's data
             }
         }
         else if (contentLength > 0)
         {
-            await DrainAsync(reader, contentLength);
+            bodyText.Append(await DrainAsync(reader, contentLength));
         }
+
+        LastBody = bodyText.Length > 0 ? bodyText.ToString() : null;
 
         byte[] body = Encoding.UTF8.GetBytes(json);
         string head =
@@ -117,7 +122,7 @@ public sealed class StubJsonApi(string json, int statusCode = 200) : IDisposable
         await stream.FlushAsync();
     }
 
-    private static async Task DrainAsync(StreamReader reader, int count)
+    private static async Task<string> DrainAsync(StreamReader reader, int count)
     {
         char[] buffer = new char[count];
         int read = 0;
@@ -131,6 +136,8 @@ public sealed class StubJsonApi(string json, int statusCode = 200) : IDisposable
 
             read += chunk;
         }
+
+        return new string(buffer, 0, read);
     }
 
     public void Dispose()

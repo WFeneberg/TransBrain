@@ -59,6 +59,46 @@ test('adminUser_chattingWithAssistant_showsUserAndAssistantBubbles', async ({ pa
     await expect(page.getByTestId('assistant-message')).toHaveCount(0);
 });
 
+test('adminUser_attachingFile_sendsItBase64AndShowsTheNameInTheBubble', async ({ page }) => {
+    await mockStatus(page, true);
+    let chatBody:
+        | {
+              messages: { role: string; content: string }[];
+              attachments?: { fileName: string; contentType: string; dataBase64: string }[];
+          }
+        | undefined;
+    await page.route('**/api/assistant/chat', async (route) => {
+        chatBody = route.request().postDataJSON();
+        await route.fulfill({ json: { reply: 'I have read the file.' } });
+    });
+
+    await signIn(page, 'admin');
+    await page.getByTestId('assistant-fab').click();
+
+    // The hidden file input behind the paperclip button; the chosen file shows up as a
+    // removable chip (name + size) above the message input before anything is sent.
+    await page.getByTestId('assistant-file-input').setInputFiles({
+        name: 'notes.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('Tour notes for today', 'utf-8'),
+    });
+    await expect(page.getByTestId('assistant-attachment-chip')).toContainText('notes.txt');
+
+    await page.getByTestId('assistant-input').fill('Please summarize this file.');
+    await page.getByTestId('assistant-send').click();
+    await expect(page.getByTestId('assistant-message').last()).toContainText('I have read the file.');
+
+    // The file travels once, with THIS message, as bare base64 (no data-URL prefix).
+    expect(chatBody?.attachments).toHaveLength(1);
+    expect(chatBody?.attachments?.[0].fileName).toBe('notes.txt');
+    expect(chatBody?.attachments?.[0].dataBase64.length).toBeGreaterThan(0);
+    expect(chatBody?.attachments?.[0].dataBase64).not.toContain(',');
+
+    // The user bubble lists the file name; the chip row is cleared for the next message.
+    await expect(page.getByTestId('assistant-message').first()).toContainText('notes.txt');
+    await expect(page.getByTestId('assistant-attachment-chip')).toHaveCount(0);
+});
+
 test('adminUser_assistantUnreachable_showsDismissibleHint', async ({ page }) => {
     await mockStatus(page, true);
     await page.route('**/api/assistant/chat', (route) =>

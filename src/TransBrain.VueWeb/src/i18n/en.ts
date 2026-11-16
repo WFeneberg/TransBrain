@@ -669,6 +669,8 @@ export const en = {
     'assistant.restart': 'Restart conversation',
     'assistant.inputLabel': 'Message to the assistant',
     'assistant.send': 'Send',
+    'assistant.attach': 'Attach file',
+    'assistant.removeAttachment': 'Remove attachment',
     'assistant.empty':
         'Ask a question about your work in TransBrain – for example about orders, tours or master data.',
     'assistant.typing': 'The assistant is writing…',
@@ -681,6 +683,9 @@ export const en = {
         'Sign-in with the AI provider failed. Please have the API key checked in the administration.',
     'assistant.error.upstream': 'The AI provider could not answer the request. Please try again later.',
     'assistant.error.generic': 'The request to the AI assistant failed. Please try again.',
+    'assistant.error.tooManyAttachments': 'At most 5 files can be attached per message.',
+    'assistant.error.attachmentsTooLarge': 'Attachments may total at most 10 MB per message.',
+    'assistant.error.attachmentUnreadable': 'The file could not be read. Please try again.',
     'export.title': 'Data export',
     'export.subtitle': "Download the chosen tenant's master data as a file.",
     'export.description':

@@ -17,6 +17,7 @@ It is a persistent volume **partially checked into git**:
 | `skills/transbrain-api/` | yes | Our curated skill teaching the agent the TransBrain REST API.    |
 | `.env.example`      | yes    | Template for the admin-managed secrets below.                        |
 | `.env`              | no     | LLM provider API keys + assistant switches. Written by the central administration UI (Verwaltung → KI-Assistent) or edited by hand. |
+| `uploads/`          | no     | Chat attachments (non-image files) handed over by the API for the agent to read. Transient: pruned automatically after 24 h. |
 | everything else     | no     | Runtime state: the stock skills Hermes unpacks into `skills/` at startup, `sessions/`, `memories/`, `state.db`, locks, caches, … Stays in the volume (that is the "self-learning" part) but never in git — it contains user data. |
 
 `data/.gitignore` is a **whitelist**: new runtime files are ignored automatically. If the agent

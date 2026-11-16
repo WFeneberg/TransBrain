@@ -672,6 +672,8 @@ export const de: Record<MessageKey, string> = {
     'assistant.restart': 'Neu starten',
     'assistant.inputLabel': 'Nachricht an den Assistenten',
     'assistant.send': 'Senden',
+    'assistant.attach': 'Datei anhängen',
+    'assistant.removeAttachment': 'Anhang entfernen',
     'assistant.empty':
         'Stelle eine Frage zu deiner Arbeit in TransBrain – zum Beispiel zu Aufträgen, Touren oder Stammdaten.',
     'assistant.typing': 'Der Assistent schreibt…',
@@ -686,6 +688,9 @@ export const de: Record<MessageKey, string> = {
     'assistant.error.upstream':
         'Der KI-Anbieter konnte die Anfrage nicht beantworten. Bitte versuche es später erneut.',
     'assistant.error.generic': 'Die Anfrage an den KI-Assistenten ist fehlgeschlagen. Bitte versuche es erneut.',
+    'assistant.error.tooManyAttachments': 'Es können höchstens 5 Dateien pro Nachricht angehängt werden.',
+    'assistant.error.attachmentsTooLarge': 'Anhänge dürfen zusammen höchstens 10 MB pro Nachricht groß sein.',
+    'assistant.error.attachmentUnreadable': 'Die Datei konnte nicht gelesen werden. Bitte versuche es erneut.',
     'export.title': 'Datenexport',
     'export.subtitle': 'Stammdaten des gewählten Mandanten als Datei herunterladen.',
     'export.description':

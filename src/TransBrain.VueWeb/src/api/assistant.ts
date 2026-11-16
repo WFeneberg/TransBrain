@@ -13,6 +13,17 @@ export interface AssistantChatMessage {
     content: string;
 }
 
+/**
+ * One file attached to the message being sent right now. dataBase64 carries the raw file bytes
+ * base64-encoded WITHOUT any "data:...;base64," prefix; attachments are never resent with the
+ * history, only their names stay in the transcript.
+ */
+export interface AssistantChatAttachment {
+    fileName: string;
+    contentType: string;
+    dataBase64: string;
+}
+
 /** Mirror of AssistantSettingsResponse in the API. The key itself never travels here. */
 export interface AssistantSettings {
     provisioned: boolean;
@@ -60,15 +71,17 @@ export async function getAssistantStatus(): Promise<AssistantStatus> {
 
 /**
  * Sends the FULL conversation; the backend is stateless and prepends its own system message.
- * The caller trims to the server's 50-message cap before handing the list over.
+ * The caller trims to the server's 50-message cap before handing the list over. Attachments
+ * belong to the newest message only and are omitted from the body when there are none.
  */
 export async function sendAssistantChat(
     messages: AssistantChatMessage[],
     pageContext: string | null,
+    attachments: AssistantChatAttachment[] = [],
 ): Promise<string> {
     const response = await client.post<{ reply: string }>(
         '/assistant/chat',
-        { messages, pageContext },
+        { messages, pageContext, attachments: attachments.length > 0 ? attachments : undefined },
         { timeout: CHAT_TIMEOUT_MS },
     );
     return response.data.reply;

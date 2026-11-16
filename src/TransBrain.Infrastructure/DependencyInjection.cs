@@ -66,6 +66,7 @@ public static class DependencyInjection
         services.AddTransient<IRoutePlanner>(provider => provider.GetRequiredService<OpenRouteServiceClient>());
         services.AddTransient<IMapDataStatusProvider, MapDataStatusProvider>();
         services.AddSingleton<IAssistantConfigurationStore, HermesEnvAssistantConfigurationStore>();
+        services.AddSingleton<IAssistantFileDrop, HermesVolumeFileDrop>();
         // ServiceDefaults wraps every HttpClient in the standard resilience handler (30 s total
         // timeout, 10 s per attempt, retries). Agent turns legitimately run for minutes, and
         // retrying a chat POST would start a duplicate agent turn — so the hermes client opts out

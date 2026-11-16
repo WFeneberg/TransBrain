@@ -811,6 +811,8 @@ export const en = {
         'Ask a question about TransBrain – for example about orders, tours or how to use this page.',
     'assistant.inputLabel': 'Message to the AI assistant',
     'assistant.send': 'Send',
+    'assistant.attach': 'Attach file',
+    'assistant.attachments.remove': 'Remove attachment',
     'assistant.typing': 'The assistant is responding …',
     'assistant.error.dismiss': 'Dismiss',
     'assistant.error.unavailable':
@@ -821,6 +823,10 @@ export const en = {
     'assistant.error.authFailed':
         'Signing in to the AI service failed. Please contact the administration.',
     'assistant.error.failed': 'The request to the AI assistant failed. Please try again.',
+    'assistant.error.tooManyAttachments': 'At most 5 files can be attached to a message.',
+    'assistant.error.attachmentsTooLarge':
+        'The attachments of a message may total at most 10 MB.',
+    'assistant.error.attachmentUnreadable': 'The selected file could not be read.',
     'assistant.settings.title': 'AI assistant',
     'assistant.settings.subtitle':
         'Connection of the central AI assistant: provider, model and key – applies to the whole installation, not to a single tenant.',

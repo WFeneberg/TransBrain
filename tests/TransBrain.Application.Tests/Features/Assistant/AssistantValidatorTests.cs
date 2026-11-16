@@ -212,4 +212,68 @@ public class ChatWithAssistantCommandValidatorTests
 
         result.IsValid.Should().BeFalse();
     }
+
+    [Fact]
+    public void Validate_ValidAttachment_Passes()
+    {
+        ValidationResult result = _validator.Validate(new ChatWithAssistantCommand(ValidPayload with
+        {
+            Attachments = [new AssistantAttachmentPayload("foto.png", "image/png", Convert.ToBase64String([1, 2, 3]))]
+        }));
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_TooManyAttachments_Fails()
+    {
+        AssistantAttachmentPayload[] attachments =
+        [
+            .. Enumerable.Range(0, AssistantAttachmentLimits.MaxCount + 1).Select(i =>
+                new AssistantAttachmentPayload($"datei{i}.txt", "text/plain", Convert.ToBase64String([1])))
+        ];
+
+        ValidationResult result = _validator.Validate(
+            new ChatWithAssistantCommand(ValidPayload with { Attachments = attachments }));
+
+        result.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Validate_AttachmentsOverTotalSizeBudget_Fails()
+    {
+        // Base64 inflates by 4/3, so this single attachment decodes to ~12 MB.
+        string oversized = new('A', (AssistantAttachmentLimits.MaxTotalBytes / 3 + 1_000_000) * 4);
+
+        ValidationResult result = _validator.Validate(new ChatWithAssistantCommand(ValidPayload with
+        {
+            Attachments = [new AssistantAttachmentPayload("gross.bin", "application/octet-stream", oversized)]
+        }));
+
+        result.IsValid.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("kein base64 👻")]
+    public void Validate_AttachmentWithInvalidBase64_Fails(string data)
+    {
+        ValidationResult result = _validator.Validate(new ChatWithAssistantCommand(ValidPayload with
+        {
+            Attachments = [new AssistantAttachmentPayload("datei.txt", "text/plain", data)]
+        }));
+
+        result.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Validate_AttachmentWithoutFileName_Fails()
+    {
+        ValidationResult result = _validator.Validate(new ChatWithAssistantCommand(ValidPayload with
+        {
+            Attachments = [new AssistantAttachmentPayload("", "text/plain", Convert.ToBase64String([1]))]
+        }));
+
+        result.IsValid.Should().BeFalse();
+    }
 }

@@ -120,6 +120,46 @@ public sealed class AssistantEndpointsTests(TransBrainApiFactory factory)
     }
 
     [Fact]
+    public async Task Chat_TooManyAttachments_ReturnsBadRequest()
+    {
+        AssistantAttachmentPayload[] attachments =
+        [
+            .. Enumerable.Range(0, AssistantAttachmentLimits.MaxCount + 1).Select(i =>
+                new AssistantAttachmentPayload($"datei{i}.txt", "text/plain", Convert.ToBase64String([1])))
+        ];
+
+        HttpResponseMessage response = await factory.CreateClientAs("viewer")
+            .PostAsJsonAsync("/api/assistant/chat", new AssistantChatPayload(
+                [new AssistantChatMessagePayload("user", "Hallo")], null, attachments));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Chat_FileAttachment_LandsInTheAgentVolumeBeforeTheTurn()
+    {
+        using WebApplicationFactory<Program> host = Provisioned();
+        await host.CreateSystemAdminClientFor()
+            .PutAsJsonAsync("/api/system/assistant-settings", APayload());
+        HttpClient client = host.CreateClient();
+        client.DefaultRequestHeaders.Add(TestAuthHandler.RolesHeader, "disponent");
+        byte[] content = "Positionen;Menge"u8.ToArray();
+
+        // No Hermes container behind this host: the turn itself fails, but the handover into the
+        // shared volume — binding included — must already have happened by then.
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/assistant/chat", new AssistantChatPayload(
+                [new AssistantChatMessagePayload("user", "Prüfe die Liste.")],
+                null,
+                [new AssistantAttachmentPayload("liste.csv", "text/csv", Convert.ToBase64String(content))]));
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        string saved = Directory.GetFiles(Path.Combine(_dataDirectory, "uploads"), "liste.csv",
+            SearchOption.AllDirectories).Single();
+        (await File.ReadAllBytesAsync(saved)).Should().Equal(content);
+    }
+
+    [Fact]
     public async Task UpdateSettings_Unprovisioned_ReturnsServiceUnavailable()
     {
         HttpResponseMessage response = await factory.CreateSystemAdminClient()

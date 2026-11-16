@@ -23,4 +23,10 @@ public sealed class HermesAgentOptions
 
     /// <summary>Agent turns run tools and can take a while; default generous.</summary>
     public int TimeoutSeconds { get; set; } = 300;
+
+    /// <summary>
+    /// Where the agent sees its data volume inside its own container. Both AppHost and compose
+    /// mount it at /opt/data; chat attachments are announced to the agent under this root.
+    /// </summary>
+    public string AgentDataPath { get; set; } = "/opt/data";
 }

@@ -1448,6 +1448,13 @@ So benutzen Sie den Chat:
 - Der Assistent weiß, wer fragt (Name und Rollen) und welche Seite gerade geöffnet ist, und
   antwortet auf Deutsch.
 
+Über die **Büroklammer-Schaltfläche** links neben dem Eingabefeld lassen sich **Dateien
+anhängen** — bis zu **5 Dateien mit zusammen höchstens 10 MB** pro Nachricht. Gewählte
+Dateien erscheinen als entfernbare Chips über dem Eingabefeld und gehen mit der nächsten
+gesendeten Nachricht hinaus; sie gelten nur für diese eine Nachricht und werden mit dem
+weiteren Gesprächsverlauf nicht erneut übertragen. Bilder werden dem KI-Modell direkt
+gezeigt, alle anderen Dateien liest der Agent über sein Datenverzeichnis.
+
 Was der Assistent darf, hängt von der zentralen Einstellung **„Allow autonomous actions"**
 (Autonome Aktionen erlauben) ab: Ist sie aus, erklärt er nur die nötigen Schritte in der
 Oberfläche; ist sie an, darf er klar beauftragte Schreibaktionen (etwa einen Auftrag anlegen)

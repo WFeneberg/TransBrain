@@ -8,6 +8,7 @@ namespace TransBrain.Application.Features.Assistant.ChatWithAssistant;
 internal sealed class ChatWithAssistantCommandHandler(
     IAssistantConfigurationStore store,
     IAssistantGateway gateway,
+    IAssistantFileDrop fileDrop,
     ICurrentUser currentUser)
     : ICommandHandler<ChatWithAssistantCommand, AssistantChatResponse>
 {
@@ -49,6 +50,13 @@ internal sealed class ChatWithAssistantCommandHandler(
         };
         messages.AddRange(command.Payload.Messages.Select(m => new AssistantTurnMessage(m.Role, m.Content)));
 
+        Result<AssistantChatResponse>? attachmentFailure = await ApplyAttachmentsAsync(
+            command.Payload, messages, cancellationToken);
+        if (attachmentFailure is not null)
+        {
+            return attachmentFailure.Value;
+        }
+
         // "custom" is the UI's name for any OpenAI-compatible endpoint; Hermes reaches it through
         // its openai-api provider whose base URL the configuration store wrote to the volume.
         string provider = string.Equals(configuration.Provider, AssistantProviders.Custom, StringComparison.OrdinalIgnoreCase)
@@ -62,6 +70,67 @@ internal sealed class ChatWithAssistantCommandHandler(
         return reply.IsSuccess
             ? new AssistantChatResponse(reply.Value.Content)
             : Result<AssistantChatResponse>.Failure(reply.Error!);
+    }
+
+    /// <summary>
+    /// Folds attachments into the latest user message: images ride inline (the gateway accepts
+    /// multimodal content parts), other files land in the agent's volume and the message tells
+    /// the agent where — its own file tools take it from there, the Hermes API itself has no
+    /// file upload.
+    /// </summary>
+    private async Task<Result<AssistantChatResponse>?> ApplyAttachmentsAsync(
+        AssistantChatPayload payload,
+        List<AssistantTurnMessage> messages,
+        CancellationToken cancellationToken)
+    {
+        if (payload.Attachments is not { Count: > 0 } attachments)
+        {
+            return null;
+        }
+
+        List<AssistantImageAttachment> images = [];
+        List<AssistantFileToDrop> files = [];
+        foreach (AssistantAttachmentPayload attachment in attachments)
+        {
+            if (attachment.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                images.Add(new AssistantImageAttachment(attachment.ContentType, attachment.DataBase64));
+            }
+            else
+            {
+                // Base64 validity is guaranteed by the request validator.
+                files.Add(new AssistantFileToDrop(attachment.FileName, Convert.FromBase64String(attachment.DataBase64)));
+            }
+        }
+
+        string content = messages[^1].Content;
+
+        if (files.Count > 0)
+        {
+            Result<IReadOnlyList<AssistantDroppedFile>> dropped = await fileDrop.SaveAsync(files, cancellationToken);
+            if (!dropped.IsSuccess)
+            {
+                return Result<AssistantChatResponse>.Failure(dropped.Error!);
+            }
+
+            StringBuilder note = new(content);
+            note.AppendLine();
+            note.AppendLine();
+            note.AppendLine("[Hinweis an den Assistenten: Der Benutzer hat dieser Nachricht Dateien angehängt. " +
+                            "Sie liegen in deinem Container; lies sie bei Bedarf mit deinen Datei-Werkzeugen:]");
+            foreach (AssistantDroppedFile file in dropped.Value)
+            {
+                note.AppendLine($"- {file.FileName}: {file.AgentPath}");
+            }
+            content = note.ToString();
+        }
+
+        messages[^1] = messages[^1] with
+        {
+            Content = content,
+            Images = images.Count > 0 ? images : null
+        };
+        return null;
     }
 
     private string BuildSystemContext(AssistantChatPayload payload, AssistantConfiguration configuration)

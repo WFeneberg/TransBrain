@@ -34,7 +34,7 @@ public sealed class HermesAgentClient(HttpClient http, ILogger<HermesAgentClient
         ChatCompletionRequest request = new(
             string.IsNullOrWhiteSpace(turn.Model) ? "hermes-agent" : turn.Model,
             turn.Provider,
-            turn.Messages.Select(m => new ChatMessage(m.Role, m.Content)).ToArray());
+            turn.Messages.Select(m => new ChatMessage(m.Role, BuildContent(m))).ToArray());
 
         HttpResponseMessage response;
         try
@@ -112,6 +112,25 @@ public sealed class HermesAgentClient(HttpClient http, ILogger<HermesAgentClient
     private static string Truncate(string value) =>
         value.Length <= 500 ? value : value[..500] + "…";
 
+    /// <summary>
+    /// Plain text stays a string; messages with images become the OpenAI multimodal content array
+    /// (<c>text</c> + <c>image_url</c> parts with data URLs), which the Hermes gateway supports on
+    /// chat completions.
+    /// </summary>
+    private static object BuildContent(AssistantTurnMessage message)
+    {
+        if (message.Images is not { Count: > 0 } images)
+        {
+            return message.Content;
+        }
+
+        List<object> parts = new(images.Count + 1) { new TextPart("text", message.Content) };
+        parts.AddRange(images.Select(object (image) => new ImagePart(
+            "image_url",
+            new ImageUrlValue($"data:{image.ContentType};base64,{image.DataBase64}"))));
+        return parts;
+    }
+
     private sealed record ChatCompletionRequest(
         [property: JsonPropertyName("model")] string Model,
         [property: JsonPropertyName("provider")] string? Provider,
@@ -120,7 +139,18 @@ public sealed class HermesAgentClient(HttpClient http, ILogger<HermesAgentClient
 
     private sealed record ChatMessage(
         [property: JsonPropertyName("role")] string Role,
-        [property: JsonPropertyName("content")] string Content);
+        [property: JsonPropertyName("content")] object Content);
+
+    private sealed record TextPart(
+        [property: JsonPropertyName("type")] string Type,
+        [property: JsonPropertyName("text")] string Text);
+
+    private sealed record ImagePart(
+        [property: JsonPropertyName("type")] string Type,
+        [property: JsonPropertyName("image_url")] ImageUrlValue ImageUrl);
+
+    private sealed record ImageUrlValue(
+        [property: JsonPropertyName("url")] string Url);
 
     private sealed record ChatCompletionResponse(
         [property: JsonPropertyName("choices")] IReadOnlyList<ChatChoice>? Choices);

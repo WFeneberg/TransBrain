@@ -11,6 +11,21 @@ export interface AssistantStatus {
 export interface AssistantMessage {
     role: 'user' | 'assistant';
     content: string;
+    /** Names of the files sent with this message - display only, the bytes are never kept. */
+    attachmentNames?: string[];
+}
+
+/** Mirror of the optional `attachments` items in the chat request. */
+export interface AssistantAttachment {
+    fileName: string;
+    contentType: string;
+    /** Raw file bytes, base64-encoded WITHOUT a `data:...;base64,` prefix. */
+    dataBase64: string;
+}
+
+/** A queued, not-yet-sent attachment; the size feeds the chip label and the total limit. */
+export interface PendingAttachment extends AssistantAttachment {
+    sizeBytes: number;
 }
 
 interface AssistantChatResponse {
@@ -25,6 +40,11 @@ interface AssistantChatResponse {
 const MAX_MESSAGES_PER_REQUEST = 50;
 export const MAX_MESSAGE_LENGTH = 8000;
 const MAX_PAGE_CONTEXT_LENGTH = 300;
+
+/** Attachment limits, mirrored from the server's validation of the chat request. */
+export const MAX_ATTACHMENTS_PER_MESSAGE = 5;
+export const MAX_ATTACHMENTS_TOTAL_BYTES = 10 * 1024 * 1024;
+const MAX_ATTACHMENT_NAME_LENGTH = 150;
 
 /** The 503 error codes the API answers chat requests with (ProblemDetails title). */
 const ERROR_MESSAGE_KEYS: Record<string, TranslationKey> = {
@@ -50,6 +70,7 @@ export class AssistantService {
     private readonly conversation = signal<AssistantMessage[]>([]);
     private readonly waiting = signal(false);
     private readonly errorKey = signal<TranslationKey | null>(null);
+    private readonly pending = signal<PendingAttachment[]>([]);
     private statusRequested = false;
 
     /** Whether the chat UI should exist at all; false until the status has been fetched. */
@@ -57,6 +78,9 @@ export class AssistantService {
 
     readonly messages = this.conversation.asReadonly();
     readonly sending = this.waiting.asReadonly();
+
+    /** Files queued for the NEXT message only - they are not resent with the history. */
+    readonly pendingAttachments = this.pending.asReadonly();
 
     /** The current, dismissible error - already a user-facing German/English text. */
     readonly error = computed(() => {
@@ -88,16 +112,30 @@ export class AssistantService {
         }
 
         this.errorKey.set(null);
-        const history = [
-            ...this.conversation(),
-            { role: 'user', content: text.slice(0, MAX_MESSAGE_LENGTH) } satisfies AssistantMessage,
-        ];
+        const attachments = this.pending();
+        const userMessage: AssistantMessage = { role: 'user', content: text.slice(0, MAX_MESSAGE_LENGTH) };
+        if (attachments.length > 0) {
+            userMessage.attachmentNames = attachments.map((attachment) => attachment.fileName);
+        }
+        const history = [...this.conversation(), userMessage];
         this.conversation.set(history);
         this.waiting.set(true);
 
         const payload = {
-            messages: history.slice(-MAX_MESSAGES_PER_REQUEST),
+            // Only role and content go to the API - attachmentNames is client-side display state.
+            messages: history
+                .slice(-MAX_MESSAGES_PER_REQUEST)
+                .map(({ role, content }) => ({ role, content })),
             pageContext: pageContext === null ? null : pageContext.slice(0, MAX_PAGE_CONTEXT_LENGTH),
+            // Attachments belong to THIS message only; `undefined` keeps them out of the JSON.
+            attachments:
+                attachments.length === 0
+                    ? undefined
+                    : attachments.map(({ fileName, contentType, dataBase64 }) => ({
+                          fileName,
+                          contentType,
+                          dataBase64,
+                      })),
         };
         this.http.post<AssistantChatResponse>('/api/assistant/chat', payload).subscribe({
             next: (response) => {
@@ -105,19 +143,55 @@ export class AssistantService {
                     ...messages,
                     { role: 'assistant', content: response.reply },
                 ]);
+                this.pending.set([]);
                 this.waiting.set(false);
             },
             error: (error: HttpErrorResponse) => {
                 // The failed turn stays in the list: the server is stateless, so simply sending
-                // the next message retries with the full history, nothing is lost.
+                // the next message retries with the full history, nothing is lost. The queued
+                // attachments also stay, so that retry carries them again.
                 this.errorKey.set(this.messageKeyFor(error));
                 this.waiting.set(false);
             },
         });
     }
 
+    /**
+     * Reads the chosen files and queues them for the next message. A selection that would
+     * break the server's limits is rejected as a whole; already queued files stay untouched.
+     */
+    async attachFiles(files: readonly File[]): Promise<void> {
+        if (files.length === 0 || this.waiting()) {
+            return;
+        }
+        const queued = this.pending();
+        if (queued.length + files.length > MAX_ATTACHMENTS_PER_MESSAGE) {
+            this.errorKey.set('assistant.error.tooManyAttachments');
+            return;
+        }
+        const totalBytes =
+            queued.reduce((sum, attachment) => sum + attachment.sizeBytes, 0) +
+            files.reduce((sum, file) => sum + file.size, 0);
+        if (totalBytes > MAX_ATTACHMENTS_TOTAL_BYTES) {
+            this.errorKey.set('assistant.error.attachmentsTooLarge');
+            return;
+        }
+        try {
+            const read = await Promise.all(files.map((file) => this.toAttachment(file)));
+            this.errorKey.set(null);
+            this.pending.update((current) => [...current, ...read]);
+        } catch {
+            this.errorKey.set('assistant.error.attachmentUnreadable');
+        }
+    }
+
+    removeAttachment(index: number): void {
+        this.pending.update((current) => current.filter((_, i) => i !== index));
+    }
+
     restart(): void {
         this.conversation.set([]);
+        this.pending.set([]);
         this.errorKey.set(null);
     }
 
@@ -133,5 +207,23 @@ export class AssistantService {
             return known;
         }
         return error.status === 503 ? 'assistant.error.unavailable' : 'assistant.error.failed';
+    }
+
+    /** Base64-encodes one file; readAsDataURL yields `data:<type>;base64,<data>`. */
+    private toAttachment(file: File): Promise<PendingAttachment> {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const dataUrl = reader.result as string;
+                resolve({
+                    fileName: file.name.slice(0, MAX_ATTACHMENT_NAME_LENGTH),
+                    contentType: file.type === '' ? 'application/octet-stream' : file.type,
+                    dataBase64: dataUrl.slice(dataUrl.indexOf(',') + 1),
+                    sizeBytes: file.size,
+                });
+            };
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+        });
     }
 }

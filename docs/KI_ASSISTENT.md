@@ -92,6 +92,25 @@ If `BaseUrl`/`DataDirectory` are absent the feature reports "not provisioned" in
 - The gateway's API server refuses requests without the correct Bearer key, and in the compose
   setup the hermes port is not published to the host (only the API container reaches it).
 
+## Attachments (files & images)
+
+Users can attach files to a chat message (paperclip button in both frontends). Limits, enforced
+client- and server-side: **5 files, 10 MB total** per message.
+
+- **Images** (`image/*`) travel inline as multimodal content parts (`image_url` data URLs) on
+  `/v1/chat/completions` — pick a vision-capable model if screenshots matter.
+- **All other files** cannot go through the Hermes API (it has no file upload). The TransBrain
+  API instead writes them into the shared volume under `uploads/<batch>/` and appends a note
+  with the container path (`/opt/data/uploads/…`) to the user's message; the agent reads them
+  with its own file tools. Filenames are sanitized, name collisions deduplicated.
+- **Retention**: upload batches older than 24 hours are pruned on the next drop; `uploads/` is
+  excluded from git by the volume's whitelist `.gitignore`.
+- **Privacy**: image attachments go to the configured LLM provider like any message text; file
+  attachments stay on the volume, but whatever the agent reads from them may end up in prompts.
+- Ops can also place reference files (price lists, manuals) in the volume by hand — anywhere
+  under `data/`, permanently; `uploads/` is only for transient chat handovers.
+- Attachments belong to the message being sent; resending history does not re-upload them.
+
 ## Dev & ops
 
 - **Aspire**: `dotnet run --project src/TransBrain.AppHost` starts `hermes` automatically

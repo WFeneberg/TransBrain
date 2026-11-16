@@ -102,6 +102,12 @@ in seinen Antworten darauf beziehen.
   **„KI-Assistent“**. Eigene Nachrichten stehen rechts, die Antworten des Assistenten links.
 - **Schreiben:** Nachricht in das Eingabefeld tippen und mit **Enter** oder der Schaltfläche
   **„Senden“** abschicken; **Umschalt+Enter** fügt eine neue Zeile ein.
+- **Anhänge:** Die Büroklammer-Schaltfläche neben dem Eingabefeld hängt Dateien an die
+  aktuelle Nachricht an — bis zu 5 Dateien mit zusammen höchstens 10 MB. Bilder werden dem
+  KI-Modell direkt gezeigt, andere Dateien liest der Agent über sein Datenverzeichnis. Die
+  ausgewählten Dateien erscheinen bis zum Senden als entfernbare Chips über dem Eingabefeld;
+  Anhänge gelten nur für die aktuelle Nachricht und werden mit älteren Nachrichten nicht
+  erneut übertragen.
 - **Warten:** Während der Assistent arbeitet, zeigen drei pulsierende Punkte an, dass die
   Antwort unterwegs ist. Das darf dauern — der Assistent schlägt für seine Antwort unter
   Umständen selbst in den Daten nach; im Einzelfall können daraus einige Minuten werden.

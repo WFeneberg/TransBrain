@@ -8,6 +8,7 @@ import {
     viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
@@ -24,7 +25,7 @@ import { AssistantService, MAX_MESSAGE_LENGTH } from './assistant.service';
 @Component({
     selector: 'app-assistant-widget',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [MatButtonModule, MatIconModule, MatTooltipModule],
+    imports: [MatButtonModule, MatChipsModule, MatIconModule, MatTooltipModule],
     template: `
         @if (session.isAuthenticated() && assistant.enabled()) {
             @if (open()) {
@@ -72,6 +73,15 @@ import { AssistantService, MAX_MESSAGE_LENGTH } from './assistant.service';
                                 [attr.data-role]="message.role"
                             >
                                 {{ message.content }}
+                                @if (message.attachmentNames; as names) {
+                                    <div class="message-attachments">
+                                        @for (name of names; track $index) {
+                                            <span data-testid="assistant-message-attachment"
+                                                >📎 {{ name }}</span
+                                            >
+                                        }
+                                    </div>
+                                }
                             </div>
                         }
                         @if (assistant.sending()) {
@@ -103,29 +113,76 @@ import { AssistantService, MAX_MESSAGE_LENGTH } from './assistant.service';
                     }
 
                     <footer>
-                        <textarea
-                            #input
-                            rows="2"
-                            data-testid="assistant-input"
-                            [value]="draft()"
-                            [attr.maxlength]="maxMessageLength"
-                            [placeholder]="i18n.t('assistant.inputLabel')"
-                            [attr.aria-label]="i18n.t('assistant.inputLabel')"
-                            (input)="draft.set(input.value)"
-                            (keydown.enter)="onEnter($event)"
-                        ></textarea>
-                        <button
-                            mat-icon-button
-                            type="button"
-                            class="send"
-                            data-testid="assistant-send"
-                            [matTooltip]="i18n.t('assistant.send')"
-                            [attr.aria-label]="i18n.t('assistant.send')"
-                            [disabled]="assistant.sending() || draft().trim() === ''"
-                            (click)="send()"
-                        >
-                            <mat-icon>send</mat-icon>
-                        </button>
+                        @if (assistant.pendingAttachments().length > 0) {
+                            <mat-chip-set class="attachments" data-testid="assistant-attachments">
+                                @for (
+                                    attachment of assistant.pendingAttachments();
+                                    track $index
+                                ) {
+                                    <mat-chip
+                                        data-testid="assistant-attachment-chip"
+                                        (removed)="assistant.removeAttachment($index)"
+                                    >
+                                        {{ attachment.fileName }}
+                                        ({{ formatSize(attachment.sizeBytes) }})
+                                        <button
+                                            matChipRemove
+                                            type="button"
+                                            [disabled]="assistant.sending()"
+                                            [attr.aria-label]="
+                                                i18n.t('assistant.attachments.remove')
+                                            "
+                                        >
+                                            <mat-icon>cancel</mat-icon>
+                                        </button>
+                                    </mat-chip>
+                                }
+                            </mat-chip-set>
+                        }
+                        <div class="input-row">
+                            <input
+                                #fileInput
+                                type="file"
+                                multiple
+                                hidden
+                                data-testid="assistant-file-input"
+                                (change)="onFilesSelected(fileInput)"
+                            />
+                            <button
+                                mat-icon-button
+                                type="button"
+                                data-testid="assistant-attach"
+                                [matTooltip]="i18n.t('assistant.attach')"
+                                [attr.aria-label]="i18n.t('assistant.attach')"
+                                [disabled]="assistant.sending()"
+                                (click)="fileInput.click()"
+                            >
+                                <mat-icon>attach_file</mat-icon>
+                            </button>
+                            <textarea
+                                #input
+                                rows="2"
+                                data-testid="assistant-input"
+                                [value]="draft()"
+                                [attr.maxlength]="maxMessageLength"
+                                [placeholder]="i18n.t('assistant.inputLabel')"
+                                [attr.aria-label]="i18n.t('assistant.inputLabel')"
+                                (input)="draft.set(input.value)"
+                                (keydown.enter)="onEnter($event)"
+                            ></textarea>
+                            <button
+                                mat-icon-button
+                                type="button"
+                                class="send"
+                                data-testid="assistant-send"
+                                [matTooltip]="i18n.t('assistant.send')"
+                                [attr.aria-label]="i18n.t('assistant.send')"
+                                [disabled]="assistant.sending() || draft().trim() === ''"
+                                (click)="send()"
+                            >
+                                <mat-icon>send</mat-icon>
+                            </button>
+                        </div>
                     </footer>
                 </section>
             }
@@ -221,6 +278,16 @@ import { AssistantService, MAX_MESSAGE_LENGTH } from './assistant.service';
             color: var(--mat-sys-on-primary-container);
         }
 
+        .message-attachments {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: 6px;
+            font: var(--mat-sys-body-small);
+            opacity: 0.85;
+            word-break: break-all;
+        }
+
         .typing {
             display: flex;
             gap: 4px;
@@ -272,10 +339,20 @@ import { AssistantService, MAX_MESSAGE_LENGTH } from './assistant.service';
 
         footer {
             display: flex;
-            align-items: flex-end;
-            gap: 4px;
+            flex-direction: column;
             padding: 8px;
             border-top: 1px solid var(--mat-sys-outline-variant);
+
+            .attachments {
+                padding: 0 4px 4px;
+                --mat-chip-container-height: 26px;
+            }
+
+            .input-row {
+                display: flex;
+                align-items: flex-end;
+                gap: 4px;
+            }
 
             textarea {
                 flex: 1 1 auto;
@@ -352,6 +429,24 @@ export class AssistantWidgetComponent {
         }
         this.assistant.send(text, this.pageContext());
         this.draft.set('');
+    }
+
+    protected onFilesSelected(input: HTMLInputElement): void {
+        const files = input.files === null ? [] : Array.from(input.files);
+        // Reset the input so re-selecting the same file (after removing its chip) fires again.
+        input.value = '';
+        void this.assistant.attachFiles(files);
+    }
+
+    /** 532 B / 2.3 KB / 1.5 MB - enough precision for a chip label. */
+    protected formatSize(bytes: number): string {
+        if (bytes < 1024) {
+            return `${bytes} B`;
+        }
+        if (bytes < 1024 * 1024) {
+            return `${(bytes / 1024).toFixed(1)} KB`;
+        }
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     }
 
     protected restart(): void {

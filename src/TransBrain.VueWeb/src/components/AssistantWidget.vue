@@ -13,6 +13,7 @@ const route = useRoute();
 
 const draft = ref('');
 const transcript = ref<HTMLElement | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
 
 // One status query per session, fired as soon as a user the Read policy covers is signed in.
 // A pure system-admin is skipped inside the store; the launcher simply never shows for them.
@@ -45,6 +46,28 @@ async function submit(): Promise<void> {
     const text = draft.value;
     draft.value = '';
     await assistant.send(text, pageContext.value);
+}
+
+function pickFiles(): void {
+    fileInput.value?.click();
+}
+
+// Clears the native input right away so picking the same file twice fires change again.
+async function onFilesPicked(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = input.files ? Array.from(input.files) : [];
+    input.value = '';
+    await assistant.addAttachments(files);
+}
+
+function formatSize(bytes: number): string {
+    if (bytes >= 1024 * 1024) {
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+    if (bytes >= 1024) {
+        return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+    return `${bytes} B`;
 }
 
 // Keeps the newest message (or the typing indicator) in view.
@@ -137,7 +160,46 @@ watch(
             </v-alert>
 
             <v-divider />
+            <div
+                v-if="assistant.pendingAttachments.length > 0"
+                class="assistant-attachments"
+                data-testid="assistant-attachments"
+            >
+                <v-chip
+                    v-for="(attachment, index) in assistant.pendingAttachments"
+                    :key="`${attachment.fileName}-${index}`"
+                    size="small"
+                    closable
+                    :disabled="assistant.sending"
+                    :close-label="t('assistant.removeAttachment')"
+                    data-testid="assistant-attachment-chip"
+                    @click:close="assistant.removeAttachment(index)"
+                >
+                    <v-icon start size="14">mdi-paperclip</v-icon>
+                    {{ attachment.fileName }} ({{ formatSize(attachment.size) }})
+                </v-chip>
+            </div>
             <div class="assistant-composer">
+                <input
+                    ref="fileInput"
+                    type="file"
+                    multiple
+                    class="assistant-file-input"
+                    tabindex="-1"
+                    aria-hidden="true"
+                    data-testid="assistant-file-input"
+                    @change="onFilesPicked"
+                />
+                <v-btn
+                    icon="mdi-paperclip"
+                    variant="text"
+                    class="mr-2"
+                    data-testid="assistant-attach"
+                    :aria-label="t('assistant.attach')"
+                    :title="t('assistant.attach')"
+                    :disabled="assistant.sending"
+                    @click="pickFiles"
+                />
                 <v-textarea
                     v-model="draft"
                     v-native-testid="'assistant-input'"
@@ -241,6 +303,18 @@ watch(
 .assistant-error {
     flex: 0 0 auto;
     margin: 0 12px 12px;
+}
+
+.assistant-attachments {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 12px 0;
+}
+
+.assistant-file-input {
+    display: none;
 }
 
 .assistant-composer {

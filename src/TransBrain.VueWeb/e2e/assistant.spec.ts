@@ -147,6 +147,7 @@ test('assistantLauncher_followsTheCentralSwitch', async ({ page, browser }) => {
     await expect(onPage.getByTestId('assistant-panel')).toContainText('AI assistant');
     await expect(onPage.getByTestId('assistant-input')).toBeVisible();
     await expect(onPage.getByTestId('assistant-send')).toBeVisible();
+    await expect(onPage.getByTestId('assistant-attach')).toBeVisible();
     await expect(onPage.getByTestId('assistant-restart')).toBeVisible();
 
     // Chat only when the answer is deterministic: without a stored key (and not on a custom

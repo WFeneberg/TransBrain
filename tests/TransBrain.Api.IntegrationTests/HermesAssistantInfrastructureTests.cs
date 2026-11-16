@@ -236,6 +236,33 @@ public sealed class HermesAgentClientTests
     }
 
     [Fact]
+    public async Task SendAsync_MessageWithImage_SendsMultimodalContentParts()
+    {
+        using StubJsonApi stub = new(GoodCompletion);
+        AssistantChatTurn turn = new(
+            [new AssistantTurnMessage("user", "Was zeigt das Bild?",
+                [new AssistantImageAttachment("image/png", "AQID")])],
+            "some/vision-model", "openrouter");
+
+        Result<AssistantReply> result = await Client(stub.BaseUrl).SendAsync(turn, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        stub.LastBody.Should().Contain("\"image_url\"")
+            .And.Contain("data:image/png;base64,AQID")
+            .And.Contain("Was zeigt das Bild?");
+    }
+
+    [Fact]
+    public async Task SendAsync_MessageWithoutImages_KeepsPlainStringContent()
+    {
+        using StubJsonApi stub = new(GoodCompletion);
+
+        await Client(stub.BaseUrl).SendAsync(ATurn(), CancellationToken.None);
+
+        stub.LastBody.Should().Contain("\"content\":\"Hallo\"", "plain turns must not regress into part arrays");
+    }
+
+    [Fact]
     public async Task SendAsync_NobodyListening_ReportsUnreachable()
     {
         // A port from the dynamic range nothing in this test run listens on.
@@ -244,5 +271,95 @@ public sealed class HermesAgentClientTests
 
         result.IsSuccess.Should().BeFalse();
         result.Error!.Code.Should().Be("Assistant.Unreachable");
+    }
+}
+
+/// <summary>The volume file drop that hands chat attachments over to the agent container.</summary>
+public sealed class HermesVolumeFileDropTests : IDisposable
+{
+    private readonly string _dataDirectory = Directory.CreateTempSubdirectory("hermes-drop-").FullName;
+
+    public void Dispose() => Directory.Delete(_dataDirectory, recursive: true);
+
+    private HermesVolumeFileDrop Drop(string? directory) => new(
+        Options.Create(new HermesAgentOptions { DataDirectory = directory }),
+        NullLogger<HermesVolumeFileDrop>.Instance);
+
+    [Fact]
+    public async Task SaveAsync_NoDataDirectory_FailsNotProvisioned()
+    {
+        Result<IReadOnlyList<AssistantDroppedFile>> result = await Drop(null)
+            .SaveAsync([new AssistantFileToDrop("a.txt", [1])], CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Assistant.NotProvisioned");
+    }
+
+    [Fact]
+    public async Task SaveAsync_WritesFilesAndReportsAgentPaths()
+    {
+        byte[] content = "Lieferschein"u8.ToArray();
+
+        Result<IReadOnlyList<AssistantDroppedFile>> result = await Drop(_dataDirectory)
+            .SaveAsync([new AssistantFileToDrop("lieferschein.pdf", content)], CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        AssistantDroppedFile dropped = result.Value.Single();
+        dropped.FileName.Should().Be("lieferschein.pdf");
+        dropped.AgentPath.Should().MatchRegex("^/opt/data/uploads/[^/]+/lieferschein\\.pdf$",
+            "the agent must get the path as seen from inside its container");
+        string onDisk = Directory.GetFiles(Path.Combine(_dataDirectory, "uploads"), "lieferschein.pdf",
+            SearchOption.AllDirectories).Single();
+        (await File.ReadAllBytesAsync(onDisk)).Should().Equal(content);
+    }
+
+    [Fact]
+    public async Task SaveAsync_HostileFileName_IsSanitizedAndStaysInUploads()
+    {
+        Result<IReadOnlyList<AssistantDroppedFile>> result = await Drop(_dataDirectory)
+            .SaveAsync([new AssistantFileToDrop(@"..\..\evil:name?.txt", [1])], CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        Directory.GetFiles(_dataDirectory, "*", SearchOption.AllDirectories)
+            .Should().OnlyContain(f => f.StartsWith(Path.Combine(_dataDirectory, "uploads")),
+                "a crafted name must never escape the uploads directory");
+        result.Value.Single().FileName.Should().NotContain("..").And.NotContain(":").And.NotContain("?");
+    }
+
+    [Fact]
+    public async Task SaveAsync_DuplicateNames_AreMadeUnique()
+    {
+        Result<IReadOnlyList<AssistantDroppedFile>> result = await Drop(_dataDirectory).SaveAsync(
+            [new AssistantFileToDrop("foto.png", [1]), new AssistantFileToDrop("foto.png", [2])],
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Select(f => f.FileName).Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public async Task SaveAsync_UploadsOlderThanADay_ArePruned()
+    {
+        string oldBatch = Path.Combine(_dataDirectory, "uploads", "20200101-000000-abcdef");
+        Directory.CreateDirectory(oldBatch);
+        await File.WriteAllBytesAsync(Path.Combine(oldBatch, "alt.txt"), [1]);
+        Directory.SetLastWriteTimeUtc(oldBatch, DateTime.UtcNow.AddHours(-25));
+
+        await Drop(_dataDirectory).SaveAsync([new AssistantFileToDrop("neu.txt", [1])], CancellationToken.None);
+
+        Directory.Exists(oldBatch).Should().BeFalse("attachments are transient working files, not an archive");
+    }
+
+    [Fact]
+    public async Task SaveAsync_UploadsRootBlockedByFile_FailsVolumeNotWritable()
+    {
+        // A file where the uploads directory should be makes every write attempt fail.
+        await File.WriteAllTextAsync(Path.Combine(_dataDirectory, "uploads"), "blocker");
+
+        Result<IReadOnlyList<AssistantDroppedFile>> result = await Drop(_dataDirectory)
+            .SaveAsync([new AssistantFileToDrop("a.txt", [1])], CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Assistant.VolumeNotWritable");
     }
 }

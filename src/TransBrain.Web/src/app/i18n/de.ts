@@ -819,6 +819,8 @@ export const de: Record<keyof typeof en, string> = {
         'Stellen Sie eine Frage zu TransBrain – zum Beispiel zu Aufträgen, Touren oder zur Bedienung dieser Seite.',
     'assistant.inputLabel': 'Nachricht an den KI-Assistenten',
     'assistant.send': 'Senden',
+    'assistant.attach': 'Datei anhängen',
+    'assistant.attachments.remove': 'Anhang entfernen',
     'assistant.typing': 'Der Assistent antwortet …',
     'assistant.error.dismiss': 'Hinweis schließen',
     'assistant.error.unavailable':
@@ -830,6 +832,11 @@ export const de: Record<keyof typeof en, string> = {
         'Die Anmeldung beim KI-Dienst ist fehlgeschlagen. Bitte wenden Sie sich an die Administration.',
     'assistant.error.failed':
         'Die Anfrage an den KI-Assistenten ist fehlgeschlagen. Bitte versuchen Sie es erneut.',
+    'assistant.error.tooManyAttachments':
+        'Es können höchstens 5 Dateien an eine Nachricht angehängt werden.',
+    'assistant.error.attachmentsTooLarge':
+        'Die Anhänge einer Nachricht dürfen zusammen höchstens 10 MB groß sein.',
+    'assistant.error.attachmentUnreadable': 'Die ausgewählte Datei konnte nicht gelesen werden.',
     'assistant.settings.title': 'KI-Assistent',
     'assistant.settings.subtitle':
         'Anbindung des zentralen KI-Assistenten: Anbieter, Modell und Schlüssel – gilt für die gesamte Installation, nicht für einzelne Mandanten.',

@@ -19,6 +19,13 @@ public sealed record AssistantChatTurn(
     string? Model,
     string? Provider);
 
-public sealed record AssistantTurnMessage(string Role, string Content);
+/// <param name="Images">Inline images for multimodal models, only ever set on the latest user message.</param>
+public sealed record AssistantTurnMessage(
+    string Role,
+    string Content,
+    IReadOnlyList<AssistantImageAttachment>? Images = null);
+
+/// <param name="DataBase64">Raw image bytes, base64-encoded; the gateway client builds the data URL.</param>
+public sealed record AssistantImageAttachment(string ContentType, string DataBase64);
 
 public sealed record AssistantReply(string Content);
