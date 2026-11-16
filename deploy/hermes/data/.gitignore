@@ -1,0 +1,15 @@
+# This volume is PARTIALLY checked in: only the curated configuration below lives in git,
+# everything else (runtime state, databases, caches, secrets) stays local-only. The agent
+# writes a lot of state here at runtime (sessions/, state.db, gateway.lock, ...) and even
+# unpacks its stock skills into skills/ on startup — hence a whitelist instead of a blocklist.
+# Secrets (.env) never go to git.
+*
+!.gitignore
+!.env.example
+!config.yaml
+!SOUL.md
+# Only our own skill is curated; the stock skills Hermes unpacks at startup stay out.
+!skills/
+skills/*
+!skills/transbrain-api/
+!skills/transbrain-api/**

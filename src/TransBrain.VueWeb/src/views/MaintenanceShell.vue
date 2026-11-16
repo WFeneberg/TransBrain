@@ -55,6 +55,9 @@ function applyManual(): void {
 // Selection is derived from the path instead of relying on router-link's active matching,
 // which would mark the backup tab active on /maintenance/import too (prefix match).
 const tab = computed(() => {
+    if (route.path.startsWith('/maintenance/assistant')) {
+        return 'assistant';
+    }
     if (route.path.startsWith('/maintenance/import/verlauf')) {
         return 'history';
     }
@@ -69,8 +72,9 @@ const tab = computed(() => {
     Shell of the global Wartung (maintenance) area, reserved for system administrators. A system
     admin belongs to no tenant, so the shell's first job is choosing the tenant to work ON: picked
     from the list of tenants owning data, or entered as a GUID for a tenant that has none yet.
-    Only with a choice made do the tool tabs (backup/restore, import, history, export) and their
-    pages appear - every one of them acts on exactly the chosen tenant.
+    The tenant-scoped tool tabs (backup/restore, import, history, export) stay disabled until that
+    choice is made - every one of them acts on exactly the chosen tenant. The AI assistant tab is
+    the exception: it configures the installation's shared agent and needs no tenant.
 -->
 <template>
     <div v-if="auth.isAuthenticated">
@@ -124,29 +128,43 @@ const tab = computed(() => {
                 </v-card-text>
             </v-card>
         </v-container>
-        <template v-if="tenant.hasSelection">
-            <v-container class="py-0">
-                <v-tabs :model-value="tab" color="primary">
-                    <v-tab value="backup" to="/maintenance" data-testid="maintenance-tab-backup">{{
-                        t('maintenance.tabs.backup')
-                    }}</v-tab>
-                    <v-tab value="import" to="/maintenance/import" data-testid="maintenance-tab-import">{{
-                        t('maintenance.tabs.import')
-                    }}</v-tab>
-                    <v-tab
-                        value="history"
-                        to="/maintenance/import/verlauf"
-                        data-testid="maintenance-tab-history"
-                        >{{ t('maintenance.tabs.history') }}</v-tab
-                    >
-                    <v-tab value="export" to="/maintenance/export" data-testid="maintenance-tab-export">{{
-                        t('maintenance.tabs.export')
-                    }}</v-tab>
-                </v-tabs>
-                <v-divider />
-            </v-container>
-            <router-view />
-        </template>
+        <v-container class="py-0">
+            <v-tabs :model-value="tab" color="primary">
+                <v-tab
+                    value="backup"
+                    to="/maintenance"
+                    :disabled="!tenant.hasSelection"
+                    data-testid="maintenance-tab-backup"
+                    >{{ t('maintenance.tabs.backup') }}</v-tab
+                >
+                <v-tab
+                    value="import"
+                    to="/maintenance/import"
+                    :disabled="!tenant.hasSelection"
+                    data-testid="maintenance-tab-import"
+                    >{{ t('maintenance.tabs.import') }}</v-tab
+                >
+                <v-tab
+                    value="history"
+                    to="/maintenance/import/verlauf"
+                    :disabled="!tenant.hasSelection"
+                    data-testid="maintenance-tab-history"
+                    >{{ t('maintenance.tabs.history') }}</v-tab
+                >
+                <v-tab
+                    value="export"
+                    to="/maintenance/export"
+                    :disabled="!tenant.hasSelection"
+                    data-testid="maintenance-tab-export"
+                    >{{ t('maintenance.tabs.export') }}</v-tab
+                >
+                <v-tab value="assistant" to="/maintenance/assistant" data-testid="maintenance-tab-assistant">{{
+                    t('maintenance.tabs.assistant')
+                }}</v-tab>
+            </v-tabs>
+            <v-divider />
+        </v-container>
+        <router-view v-if="tenant.hasSelection || tab === 'assistant'" />
         <p
             v-else
             class="text-center text-medium-emphasis mt-12"

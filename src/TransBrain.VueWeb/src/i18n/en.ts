@@ -603,6 +603,7 @@ export const en = {
     'maintenance.tabs.import': 'Import',
     'maintenance.tabs.history': 'Import history',
     'maintenance.tabs.export': 'Export',
+    'maintenance.tabs.assistant': 'AI assistant',
     'maintenance.tenant.title': 'Select tenant',
     'maintenance.tenant.description':
         'As a system administrator you first choose the tenant whose data you want to maintain. Every tool below acts on exactly that tenant.',
@@ -637,6 +638,49 @@ export const en = {
     'maintenance.restore.rows': 'Rows',
     'maintenance.restore.invalidFile': 'The file is not a TransBrain backup.',
     'maintenance.restore.error': 'The restore failed. No data has been changed.',
+    'maintenance.assistant.title': 'AI assistant',
+    'maintenance.assistant.subtitle':
+        'Central configuration of the shared assistant: provider, model, API key and autonomy. It applies to the whole installation, not to a single tenant.',
+    'maintenance.assistant.notProvisioned':
+        'No Hermes agent container is provisioned on this installation. The settings cannot be saved until the agent data volume is wired up.',
+    'maintenance.assistant.loadError': 'The assistant settings could not be loaded.',
+    'maintenance.assistant.enabled': 'Enable AI assistant',
+    'maintenance.assistant.enabledHint':
+        'When enabled, every signed-in user sees the chat button at the bottom right.',
+    'maintenance.assistant.provider': 'Provider',
+    'maintenance.assistant.providerCustom': 'Custom OpenAI-compatible endpoint',
+    'maintenance.assistant.model': 'Model',
+    'maintenance.assistant.modelHint':
+        'Model id at the chosen provider, e.g. "anthropic/claude-sonnet-4.5" on OpenRouter.',
+    'maintenance.assistant.baseUrl': 'Base URL',
+    'maintenance.assistant.baseUrlHint':
+        'Absolute http(s) address of the OpenAI-compatible endpoint, e.g. http://localhost:11434/v1.',
+    'maintenance.assistant.autonomy': 'Allow autonomous actions',
+    'maintenance.assistant.autonomyHint':
+        'When enabled, the assistant may perform clearly requested write actions (create or change data) through the TransBrain API itself.',
+    'maintenance.assistant.apiKey': 'API key',
+    'maintenance.assistant.apiKeyHint': 'The key is stored in the agent volume and never shown again.',
+    'maintenance.assistant.apiKeyKeepHint': 'A key is stored – leave empty to keep it.',
+    'maintenance.assistant.saved': 'Assistant settings saved.',
+    'maintenance.assistant.saveError': 'The assistant settings could not be saved.',
+    'assistant.title': 'AI assistant',
+    'assistant.open': 'Open AI assistant',
+    'assistant.close': 'Close',
+    'assistant.restart': 'Restart conversation',
+    'assistant.inputLabel': 'Message to the assistant',
+    'assistant.send': 'Send',
+    'assistant.empty':
+        'Ask a question about your work in TransBrain – for example about orders, tours or master data.',
+    'assistant.typing': 'The assistant is writing…',
+    'assistant.error.unreachable': 'The AI assistant cannot be reached right now. Please try again later.',
+    'assistant.error.notConfigured':
+        'The AI assistant is not fully configured yet. Please contact your administration.',
+    'assistant.error.disabled': 'The AI assistant is currently switched off.',
+    'assistant.error.notProvisioned': 'No AI assistant is set up on this installation.',
+    'assistant.error.authFailed':
+        'Sign-in with the AI provider failed. Please have the API key checked in the administration.',
+    'assistant.error.upstream': 'The AI provider could not answer the request. Please try again later.',
+    'assistant.error.generic': 'The request to the AI assistant failed. Please try again.',
     'export.title': 'Data export',
     'export.subtitle': "Download the chosen tenant's master data as a file.",
     'export.description':

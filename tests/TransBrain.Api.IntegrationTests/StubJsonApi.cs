@@ -57,6 +57,8 @@ public sealed class StubJsonApi(string json, int statusCode = 200) : IDisposable
     {
         NetworkStream stream = client.GetStream();
         using var reader = new StreamReader(stream, Encoding.ASCII, false, 1024, leaveOpen: true);
+        int contentLength = 0;
+        bool chunked = false;
         string? line;
         while (!string.IsNullOrEmpty(line = await reader.ReadLineAsync()))
         {
@@ -64,6 +66,44 @@ public sealed class StubJsonApi(string json, int statusCode = 200) : IDisposable
             {
                 LastAuthorization = line["Authorization:".Length..].Trim();
             }
+
+            if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
+            {
+                _ = int.TryParse(line["Content-Length:".Length..].Trim(), out contentLength);
+            }
+
+            if (line.StartsWith("Transfer-Encoding:", StringComparison.OrdinalIgnoreCase)
+                && line.Contains("chunked", StringComparison.OrdinalIgnoreCase))
+            {
+                chunked = true;
+            }
+        }
+
+        // Drain a request body (POSTs) before answering: closing the socket while the client is
+        // still sending would reset the connection instead of delivering the canned response.
+        // The ASCII decoder maps one byte to one char, so byte counts work as char counts here.
+        if (chunked)
+        {
+            while ((line = await reader.ReadLineAsync()) is not null)
+            {
+                if (!int.TryParse(line.Trim(), System.Globalization.NumberStyles.HexNumber, null, out int size))
+                {
+                    break; // malformed; give up draining and just answer
+                }
+
+                if (size == 0)
+                {
+                    await reader.ReadLineAsync(); // trailing CRLF after the last chunk
+                    break;
+                }
+
+                await DrainAsync(reader, size);
+                await reader.ReadLineAsync(); // CRLF terminating this chunk's data
+            }
+        }
+        else if (contentLength > 0)
+        {
+            await DrainAsync(reader, contentLength);
         }
 
         byte[] body = Encoding.UTF8.GetBytes(json);
@@ -75,6 +115,22 @@ public sealed class StubJsonApi(string json, int statusCode = 200) : IDisposable
         await stream.WriteAsync(Encoding.ASCII.GetBytes(head));
         await stream.WriteAsync(body);
         await stream.FlushAsync();
+    }
+
+    private static async Task DrainAsync(StreamReader reader, int count)
+    {
+        char[] buffer = new char[count];
+        int read = 0;
+        while (read < count)
+        {
+            int chunk = await reader.ReadAsync(buffer.AsMemory(read, count - read));
+            if (chunk == 0)
+            {
+                break;
+            }
+
+            read += chunk;
+        }
     }
 
     public void Dispose()

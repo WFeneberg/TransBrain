@@ -3,6 +3,7 @@ import { onMounted } from 'vue';
 import { useLocale } from 'vuetify';
 import { useAuthStore } from './stores/auth';
 import { useI18n, type Locale } from './i18n';
+import AssistantWidget from './components/AssistantWidget.vue';
 
 const auth = useAuthStore();
 const { locale, setLocale, t } = useI18n();
@@ -47,5 +48,7 @@ function toggleLocale(): void {
         <v-main>
             <router-view />
         </v-main>
+        <!-- Floats above every page; renders nothing while the assistant is switched off. -->
+        <AssistantWidget />
     </v-app>
 </template>

@@ -1,11 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { I18nService } from '../i18n/i18n.service';
 import { SystemTenantService, TenantSummary } from '../system/system-tenant.service';
 
@@ -15,8 +17,10 @@ const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * Shell of the global Wartung (maintenance) area, reserved for system administrators. A system
  * admin belongs to no tenant, so the shell's first job is choosing the tenant to work ON: picked
  * from the list of tenants owning data, or entered as a GUID for a tenant that has none yet.
- * Only with a choice made do the tool tabs (backup/restore, import, history, export) and their
- * pages appear — every one of them acts on exactly the chosen tenant.
+ * Only with a choice made do the tenant tool tabs (backup/restore, import, history, export) and
+ * their pages appear — every one of them acts on exactly the chosen tenant. The KI-Assistent tab
+ * is the exception: it configures the installation's shared agent, needs no tenant and is
+ * therefore always offered.
  */
 @Component({
     selector: 'app-maintenance-shell',
@@ -97,8 +101,8 @@ const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
                 </mat-card-content>
             </mat-card>
 
-            @if (tenant.hasSelection()) {
-                <nav mat-tab-nav-bar [tabPanel]="panel">
+            <nav mat-tab-nav-bar [tabPanel]="panel">
+                @if (tenant.hasSelection()) {
                     <a
                         mat-tab-link
                         routerLink="/maintenance"
@@ -143,15 +147,28 @@ const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
                     >
                         {{ i18n.t('maintenance.tabs.export') }}
                     </a>
-                </nav>
-                <mat-tab-nav-panel #panel>
+                }
+                <a
+                    mat-tab-link
+                    routerLink="/maintenance/assistant"
+                    routerLinkActive
+                    #assistantLink="routerLinkActive"
+                    [routerLinkActiveOptions]="{ exact: true }"
+                    [active]="assistantLink.isActive"
+                    data-testid="maintenance-tab-assistant"
+                >
+                    {{ i18n.t('maintenance.tabs.assistant') }}
+                </a>
+            </nav>
+            <mat-tab-nav-panel #panel>
+                @if (tenant.hasSelection() || onAssistantPage()) {
                     <router-outlet />
-                </mat-tab-nav-panel>
-            } @else {
-                <p class="pick-first" data-testid="system-tenant-required">
-                    {{ i18n.t('maintenance.tenant.required') }}
-                </p>
-            }
+                } @else {
+                    <p class="pick-first" data-testid="system-tenant-required">
+                        {{ i18n.t('maintenance.tenant.required') }}
+                    </p>
+                }
+            </mat-tab-nav-panel>
         </div>
     `,
     styles: `
@@ -207,11 +224,25 @@ const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export class MaintenanceShellComponent {
     protected readonly i18n = inject(I18nService);
     protected readonly tenant = inject(SystemTenantService);
+    private readonly router = inject(Router);
 
     protected readonly tenants = signal<TenantSummary[]>([]);
     protected readonly loadError = signal(false);
     protected readonly manualId = signal('');
     protected readonly manualInvalid = signal(false);
+
+    /** The assistant page is tenant-free, so the outlet must render for it without a choice. */
+    private readonly currentUrl = toSignal(
+        this.router.events.pipe(
+            filter((event) => event instanceof NavigationEnd),
+            map(() => this.router.url),
+        ),
+        { initialValue: this.router.url },
+    );
+
+    protected readonly onAssistantPage = computed(() =>
+        this.currentUrl().startsWith('/maintenance/assistant'),
+    );
 
     constructor() {
         this.tenant.getTenants().subscribe({

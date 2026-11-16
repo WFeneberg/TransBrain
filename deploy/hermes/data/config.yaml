@@ -1,0 +1,37 @@
+# Hermes Agent configuration for the TransBrain assistant container.
+# Checked into git — edit here, not inside the container. Secrets belong in .env (gitignored),
+# which the central administration UI (Verwaltung → KI-Assistent) maintains.
+#
+# The TransBrain API sends the administrator-selected model/provider with every proxied chat
+# request, so the model below is only the fallback for sessions Hermes starts on its own
+# (cron jobs, autonomous follow-ups).
+model: openrouter/anthropic/claude-sonnet-4.5
+
+agent:
+  # Hard upper bound for tool-call iterations per turn; unattended gateway turns additionally
+  # keep Hermes' default tool-loop hard stops (non_interactive_hard_stop_enabled: true).
+  max_turns: 30
+
+approvals:
+  # The TransBrain API talks to the gateway via NON-streaming chat completions — there is no
+  # channel to answer an approval card. With the default "smart" mode, any command the risk
+  # assessor flags would stall for `timeout` seconds and kill the turn (observed live: "Exec
+  # approval text prompt send success=False" + "BLOCKED: Command timed out without user
+  # response"); `unattended_mode` is not consulted for api_server DM sessions. So approvals are
+  # OFF by design here: the terminal runs inside this container (only mount: this data volume),
+  # Hermes' hardline blocklist (rm -rf / etc.) stays active regardless, and anything the agent
+  # does against TransBrain is bounded by the transbrain-agent service account's role and tenant
+  # plus the skill's autonomy gate.
+  mode: "off"
+  unattended_mode: approve
+
+terminal:
+  # Terminal sessions get a sanitized environment; these orchestrator-provided variables must
+  # reach the transbrain-api skill's curl calls (also declared in the skill's frontmatter).
+  env_passthrough:
+    - TRANSBRAIN_API_BASE_URL
+    - TRANSBRAIN_OIDC_TOKEN_URL
+    - TRANSBRAIN_AGENT_CLIENT_ID
+    - TRANSBRAIN_AGENT_CLIENT_SECRET
+    - TRANSBRAIN_ASSISTANT_AUTONOMY
+_config_version: 53

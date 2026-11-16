@@ -58,3 +58,10 @@
 <main>
     <router-outlet />
 </main>
+
+<!-- Deferred: the chat widget (and the Material overlay code it drags in) stays out of the
+     initial bundle and only loads once someone is actually signed in. It renders nothing
+     unless the administration has also enabled the assistant. -->
+@defer (when session.isAuthenticated()) {
+    <app-assistant-widget />
+}

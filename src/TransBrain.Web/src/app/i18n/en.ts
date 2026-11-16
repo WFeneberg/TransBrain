@@ -576,6 +576,7 @@ export const en = {
     'maintenance.tabs.import': 'Import',
     'maintenance.tabs.history': 'Import history',
     'maintenance.tabs.export': 'Export',
+    'maintenance.tabs.assistant': 'AI assistant',
     'maintenance.tenant.title': 'Select tenant',
     'maintenance.tenant.description':
         'As a system administrator you first choose the tenant whose data you want to maintain. Every tool below acts on exactly that tenant.',
@@ -801,4 +802,57 @@ export const en = {
     'imports.error.execute': 'The import failed.',
     'imports.error.list': 'The import history could not be loaded.',
     'imports.error.delete': 'The import could not be deleted.',
+
+    'assistant.title': 'AI assistant',
+    'assistant.open': 'Open the AI assistant',
+    'assistant.close': 'Close',
+    'assistant.restart': 'Restart',
+    'assistant.emptyHint':
+        'Ask a question about TransBrain – for example about orders, tours or how to use this page.',
+    'assistant.inputLabel': 'Message to the AI assistant',
+    'assistant.send': 'Send',
+    'assistant.typing': 'The assistant is responding …',
+    'assistant.error.dismiss': 'Dismiss',
+    'assistant.error.unavailable':
+        'The AI assistant is currently unavailable. Please try again later.',
+    'assistant.error.notConfigured':
+        'The AI assistant is not fully configured yet. Please contact the administration.',
+    'assistant.error.disabled': 'The AI assistant has been switched off by the administration.',
+    'assistant.error.authFailed':
+        'Signing in to the AI service failed. Please contact the administration.',
+    'assistant.error.failed': 'The request to the AI assistant failed. Please try again.',
+    'assistant.settings.title': 'AI assistant',
+    'assistant.settings.subtitle':
+        'Connection of the central AI assistant: provider, model and key – applies to the whole installation, not to a single tenant.',
+    'assistant.settings.notProvisioned':
+        'No Hermes agent container is provisioned for this installation. The settings cannot be saved.',
+    'assistant.settings.enabled': 'Enable the AI assistant',
+    'assistant.settings.enabledHint': 'Shows the chat for every signed-in user.',
+    'assistant.settings.provider': 'Provider',
+    'assistant.settings.provider.openrouter': 'OpenRouter',
+    'assistant.settings.provider.openai-api': 'OpenAI',
+    'assistant.settings.provider.anthropic': 'Anthropic',
+    'assistant.settings.provider.gemini': 'Google Gemini',
+    'assistant.settings.provider.deepseek': 'DeepSeek',
+    'assistant.settings.provider.xai': 'xAI',
+    'assistant.settings.provider.custom': 'Custom OpenAI-compatible endpoint',
+    'assistant.settings.model': 'Model',
+    'assistant.settings.modelHint':
+        'Model name at the chosen provider, e.g. "anthropic/claude-sonnet-4.5" on OpenRouter.',
+    'assistant.settings.modelNoWhitespace': 'The model name must not contain spaces.',
+    'assistant.settings.baseUrl': 'Endpoint base URL',
+    'assistant.settings.baseUrlHint':
+        'Absolute http(s) address of the OpenAI-compatible service, e.g. http://localhost:11434/v1.',
+    'assistant.settings.baseUrlInvalid': 'Please enter an absolute http(s) URL.',
+    'assistant.settings.autonomy': 'Allow autonomous actions',
+    'assistant.settings.autonomyHint':
+        'The assistant may then also perform write actions through the API (e.g. create or change data) – not just read and answer.',
+    'assistant.settings.apiKey': 'API key',
+    'assistant.settings.apiKeyStored': 'A key is stored – leave empty to keep it.',
+    'assistant.settings.apiKeyHint':
+        'Stored in the agent container and never displayed again.',
+    'assistant.settings.save': 'Save',
+    'assistant.settings.saved': 'The AI assistant settings have been saved.',
+    'assistant.settings.error.load': 'The AI assistant settings could not be loaded.',
+    'assistant.settings.error.save': 'The AI assistant settings could not be saved.',
 } as const;

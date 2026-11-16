@@ -89,6 +89,32 @@ IResourceBuilder<ContainerResource>? nominatim = useOnlineGeocoding
         .WithEnvironment("FREEZE", "true")
         .WithHttpHealthCheck("/status");
 
+// The self-learning AI assistant: Hermes Agent (Nous Research) in its own container, running as
+// a persistent gateway whose OpenAI-compatible API server (port 8642) the TransBrain API proxies
+// chat requests to. All agent state lives in the bind-mounted deploy/hermes/data directory — a
+// persistent volume that is PARTIALLY checked into git (config.yaml, SOUL.md, skills/; runtime
+// state and .env are gitignored, see deploy/hermes/README.md). LLM provider, model and API key
+// are managed at runtime through the central administration UI, which writes the volume's .env;
+// Hermes re-reads that file at the start of every turn, so no restart is needed. The key below
+// only guards the container-local API server — override it per machine via user secrets
+// (Parameters:hermes-api-server-key) and ALWAYS for anything beyond local development.
+string hermesApiServerKey = builder.Configuration["Parameters:hermes-api-server-key"]
+    ?? "transbrain-dev-hermes-key";
+var hermes = builder.AddContainer("hermes", "nousresearch/hermes-agent", "latest")
+    .WithArgs("gateway", "run")
+    .WithBindMount("../../deploy/hermes/data", "/opt/data")
+    .WithHttpEndpoint(targetPort: 8642)
+    .WithHttpHealthCheck("/health")
+    .WithEnvironment("API_SERVER_ENABLED", "true")
+    .WithEnvironment("API_SERVER_HOST", "0.0.0.0")
+    .WithEnvironment("API_SERVER_KEY", hermesApiServerKey)
+    // Credentials of the agent's Keycloak service account (realm client transbrain-agent, role
+    // disponent, fixed demo tenant): the transbrain-api skill exchanges them for a token, which
+    // is what lets the agent read live data and act autonomously when the admin allows it.
+    .WithEnvironment("TRANSBRAIN_AGENT_CLIENT_ID", "transbrain-agent")
+    .WithEnvironment("TRANSBRAIN_AGENT_CLIENT_SECRET", "transbrain-agent-dev-secret")
+    .WithEnvironment("HERMES_TIMEZONE", "Europe/Berlin");
+
 var api = builder.AddProject<Projects.TransBrain_Api>("api")
     // The Api reads only the extract's PBF header, to show region and data age on the geodata page.
     .WithEnvironment(
@@ -97,8 +123,27 @@ var api = builder.AddProject<Projects.TransBrain_Api>("api")
     .WithReference(database).WaitFor(database)
     .WithReference(cache).WaitFor(cache)
     .WithReference(keycloak).WaitFor(keycloak)
+    // Deliberately no WaitFor(hermes): the assistant is an optional sidecar. While the (large)
+    // image still pulls or the admin has not configured a provider yet, the assistant endpoints
+    // answer 503/disabled and the rest of the application is unaffected.
+    .WithEnvironment("HermesAgent__BaseUrl", ReferenceExpression.Create($"{hermes.GetEndpoint("http")}"))
+    .WithEnvironment("HermesAgent__ApiKey", hermesApiServerKey)
+    // The API manages the agent's .env in the shared volume on behalf of the central
+    // administration UI; as a host process it reaches the bind-mount source directly.
+    .WithEnvironment(
+        "HermesAgent__DataDirectory",
+        Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "../../deploy/hermes/data")))
     .WithHttpHealthCheck("/health")
     .WithExternalHttpEndpoints();
+
+// The agent's view of the API and of Keycloak's token endpoint. Aspire rewrites the host-process
+// endpoints to the container gateway address for container consumers. Note the Keycloak scheme
+// caveat from above: the endpoint renders as http:// but actually serves HTTPS with the dev
+// certificate — the transbrain-api skill knows to flip the scheme and to pass -k in development.
+hermes.WithEnvironment("TRANSBRAIN_API_BASE_URL", api.GetEndpoint("http"))
+    .WithEnvironment(
+        "TRANSBRAIN_OIDC_TOKEN_URL",
+        ReferenceExpression.Create($"{keycloak.GetEndpoint("http")}/realms/transbrain/protocol/openid-connect/token"));
 
 if (ors is not null)
 {

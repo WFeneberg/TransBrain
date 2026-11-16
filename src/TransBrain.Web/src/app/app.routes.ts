@@ -50,6 +50,8 @@ const loadImportHistory = () =>
     import('./imports/import-history.component').then((m) => m.ImportHistoryComponent);
 const loadExportPage = () =>
     import('./exports/export.component').then((m) => m.ExportPageComponent);
+const loadAssistantSettings = () =>
+    import('./assistant/assistant-settings.component').then((m) => m.AssistantSettingsComponent);
 
 export const routes: Routes = [
     // angular-auth-oidc-client's checkAuth() detects the OIDC callback by comparing the
@@ -211,6 +213,14 @@ export const routes: Routes = [
             {
                 path: 'export',
                 loadComponent: loadExportPage,
+                canActivate: [requireCapability('system.maintenance')],
+            },
+            // The assistant settings configure the installation's shared agent container -
+            // system infrastructure, not tenant data - so this is the one maintenance page
+            // that works without a tenant selection.
+            {
+                path: 'assistant',
+                loadComponent: loadAssistantSettings,
                 canActivate: [requireCapability('system.maintenance')],
             },
         ],

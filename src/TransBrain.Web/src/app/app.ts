@@ -2,11 +2,12 @@ import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterOutlet } from '@angular/router';
+import { AssistantWidgetComponent } from './assistant/assistant-widget.component';
 import { SessionService } from './auth/session.service';
 import { I18nService } from './i18n/i18n.service';
 
 @Component({
-    imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule],
+    imports: [RouterOutlet, RouterLink, MatToolbarModule, MatButtonModule, AssistantWidgetComponent],
     selector: 'app-root',
     styleUrl: './app.scss',
     templateUrl: './app.html',

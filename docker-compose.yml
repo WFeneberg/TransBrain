@@ -45,6 +45,32 @@ services:
       retries: 30
       start_period: 30s
 
+  # Self-learning AI assistant (see deploy/hermes/README.md and docs/KI_ASSISTENT.md). State
+  # lives in ./deploy/hermes/data — a persistent volume partially checked into git. Provider,
+  # model and API key are managed in the central administration UI, which writes that volume's
+  # .env through the api service's mount; Hermes re-reads it on every turn.
+  hermes:
+    image: nousresearch/hermes-agent:latest
+    command: ["gateway", "run"]
+    environment:
+      API_SERVER_ENABLED: "true"
+      API_SERVER_HOST: 0.0.0.0
+      API_SERVER_KEY: ${HERMES_API_SERVER_KEY:-transbrain-dev-hermes-key}
+      TRANSBRAIN_API_BASE_URL: http://api:8080
+      TRANSBRAIN_OIDC_TOKEN_URL: http://keycloak:8080/realms/transbrain/protocol/openid-connect/token
+      TRANSBRAIN_AGENT_CLIENT_ID: transbrain-agent
+      TRANSBRAIN_AGENT_CLIENT_SECRET: transbrain-agent-dev-secret
+      HERMES_TIMEZONE: Europe/Berlin
+    volumes:
+      - ./deploy/hermes/data:/opt/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8642/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+    # No host port on purpose: only the api service talks to the agent (http://hermes:8642),
+    # and Hermes itself warns that its API server dispatches unsandboxed agent work.
+
   api:
     build:
       context: .
@@ -54,6 +80,11 @@ services:
       ConnectionStrings__transbraindb: Host=postgres;Database=transbraindb;Username=transbrain;Password=${POSTGRES_PASSWORD:-transbrain-dev}
       ConnectionStrings__cache: redis:6379
       services__keycloak__http__0: http://keycloak:8080
+      HermesAgent__BaseUrl: http://hermes:8642
+      HermesAgent__ApiKey: ${HERMES_API_SERVER_KEY:-transbrain-dev-hermes-key}
+      HermesAgent__DataDirectory: /opt/hermes-data
+    volumes:
+      - ./deploy/hermes/data:/opt/hermes-data
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }

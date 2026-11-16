@@ -141,6 +141,57 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "transbrain-agent",
+      "description": "Service account of the Hermes AI assistant: the transbrain-api skill exchanges these client credentials for tokens. Dispatcher role, pinned to the first demo tenant. DEVELOPMENT secret - replace outside local development.",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "transbrain-agent-dev-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "transbrain-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "transbrain-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles-in-id-token",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "tenant-id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "tenant_id",
+            "claim.name": "tenant_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "users": [
@@ -226,6 +277,14 @@
       "lastName": "System",
       "credentials": [ { "type": "password", "value": "system", "temporary": false } ],
       "realmRoles": [ "system-admin" ]
+    },
+    {
+      "id": "0199c0de-0000-7000-9000-000000000008",
+      "username": "service-account-transbrain-agent",
+      "enabled": true,
+      "serviceAccountClientId": "transbrain-agent",
+      "attributes": { "tenant_id": [ "0199c0de-0000-7000-8000-000000000001" ] },
+      "realmRoles": [ "disponent" ]
     }
   ]
 }

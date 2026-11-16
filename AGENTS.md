@@ -16,6 +16,7 @@ This file provides guidance to KI Agent (claude.ai/code, Github Copilot, Jetbrai
 - OpenApi Support
 - Aspire Support
 - Redis cache
+- AI assistant: self-learning Hermes Agent (Nous Research) in its own container, state in the partially git-tracked volume `deploy/hermes/data`, proxied by the API (`Features/Assistant`) — see `docs/KI_ASSISTENT.md`
 
 ## Web Stack for Web Project
 - Angular latest

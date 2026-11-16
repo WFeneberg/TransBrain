@@ -605,6 +605,7 @@ export const de: Record<MessageKey, string> = {
     'maintenance.tabs.import': 'Import',
     'maintenance.tabs.history': 'Import-Verlauf',
     'maintenance.tabs.export': 'Export',
+    'maintenance.tabs.assistant': 'KI-Assistent',
     'maintenance.tenant.title': 'Mandant auswählen',
     'maintenance.tenant.description':
         'Als System-Administrator wählen Sie zuerst den Mandanten, dessen Daten Sie warten möchten. Alle Werkzeuge unten wirken ausschließlich auf diesen Mandanten.',
@@ -639,6 +640,52 @@ export const de: Record<MessageKey, string> = {
     'maintenance.restore.rows': 'Zeilen',
     'maintenance.restore.invalidFile': 'Die Datei ist kein TransBrain-Backup.',
     'maintenance.restore.error': 'Die Wiederherstellung ist fehlgeschlagen. Es wurden keine Daten verändert.',
+    'maintenance.assistant.title': 'KI-Assistent',
+    'maintenance.assistant.subtitle':
+        'Zentrale Konfiguration des gemeinsamen Assistenten: Anbieter, Modell, API-Schlüssel und Autonomie. Sie gilt für die gesamte Installation, nicht für einen einzelnen Mandanten.',
+    'maintenance.assistant.notProvisioned':
+        'Auf dieser Installation ist kein Hermes-Agent-Container eingerichtet. Die Einstellungen können erst gespeichert werden, wenn das Agent-Datenverzeichnis angebunden ist.',
+    'maintenance.assistant.loadError': 'Die Assistent-Einstellungen konnten nicht geladen werden.',
+    'maintenance.assistant.enabled': 'KI-Assistent aktivieren',
+    'maintenance.assistant.enabledHint':
+        'Wenn aktiv, sehen alle angemeldeten Benutzer die Chat-Schaltfläche rechts unten.',
+    'maintenance.assistant.provider': 'Anbieter',
+    'maintenance.assistant.providerCustom': 'Eigener OpenAI-kompatibler Endpunkt',
+    'maintenance.assistant.model': 'Modell',
+    'maintenance.assistant.modelHint':
+        'Modellkennung beim gewählten Anbieter, z. B. „anthropic/claude-sonnet-4.5“ bei OpenRouter.',
+    'maintenance.assistant.baseUrl': 'Basis-URL',
+    'maintenance.assistant.baseUrlHint':
+        'Absolute http(s)-Adresse des OpenAI-kompatiblen Endpunkts, z. B. http://localhost:11434/v1.',
+    'maintenance.assistant.autonomy': 'Autonome Aktionen erlauben',
+    'maintenance.assistant.autonomyHint':
+        'Wenn aktiv, darf der Assistent klar beauftragte Schreibaktionen (Daten anlegen oder ändern) selbst über die TransBrain-API ausführen.',
+    'maintenance.assistant.apiKey': 'API-Schlüssel',
+    'maintenance.assistant.apiKeyHint':
+        'Der Schlüssel wird im Agent-Datenverzeichnis gespeichert und nie wieder angezeigt.',
+    'maintenance.assistant.apiKeyKeepHint': 'Schlüssel ist hinterlegt – leer lassen zum Beibehalten.',
+    'maintenance.assistant.saved': 'Einstellungen gespeichert.',
+    'maintenance.assistant.saveError': 'Die Einstellungen konnten nicht gespeichert werden.',
+    'assistant.title': 'KI-Assistent',
+    'assistant.open': 'KI-Assistent öffnen',
+    'assistant.close': 'Schließen',
+    'assistant.restart': 'Neu starten',
+    'assistant.inputLabel': 'Nachricht an den Assistenten',
+    'assistant.send': 'Senden',
+    'assistant.empty':
+        'Stelle eine Frage zu deiner Arbeit in TransBrain – zum Beispiel zu Aufträgen, Touren oder Stammdaten.',
+    'assistant.typing': 'Der Assistent schreibt…',
+    'assistant.error.unreachable':
+        'Der KI-Assistent ist gerade nicht erreichbar. Bitte versuche es später erneut.',
+    'assistant.error.notConfigured':
+        'Der KI-Assistent ist noch nicht fertig konfiguriert. Bitte wende dich an die Administration.',
+    'assistant.error.disabled': 'Der KI-Assistent ist derzeit abgeschaltet.',
+    'assistant.error.notProvisioned': 'Auf dieser Installation ist kein KI-Assistent eingerichtet.',
+    'assistant.error.authFailed':
+        'Die Anmeldung beim KI-Anbieter ist fehlgeschlagen. Bitte lass den API-Schlüssel in der Verwaltung prüfen.',
+    'assistant.error.upstream':
+        'Der KI-Anbieter konnte die Anfrage nicht beantworten. Bitte versuche es später erneut.',
+    'assistant.error.generic': 'Die Anfrage an den KI-Assistenten ist fehlgeschlagen. Bitte versuche es erneut.',
     'export.title': 'Datenexport',
     'export.subtitle': 'Stammdaten des gewählten Mandanten als Datei herunterladen.',
     'export.description':

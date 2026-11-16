@@ -581,6 +581,7 @@ export const de: Record<keyof typeof en, string> = {
     'maintenance.tabs.import': 'Import',
     'maintenance.tabs.history': 'Import-Verlauf',
     'maintenance.tabs.export': 'Export',
+    'maintenance.tabs.assistant': 'KI-Assistent',
     'maintenance.tenant.title': 'Mandant auswählen',
     'maintenance.tenant.description':
         'Als System-Administrator wählen Sie zuerst den Mandanten, dessen Daten Sie warten möchten. Alle Werkzeuge unten wirken ausschließlich auf diesen Mandanten.',
@@ -809,4 +810,60 @@ export const de: Record<keyof typeof en, string> = {
     'imports.error.execute': 'Der Import ist fehlgeschlagen.',
     'imports.error.list': 'Der Importverlauf konnte nicht geladen werden.',
     'imports.error.delete': 'Der Importvorgang konnte nicht gelöscht werden.',
+
+    'assistant.title': 'KI-Assistent',
+    'assistant.open': 'KI-Assistenten öffnen',
+    'assistant.close': 'Schließen',
+    'assistant.restart': 'Neu starten',
+    'assistant.emptyHint':
+        'Stellen Sie eine Frage zu TransBrain – zum Beispiel zu Aufträgen, Touren oder zur Bedienung dieser Seite.',
+    'assistant.inputLabel': 'Nachricht an den KI-Assistenten',
+    'assistant.send': 'Senden',
+    'assistant.typing': 'Der Assistent antwortet …',
+    'assistant.error.dismiss': 'Hinweis schließen',
+    'assistant.error.unavailable':
+        'Der KI-Assistent ist gerade nicht erreichbar. Bitte versuchen Sie es später erneut.',
+    'assistant.error.notConfigured':
+        'Der KI-Assistent ist noch nicht fertig konfiguriert. Bitte wenden Sie sich an die Administration.',
+    'assistant.error.disabled': 'Der KI-Assistent wurde von der Administration abgeschaltet.',
+    'assistant.error.authFailed':
+        'Die Anmeldung beim KI-Dienst ist fehlgeschlagen. Bitte wenden Sie sich an die Administration.',
+    'assistant.error.failed':
+        'Die Anfrage an den KI-Assistenten ist fehlgeschlagen. Bitte versuchen Sie es erneut.',
+    'assistant.settings.title': 'KI-Assistent',
+    'assistant.settings.subtitle':
+        'Anbindung des zentralen KI-Assistenten: Anbieter, Modell und Schlüssel – gilt für die gesamte Installation, nicht für einzelne Mandanten.',
+    'assistant.settings.notProvisioned':
+        'Für diese Installation ist kein Hermes-Agent-Container eingerichtet. Die Einstellungen können nicht gespeichert werden.',
+    'assistant.settings.enabled': 'KI-Assistenten aktivieren',
+    'assistant.settings.enabledHint': 'Blendet den Chat für alle angemeldeten Benutzer ein.',
+    'assistant.settings.provider': 'Anbieter',
+    'assistant.settings.provider.openrouter': 'OpenRouter',
+    'assistant.settings.provider.openai-api': 'OpenAI',
+    'assistant.settings.provider.anthropic': 'Anthropic',
+    'assistant.settings.provider.gemini': 'Google Gemini',
+    'assistant.settings.provider.deepseek': 'DeepSeek',
+    'assistant.settings.provider.xai': 'xAI',
+    'assistant.settings.provider.custom': 'Eigener OpenAI-kompatibler Endpunkt',
+    'assistant.settings.model': 'Modell',
+    'assistant.settings.modelHint':
+        'Modellname beim gewählten Anbieter, z. B. „anthropic/claude-sonnet-4.5“ bei OpenRouter.',
+    'assistant.settings.modelNoWhitespace': 'Der Modellname darf keine Leerzeichen enthalten.',
+    'assistant.settings.baseUrl': 'Basis-URL des Endpunkts',
+    'assistant.settings.baseUrlHint':
+        'Absolute http(s)-Adresse des OpenAI-kompatiblen Dienstes, z. B. http://localhost:11434/v1.',
+    'assistant.settings.baseUrlInvalid': 'Bitte eine absolute http(s)-Adresse eingeben.',
+    'assistant.settings.autonomy': 'Autonome Aktionen erlauben',
+    'assistant.settings.autonomyHint':
+        'Der Assistent darf dann über die API auch schreibende Aktionen ausführen (z. B. Daten anlegen oder ändern) – nicht nur lesen und antworten.',
+    'assistant.settings.apiKey': 'API-Schlüssel',
+    'assistant.settings.apiKeyStored': 'Schlüssel ist hinterlegt – leer lassen zum Beibehalten.',
+    'assistant.settings.apiKeyHint':
+        'Wird im Agent-Container gespeichert und nie wieder angezeigt.',
+    'assistant.settings.save': 'Speichern',
+    'assistant.settings.saved': 'Die Einstellungen für den KI-Assistenten wurden gespeichert.',
+    'assistant.settings.error.load':
+        'Die Einstellungen des KI-Assistenten konnten nicht geladen werden.',
+    'assistant.settings.error.save':
+        'Die Einstellungen des KI-Assistenten konnten nicht gespeichert werden.',
 };

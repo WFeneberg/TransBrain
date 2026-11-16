@@ -35,6 +35,7 @@ import ImportHistory from './views/ImportHistory.vue';
 import ExportPage from './views/ExportPage.vue';
 import Maintenance from './views/Maintenance.vue';
 import MaintenanceShell from './views/MaintenanceShell.vue';
+import AssistantSettings from './views/AssistantSettings.vue';
 import AuthCallback from './views/AuthCallback.vue';
 import { useAuthStore } from './stores/auth';
 import { useI18n } from './i18n';
@@ -94,6 +95,8 @@ const router = createRouter({
         // plus the import wizard, its history and the export. All of it is cross-tenant work on
         // /api/system/... and demands the system.maintenance capability, which only the
         // system-admin role grants; the shell inside additionally forces a tenant choice first.
+        // The AI assistant settings are the exception: they configure the installation's shared
+        // agent, not a tenant, so the shell shows them without a tenant choice.
         {
             path: '/maintenance',
             component: MaintenanceShell,
@@ -102,6 +105,7 @@ const router = createRouter({
                 { path: 'import', component: ImportWizard, meta: { capability: 'system.maintenance' } },
                 { path: 'import/verlauf', component: ImportHistory, meta: { capability: 'system.maintenance' } },
                 { path: 'export', component: ExportPage, meta: { capability: 'system.maintenance' } },
+                { path: 'assistant', component: AssistantSettings, meta: { capability: 'system.maintenance' } },
             ],
         },
         // The import pages lived at the top level before they moved into the Wartung area; keep

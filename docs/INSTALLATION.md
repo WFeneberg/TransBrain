@@ -20,6 +20,9 @@ flowchart LR
     API --> PG[(PostgreSQL)]
     API --> Redis[(Redis cache)]
     API -->|JWKS / discovery| KC
+    API -->|"chat proxy (OpenAI-compatible)"| Hermes["hermes (AI assistant agent)"]
+    Hermes --- Vol[("deploy/hermes/data volume")]
+    API --- Vol
     KC --> PG
 ```
 
@@ -40,6 +43,10 @@ no CORS configuration in the container setups.
 | `OpenRouteService__Mode` | API | `SelfHosted` (default) plans tour routes against an own OpenRouteService container at `OpenRouteService__BaseUrl`; `Online` uses the public `api.openrouteservice.org` instead — the only routing option in the Compose and Azure setups, which ship no map containers |
 | `OpenRouteService__ApiKey` | API | API key for `Online` mode (free account at openrouteservice.org; setup guide incl. registration: [ONLINE_KARTENDIENSTE.md](ONLINE_KARTENDIENSTE.md)). Missing or wrong = routing answers `503` |
 | `Nominatim__Mode` | API | `SelfHosted` (default) geocodes against an own Nominatim container at `Nominatim__BaseUrl`; `Online` uses the public `nominatim.openstreetmap.org` — no key, but a strict fair-use policy (the required identifying User-Agent is sent automatically; replace `Nominatim__UserAgent` with your own contact) |
+| `HermesAgent__BaseUrl` | API | Base URL of the `hermes` AI-assistant gateway. **Unset = assistant reports "not provisioned"** (feature off, everything else unaffected) |
+| `HermesAgent__ApiKey` | API | Must equal the hermes container's `API_SERVER_KEY` (Compose wires both to `HERMES_API_SERVER_KEY`) |
+| `HermesAgent__DataDirectory` | API | The agent volume (`deploy/hermes/data`) as the **API** process sees it; the settings page edits the `.env` there. See [KI_ASSISTENT.md](KI_ASSISTENT.md) |
+| `TRANSBRAIN_AGENT_CLIENT_SECRET` | hermes | Secret of the `transbrain-agent` realm client the agent uses for autonomous API calls; remove the client to disable that entirely |
 | `API_URL` | web, vueweb | Upstream the nginx `/api/` location proxies to |
 | `OIDC_AUTHORITY` | web, vueweb | Realm URL as the **browser** sees it; written to `/config.js` at container start |
 
@@ -101,6 +108,7 @@ Override via a `.env` file next to `docker-compose.yml` (git-ignored) or the she
 |---|---|
 | `POSTGRES_PASSWORD` | `transbrain-dev` |
 | `KEYCLOAK_ADMIN_PASSWORD` | `admin` |
+| `HERMES_API_SERVER_KEY` | `transbrain-dev-hermes-key` (gateway key between API and the `hermes` assistant container, which exposes no host port; at least 16 characters, or the gateway refuses to start its API server) |
 
 ### Operations
 

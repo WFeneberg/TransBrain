@@ -105,6 +105,12 @@ repositories in `Persistence/Repositories`, `RedisCacheService`, and `Sequential
 pre-check: tour double booking is refused by unique indexes on `(tour_date, vehicle_id)` and
 `(tour_date, driver_id)`; the repository maps the unique violation to a `409`.
 
+The AI assistant's seams also live here (`Infrastructure/Assistant/`): `HermesAgentClient` is a typed
+`HttpClient` implementing `IAssistantGateway` against the hermes container's OpenAI-compatible API, and
+`HermesEnvAssistantConfigurationStore` implements `IAssistantConfigurationStore` by atomically rewriting
+the agent volume's `.env` (foreign lines preserved) — the application slice `Features/Assistant` only
+sees the two abstractions. See [KI_ASSISTENT.md](KI_ASSISTENT.md).
+
 ### 3.4 API
 
 `Program.cs` is the composition root. Endpoints are grouped in classes implementing `IEndpointGroup`

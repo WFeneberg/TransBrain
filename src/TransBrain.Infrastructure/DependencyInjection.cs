@@ -1,6 +1,8 @@
+using System.Net.Http.Headers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TransBrain.Application.Abstractions;
+using TransBrain.Infrastructure.Assistant;
 using TransBrain.Infrastructure.Billing;
 using TransBrain.Infrastructure.Imports;
 using TransBrain.Infrastructure.Persistence.Caching;
@@ -63,6 +65,30 @@ public static class DependencyInjection
         services.AddTransient<IGeocoder>(provider => provider.GetRequiredService<NominatimGeocoder>());
         services.AddTransient<IRoutePlanner>(provider => provider.GetRequiredService<OpenRouteServiceClient>());
         services.AddTransient<IMapDataStatusProvider, MapDataStatusProvider>();
+        services.AddSingleton<IAssistantConfigurationStore, HermesEnvAssistantConfigurationStore>();
+        // ServiceDefaults wraps every HttpClient in the standard resilience handler (30 s total
+        // timeout, 10 s per attempt, retries). Agent turns legitimately run for minutes, and
+        // retrying a chat POST would start a duplicate agent turn — so the hermes client opts out
+        // via RemoveAllResilienceHandlers (experimental, hence the pragma, but purpose-built for
+        // this); client.Timeout below is the only bound.
+#pragma warning disable EXTEXP0001
+        services.AddHttpClient<IAssistantGateway, HermesAgentClient>((provider, client) =>
+        {
+            HermesAgentOptions options = provider.GetRequiredService<IOptions<HermesAgentOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(options.BaseUrl))
+            {
+                // No BaseAddress when unprovisioned; the client then reports the assistant missing.
+                client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+            }
+            if (!string.IsNullOrWhiteSpace(options.ApiKey))
+            {
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", options.ApiKey);
+            }
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(10, options.TimeoutSeconds));
+        })
+        .RemoveAllResilienceHandlers();
+#pragma warning restore EXTEXP0001
         return services;
     }
 }

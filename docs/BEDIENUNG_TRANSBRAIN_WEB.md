@@ -90,6 +90,37 @@ Anders bei den Schaltflächen zum Anlegen, Ändern und Löschen: Die erscheinen 
 die Änderung auch tatsächlich vornehmen dürfen. Rufen Sie ein Formular über die Adresszeile
 auf, für das Ihnen die Berechtigung fehlt, bringt die Anwendung Sie zur Startseite zurück.
 
+## KI-Assistent (Chat)
+
+Unten rechts schwebt — auf jeder Seite der Anwendung — eine runde Schaltfläche mit einem
+Roboter-Symbol. Sie öffnet den **KI-Assistenten**: einen Chat, der Fragen zur Bedienung und
+zu den Daten von TransBrain beantwortet, etwa „Welche Touren fahren heute?“ oder „Wie lege
+ich eine Rechnung an?“. Der Assistent kennt dabei die gerade geöffnete Seite und kann sich
+in seinen Antworten darauf beziehen.
+
+- **Fenster:** Die Schaltfläche öffnet und schließt ein Chat-Fenster mit der Überschrift
+  **„KI-Assistent“**. Eigene Nachrichten stehen rechts, die Antworten des Assistenten links.
+- **Schreiben:** Nachricht in das Eingabefeld tippen und mit **Enter** oder der Schaltfläche
+  **„Senden“** abschicken; **Umschalt+Enter** fügt eine neue Zeile ein.
+- **Warten:** Während der Assistent arbeitet, zeigen drei pulsierende Punkte an, dass die
+  Antwort unterwegs ist. Das darf dauern — der Assistent schlägt für seine Antwort unter
+  Umständen selbst in den Daten nach; im Einzelfall können daraus einige Minuten werden.
+- **Gesprächsverlauf:** Das Gespräch bleibt für die laufende Browser-Sitzung erhalten, auch
+  wenn das Fenster zwischendurch geschlossen oder die Seite gewechselt wird. **„Neu
+  starten“** (Pfeil-Symbol im Kopf des Fensters) beginnt ein leeres Gespräch. Nach Abmelden
+  oder Neuladen der Anwendung ist der Verlauf weg — gespeichert wird er nicht.
+- **Fehler:** Kann der Assistent nicht antworten, erscheint im Fenster ein Hinweis, z. B.
+  „Der KI-Assistent ist gerade nicht erreichbar. Bitte versuchen Sie es später erneut.“ Die
+  eigene Frage bleibt im Verlauf stehen und wird beim nächsten Senden erneut mitgeschickt.
+
+**Ob der Assistent überhaupt zur Verfügung steht, entscheidet die Systemverwaltung** (siehe
+Abschnitt „Wartung“, Reiter „KI-Assistent“). Ist er abgeschaltet oder gar nicht
+eingerichtet, fehlt die Schaltfläche vollständig — das ist kein Fehler. Ebenso legt die
+Systemverwaltung fest, ob der Assistent nur liest und antwortet oder auch selbst Daten
+anlegen und ändern darf („Autonome Aktionen“). Der Chat steht den vier Mandanten-Rollen
+(`admin`, `disponent`, `fahrer`, `viewer`) offen; der `system-admin` konfiguriert ihn nur
+und hat selbst keinen Chat.
+
 ## Fahrzeugliste
 
 Erreichbar über `/vehicles`, den Menüpunkt **Vehicles** oder die Kachel **Vehicles** auf der
@@ -1440,8 +1471,9 @@ gewählten Mandanten.
 
 Erreichbar über den Menüpunkt **Wartung** (`/maintenance`). Der Wartungsbereich bündelt die
 mandantenübergreifenden System-Werkzeuge unter einer Reiterleiste: **Datensicherung** (dieser
-Abschnitt), **Import** und **Import-Verlauf** (Abschnitt „Datenimport“) sowie **Export**
-(Abschnitt „Datenexport“). Menüpunkt und Seiten stehen ausschließlich der Rolle
+Abschnitt), **Import** und **Import-Verlauf** (Abschnitt „Datenimport“), **Export**
+(Abschnitt „Datenexport“) sowie **KI-Assistent** (eigener Abschnitt unten). Menüpunkt und
+Seiten stehen ausschließlich der Rolle
 **`system-admin`** zur Verfügung — einem technischen Systemverwalter, der selbst **keinem
 Mandanten angehört**. Alle anderen Rollen (auch `admin`) werden zur Startseite umgeleitet,
 und die API lehnt ihre Anfragen ab.
@@ -1456,8 +1488,10 @@ Wahl des Mandanten, dessen Daten gewartet werden sollen:
   **Übernehmen** aktivieren — etwa für einen neuen, noch leeren Mandanten, in den eine
   Sicherung oder ein Import eingespielt werden soll.
 
-Erst nach der Wahl erscheinen die Werkzeug-Reiter; jede Aktion wirkt ausschließlich auf den
-gewählten Mandanten, der oberhalb der Reiter angezeigt wird. Die Wahl gilt für die laufende
+Erst nach der Wahl erscheinen die mandantenbezogenen Werkzeug-Reiter; jede ihrer Aktionen
+wirkt ausschließlich auf den gewählten Mandanten, der oberhalb der Reiter angezeigt wird.
+Einzige Ausnahme ist der Reiter **KI-Assistent**: Er betrifft die gesamte Installation und
+ist deshalb schon vor der Mandantenwahl sichtbar und benutzbar. Die Wahl gilt für die laufende
 Browser-Sitzung; eine neue Anmeldung beginnt neutral.
 
 ### Datensicherung
@@ -1506,6 +1540,45 @@ Zwei Dateien werden mit einer Fehlermeldung abgewiesen:
   solche Sicherungen in eine Installation mit passendem Stand zurück und erstellen Sie nach
   jedem Update eine frische Sicherung.
 
+### KI-Assistent (Einstellungen)
+
+Der Reiter **KI-Assistent** konfiguriert den Chat-Assistenten, den die Mandanten-Rollen
+unten rechts auf jeder Seite sehen (Kapitel „KI-Assistent (Chat)“). Er ist der einzige
+Reiter, der **keine Mandantenwahl** verlangt: Es gibt genau einen Assistenten je
+Installation, seine Einstellungen gelten für alle Mandanten gemeinsam.
+
+Ist für die Installation kein Hermes-Agent-Container eingerichtet, zeigt die Seite den
+Warnhinweis „Für diese Installation ist kein Hermes-Agent-Container eingerichtet. Die
+Einstellungen können nicht gespeichert werden.“ Die Felder bleiben sichtbar, Speichern lehnt
+der Server dann aber ab — die Einrichtung des Containers ist Sache des Betriebs (siehe
+`docs/KI_ASSISTENT.md`), nicht dieser Oberfläche.
+
+Die Felder im Einzelnen:
+
+- **„KI-Assistenten aktivieren“** blendet den Chat für alle angemeldeten Benutzer ein bzw.
+  aus. Abgeschaltet verschwindet die Chat-Schaltfläche vollständig aus der Oberfläche.
+- **Anbieter**: der KI-Dienst, über den der Assistent seine Antworten bezieht — zur Wahl
+  stehen **OpenRouter**, **OpenAI**, **Anthropic**, **Google Gemini**, **DeepSeek**, **xAI**
+  und **„Eigener OpenAI-kompatibler Endpunkt“** für selbst betriebene Dienste.
+- **Modell**: der Modellname beim gewählten Anbieter, z. B.
+  `anthropic/claude-sonnet-4.5` bei OpenRouter. Pflichtfeld, solange der Assistent
+  aktiviert ist; Leerzeichen sind nicht erlaubt.
+- **Basis-URL des Endpunkts** erscheint nur beim Anbieter „Eigener OpenAI-kompatibler
+  Endpunkt“ und verlangt eine absolute http(s)-Adresse, z. B. `http://localhost:11434/v1`.
+- **„Autonome Aktionen erlauben“**: Standardmäßig liest der Assistent nur und antwortet.
+  Mit diesem Schalter darf er über die API auch **schreibende** Aktionen ausführen — also
+  etwa Aufträge anlegen oder Daten ändern, wenn eine Benutzerin ihn darum bittet. Schalten
+  Sie das nur ein, wenn das gewünscht ist.
+- **API-Schlüssel**: der Zugangsschlüssel des gewählten Anbieters. Er wird im
+  Agent-Container gespeichert und **nie wieder angezeigt**; ist bereits ein Schlüssel
+  hinterlegt, sagt das Feld „Schlüssel ist hinterlegt – leer lassen zum Beibehalten.“ —
+  ein leeres Feld beim Speichern behält also den vorhandenen Schlüssel, nur eine neue
+  Eingabe ersetzt ihn.
+
+**„Speichern“** übernimmt die Einstellungen und bestätigt mit „Die Einstellungen für den
+KI-Assistenten wurden gespeichert.“ Abgelehnte Eingaben (fehlendes Modell, ungültige
+Basis-URL) markiert das Formular am jeweiligen Feld.
+
 ## Rollen und Rechte
 
 Die Anmeldung erfolgt über Keycloak mit genau einer der Rollen `admin`,
@@ -1528,9 +1601,11 @@ und abschließen — siehe Abschnitt „Touren als Fahrer“.
 
 **`system-admin` ist keine Mandanten-Rolle:** Der Systemverwalter gehört keinem Mandanten an
 und taucht deshalb in der Tabelle nicht auf. Er sieht ausschließlich den globalen
-Wartungsbereich (Datensicherung, Import, Export — Abschnitt „Wartung“) und wählt dort je
-Vorgang den Mandanten, auf den er wirkt; die fachlichen Bereiche (Fahrzeuge, Aufträge,
-Touren …) stehen ihm nicht zur Verfügung.
+Wartungsbereich (Datensicherung, Import, Export, KI-Assistent-Einstellungen — Abschnitt
+„Wartung“) und wählt dort je Vorgang den Mandanten, auf den er wirkt; die fachlichen Bereiche
+(Fahrzeuge, Aufträge, Touren …) stehen ihm nicht zur Verfügung — auch der Chat des
+KI-Assistenten gehört dazu: Er steht nur den vier Mandanten-Rollen offen, der Systemverwalter
+konfiguriert ihn lediglich.
 
 
 **Die Oberfläche bietet nur an, was Ihre Rolle auch darf.** Die Schaltflächen
@@ -1542,8 +1617,8 @@ Menüpunkt **Einstellungen** — mit den Reitern **Rechnungsdesign** und **Geoda
 Änderungen der Geodaten-Wartung („Add coordinates“,
 „Set coordinates“, „Remove manual coordinates“) sind ebenfalls `admin` vorbehalten. Der
 Menüpunkt **Maintenance** — mit der Mandantenwahl und den Reitern **Backup & restore**
-(Datensicherung), **Import** und **Import history** (Datenimport) sowie **Export**
-(Datenexport) — ist zur Gänze — einschließlich des
+(Datensicherung), **Import** und **Import history** (Datenimport), **Export**
+(Datenexport) sowie **KI-Assistent** (Einstellungen des Chat-Assistenten) — ist zur Gänze — einschließlich des
 Ansehens — `system-admin` vorbehalten. Wer eine Schaltfläche nicht sieht, dürfte sie ohnehin nicht benutzen.
 
 Das **Lesen** ist davon unberührt: alle vier Mandanten-Rollen dürfen alle Listen ansehen, mit der

@@ -4,7 +4,8 @@ Dispatch software for a trucking company: vehicles, drivers, transport orders an
 built with .NET 11 (Clean Architecture, a hand-rolled CQRS mediator, EF Core 10 /
 PostgreSQL, Redis) behind Keycloak-issued OIDC tokens, with two frontends — Angular and
 Vue — talking to the same API, plus a Flutter driver app for Android, iOS and the
-browser (`src/TransBrain.DriverApp`).
+browser (`src/TransBrain.DriverApp`) and an optional AI assistant for all users
+(Hermes Agent in its own container, see [docs/KI_ASSISTENT.md](docs/KI_ASSISTENT.md)).
 
 Phase 1 (foundation and walking skeleton) delivered a `Vehicle` aggregate with `Create`
 and `List`, wired end to end through both frontends. Phase 2 (master data completion)
@@ -18,6 +19,7 @@ exists today, and `.superpowers/sdd/` for the phase plans.
 - [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) — architecture, conventions, how to extend and test
 - [docs/INSTALLATION.md](docs/INSTALLATION.md) — local (Aspire), Docker Compose and Azure (Bicep)
 - [docs/KEYCLOAK.md](docs/KEYCLOAK.md) — authentication setup
+- [docs/KI_ASSISTENT.md](docs/KI_ASSISTENT.md) — the AI assistant (Hermes Agent container, volume/git policy, configuration, trust model)
 - [docs/BEDIENUNG_TRANSBRAIN_DRIVERAPP.md](docs/BEDIENUNG_TRANSBRAIN_DRIVERAPP.md) — the Flutter driver app (German operator guide, incl. how to run it)
 
 ## Prerequisites
@@ -133,6 +135,7 @@ password Aspire generates per machine), and for more on how the realm is wired, 
 | Vue (`VueWeb`)   | 4300                                |
 | Flutter web demo (`DriverApp`) | 4400 |
 | Keycloak         | 8080 (HTTPS)                       |
+| Hermes agent (`hermes`) | dynamic (container port 8642) — see the Aspire dashboard |
 | API              | dynamic — see the Aspire dashboard |
 
 ## API endpoints
