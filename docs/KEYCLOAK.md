@@ -113,9 +113,9 @@ The dev realm ships two tenants:
 
 All pre-tenancy data and every migration-seeded catalog entry belong to the default
 tenant; `admin.zweite` sees an empty system and builds its own master data.
-`scripts/seed-testdata.py` fills both tenants with separate test data (the second tenant
-gets its own catalog entries, a haulier in Ingolstadt with its own drivers, vehicles,
-customers, orders and tours).
+`scripts/seed-testdata.py` fills the default tenant with test data (drivers, vehicles,
+customers with delivery locations, part-load orders and tours); the second tenant is
+not seeded and stays empty — useful for testing tenant isolation and empty-state flows.
 
 To give a **new** user a tenant in the admin console: user → **Attributes** tab → add key
 `tenant_id` with the tenant GUID as value. On Keycloak 24+ the attributes tab may hide

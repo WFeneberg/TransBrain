@@ -118,7 +118,7 @@ API isolates all data per tenant based on that claim (see
 (backup/restore, import, export) under `/api/system/…`, where the target tenant is named
 in the URL. `admin.zweite` starts with an empty database view —
 including an empty vehicle catalog — because the migration-seeded catalog belongs to the default
-tenant; `scripts/seed-testdata.py` gives each of the two tenants its own test data.
+tenant; `scripts/seed-testdata.py` seeds test data for the default tenant only.
 
 **These credentials are for local development only. They must never be used in, or
 reach, a deployed environment.**
