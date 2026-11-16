@@ -297,7 +297,7 @@ ORDERS = {
     "dairy": (address("Alpenmilch Weilheim eG", "Münchener Str. 20", "82362", "Weilheim in Oberbayern", "DE"), "frische",
               "Molkereiprodukte gekühlt +2 bis +6 °C, 12 EUR-Paletten", 6500, 4.4,
               (at(3, "05:00"), at(3, "06:30")), (at(3, "08:00"), at(3, "10:00"))),
-    "drinks": (address("Brauerei Weihenstephan Logistik GmbH", "Alte Akademie 1", "85354", "Freising", "DE"),
+    "drinks": (address("Brauerei Weihenstephan Logistik GmbH", "Clemensänger-Ring 10", "85356", "Freising", "DE"),
                "getraenke", "Getränke in Kisten, 14 EUR-Paletten", 7800, 5.0,
                (at(3, "07:00"), at(3, "09:00")), (at(3, "11:00"), at(3, "13:00"))),
     "timber": (address("Holzbau Werdenfels GmbH & Co. KG", "Zugspitzstr. 20", "82467", "Garmisch-Partenkirchen", "DE"),
