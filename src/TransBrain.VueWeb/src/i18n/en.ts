@@ -594,6 +594,14 @@ export const en = {
     'route.kind.Service': 'Stop time (loading and unloading)',
     'route.stopType.Pickup': 'Pickup',
     'route.stopType.Delivery': 'Delivery',
+    'route.violation.Tour.RegimeNotModelled':
+        'Driving in {country} follows rules this planner does not model. Check the rest times manually.',
+    'route.violation.Tour.NationalTruckBan':
+        'Trucks may not drive in {country} at this time: a Sunday truck driving ban applies.',
+    'route.violation.Tour.DailyDrivingExceeded':
+        'Planned driving of {time} h exceeds the 10 h maximum for one day.',
+    'route.violation.Tour.ExtendedDailyDriving':
+        'Planned driving of {time} h needs the 10 h extension, which is allowed twice a week.',
 
     'callback.error': 'Sign-in could not be completed. Please try again.',
 

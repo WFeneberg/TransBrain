@@ -16,7 +16,16 @@ import { I18nService, TranslationKey } from '../i18n/i18n.service';
 import { LocationMapComponent, MapMarker } from '../shared/location-map.component';
 import { Observable, of, Subscription, switchMap } from 'rxjs';
 import { Order, OrderService } from '../orders/order.service';
-import { FittingOrders, Tour, TourRoute, TourService, tourStatusTone } from './tour.service';
+import { FittingOrders, Tour, TourRoute, TourRouteViolation, TourService, tourStatusTone } from './tour.service';
+
+// The API reports rule violations in English with a stable code; known codes
+// are shown through the i18n dictionary, unknown ones fall back to the raw text.
+const VIOLATION_KEYS: Partial<Record<string, TranslationKey>> = {
+    'Tour.RegimeNotModelled': 'tours.route.violation.Tour.RegimeNotModelled',
+    'Tour.NationalTruckBan': 'tours.route.violation.Tour.NationalTruckBan',
+    'Tour.DailyDrivingExceeded': 'tours.route.violation.Tour.DailyDrivingExceeded',
+    'Tour.ExtendedDailyDriving': 'tours.route.violation.Tour.ExtendedDailyDriving',
+};
 
 @Component({
     selector: 'app-tour-detail',
@@ -534,7 +543,7 @@ import { FittingOrders, Tour, TourRoute, TourService, tourStatusTone } from './t
                                                             )
                                                         }}:</strong
                                                     >
-                                                    {{ violation.message }}
+                                                    {{ violationText(violation, r.drivingSeconds) }}
                                                 </span>
                                             </li>
                                         }
@@ -735,6 +744,16 @@ export class TourDetailComponent {
     protected formatDuration(seconds: number): string {
         const minutes = Math.round(seconds / 60);
         return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
+    }
+
+    protected violationText(violation: TourRouteViolation, drivingSeconds: number): string {
+        const key = VIOLATION_KEYS[violation.code];
+        return key
+            ? this.i18n.t(key, {
+                  country: violation.countryCode ?? '',
+                  time: this.formatDuration(drivingSeconds),
+              })
+            : violation.message;
     }
 
     protected enumText(prefix: string, value: string): string {

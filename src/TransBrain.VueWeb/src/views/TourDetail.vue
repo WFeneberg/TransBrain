@@ -13,6 +13,7 @@ import {
     removeOrderFromTour,
     startTour,
     type FittingOrders,
+    type RouteViolation,
     type ScheduleEntry,
     type Tour,
     type TourRoute,
@@ -72,6 +73,15 @@ const kindLabels: Record<ScheduleEntry['kind'], MessageKey> = {
 const stopTypeLabels: Record<'Pickup' | 'Delivery', MessageKey> = {
     Pickup: 'route.stopType.Pickup',
     Delivery: 'route.stopType.Delivery',
+};
+
+// The API reports rule violations in English with a stable code; known codes
+// are shown through the i18n dictionary, unknown ones fall back to the raw text.
+const violationKeys: Partial<Record<string, MessageKey>> = {
+    'Tour.RegimeNotModelled': 'route.violation.Tour.RegimeNotModelled',
+    'Tour.NationalTruckBan': 'route.violation.Tour.NationalTruckBan',
+    'Tour.DailyDrivingExceeded': 'route.violation.Tour.DailyDrivingExceeded',
+    'Tour.ExtendedDailyDriving': 'route.violation.Tour.ExtendedDailyDriving',
 };
 
 const routeMarkers = computed(() =>
@@ -157,6 +167,16 @@ function formatKm(meters: number): string {
 function formatDuration(seconds: number): string {
     const totalMinutes = Math.round(seconds / 60);
     return `${Math.floor(totalMinutes / 60)}:${String(totalMinutes % 60).padStart(2, '0')}`;
+}
+
+function violationText(violation: RouteViolation): string {
+    const key = violationKeys[violation.code];
+    return key
+        ? t(key, {
+              country: violation.countryCode ?? '',
+              time: formatDuration(tourRoute.value?.drivingSeconds ?? 0),
+          })
+        : violation.message;
 }
 
 function formatDateTime(iso: string): string {
@@ -554,7 +574,7 @@ function describe(error: unknown, fallback: string): string {
                                     class="violation"
                                     data-testid="tour-route-violation"
                                 >
-                                    {{ violation.message }}
+                                    {{ violationText(violation) }}
                                 </v-alert>
                             </template>
                         </v-card-text>

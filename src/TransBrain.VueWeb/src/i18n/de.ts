@@ -596,6 +596,14 @@ export const de: Record<MessageKey, string> = {
     'route.kind.Service': 'Standzeit (Be- und Entladung)',
     'route.stopType.Pickup': 'Abholung',
     'route.stopType.Delivery': 'Lieferung',
+    'route.violation.Tour.RegimeNotModelled':
+        'Für Fahrten in {country} gelten Regeln, die diese Planung nicht abbildet. Bitte prüfen Sie die Lenk- und Ruhezeiten manuell.',
+    'route.violation.Tour.NationalTruckBan':
+        'In {country} dürfen Lkw zu dieser Zeit nicht fahren: Es gilt ein Sonntagsfahrverbot.',
+    'route.violation.Tour.DailyDrivingExceeded':
+        'Die geplante Lenkzeit von {time} h überschreitet die zulässige Tageslenkzeit von 10 Stunden.',
+    'route.violation.Tour.ExtendedDailyDriving':
+        'Die geplante Lenkzeit von {time} h nutzt die Verlängerung auf 10 Stunden, die zweimal pro Woche zulässig ist.',
 
     'callback.error': 'Die Anmeldung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.',
 

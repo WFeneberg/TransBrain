@@ -61,4 +61,30 @@ abstract final class Labels {
         'Violation' => 'Verstoß',
         _ => severity,
       };
+
+  /// German text for a driving-time rule the API reports by code; unknown
+  /// codes fall back to the server's English message.
+  static String violationMessage(
+    String code,
+    String? countryCode,
+    Duration plannedDriving,
+    String fallback,
+  ) {
+    final String country = countryCode ?? '?';
+    return switch (code) {
+      'Tour.RegimeNotModelled' =>
+        'Für Fahrten in $country gelten Regeln, die diese Planung nicht '
+            'abbildet. Lenk- und Ruhezeiten bitte manuell prüfen.',
+      'Tour.NationalTruckBan' =>
+        'In $country dürfen Lkw zu dieser Zeit nicht fahren: '
+            'Es gilt ein Sonntagsfahrverbot.',
+      'Tour.DailyDrivingExceeded' =>
+        'Die geplante Lenkzeit von ${Formats.duration(plannedDriving)} '
+            'überschreitet die zulässige Tageslenkzeit von 10 Stunden.',
+      'Tour.ExtendedDailyDriving' =>
+        'Die geplante Lenkzeit von ${Formats.duration(plannedDriving)} nutzt '
+            'die Verlängerung auf 10 Stunden, die zweimal pro Woche zulässig ist.',
+      _ => fallback,
+    };
+  }
 }

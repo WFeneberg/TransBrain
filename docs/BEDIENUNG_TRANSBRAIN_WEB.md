@@ -924,8 +924,9 @@ Auftrags neu geladen. Sie besteht aus:
   werden darf.
 - **Lenk- und Ruhezeiten:** Tabelle mit Fahrt, Pause und Service, jeweils mit Beginn, Ende und
   Land.
-- **Verstöße und Warnungen:** Verstöße werden rot, Warnungen bernsteinfarben angezeigt. Der Text
-  stammt vom Server.
+- **Verstöße und Warnungen:** Verstöße werden rot, Warnungen bernsteinfarben angezeigt — zum
+  Beispiel das Sonntagsfahrverbot oder eine überschrittene Tageslenkzeit, in der gewählten
+  Sprache der Oberfläche.
 
 **Hinweis:** Die Route berechnet ein Routing-Dienst, der auf dem eigenen Server läuft; ein externer
 Dienst oder Schlüssel ist nicht nötig. Er kann nur Strecken im geladenen Kartenausschnitt planen.

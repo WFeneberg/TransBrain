@@ -288,7 +288,12 @@ class _TimelineList extends StatelessWidget {
                     : Icons.warning_amber_outlined,
                 color: violation.isViolation ? Colors.red : Colors.amber[800],
               ),
-              title: Text(violation.message),
+              title: Text(Labels.violationMessage(
+                violation.code,
+                violation.countryCode,
+                Duration(seconds: route.drivingSeconds.round()),
+                violation.message,
+              )),
               subtitle: Text(Labels.violationSeverity(violation.severity)),
               dense: true,
             ),

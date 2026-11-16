@@ -564,6 +564,14 @@ export const en = {
     'tours.route.stopType.Delivery': 'Delivery',
     'tours.route.severity.Violation': 'Violation',
     'tours.route.severity.Warning': 'Warning',
+    'tours.route.violation.Tour.RegimeNotModelled':
+        'Driving in {country} follows rules this planner does not model. Check the rest times manually.',
+    'tours.route.violation.Tour.NationalTruckBan':
+        'Trucks may not drive in {country} at this time: a Sunday truck driving ban applies.',
+    'tours.route.violation.Tour.DailyDrivingExceeded':
+        'Planned driving of {time} h exceeds the 10 h maximum for one day.',
+    'tours.route.violation.Tour.ExtendedDailyDriving':
+        'Planned driving of {time} h needs the 10 h extension, which is allowed twice a week.',
     'tours.route.error.load': 'The route could not be loaded.',
     'tours.route.error.addressNotFound':
         'The address "{address}" was not found in the loaded map extract, so the route cannot be calculated.',

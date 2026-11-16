@@ -569,6 +569,14 @@ export const de: Record<keyof typeof en, string> = {
     'tours.route.stopType.Delivery': 'Zustellung',
     'tours.route.severity.Violation': 'Verstoß',
     'tours.route.severity.Warning': 'Warnung',
+    'tours.route.violation.Tour.RegimeNotModelled':
+        'Für Fahrten in {country} gelten Regeln, die diese Planung nicht abbildet. Bitte prüfen Sie die Lenk- und Ruhezeiten manuell.',
+    'tours.route.violation.Tour.NationalTruckBan':
+        'In {country} dürfen Lkw zu dieser Zeit nicht fahren: Es gilt ein Sonntagsfahrverbot.',
+    'tours.route.violation.Tour.DailyDrivingExceeded':
+        'Die geplante Lenkzeit von {time} h überschreitet die zulässige Tageslenkzeit von 10 Stunden.',
+    'tours.route.violation.Tour.ExtendedDailyDriving':
+        'Die geplante Lenkzeit von {time} h nutzt die Verlängerung auf 10 Stunden, die zweimal pro Woche zulässig ist.',
     'tours.route.error.load': 'Die Route konnte nicht geladen werden.',
     'tours.route.error.addressNotFound':
         'Die Adresse „{address}“ wurde im geladenen Kartenausschnitt nicht gefunden. Ohne sie lässt sich die Route nicht berechnen.',
