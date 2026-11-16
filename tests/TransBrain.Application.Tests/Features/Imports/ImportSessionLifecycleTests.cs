@@ -156,6 +156,89 @@ public class ImportSessionLifecycleTests
     }
 
     [Fact]
+    public async Task Send_CreateApiImportSession_ReadsApiAndStripsQueryFromDisplayName()
+    {
+        ImportTestSetup.TestContext context = ImportTestSetup.Build();
+        context.Parser.NextApiResult = ImportTestSetup.CustomerTables(
+            ["Huber GmbH", "Hauptstr. 1", "80331", "München", "DE", "30"]);
+
+        Result<ImportSessionResponse> result = await context.Sender.Send(
+            new CreateApiImportSessionCommand(
+                "https://alt.example.com/export/kunden?apiKey=supergeheim",
+                [new ImportApiHeader("Authorization", "Bearer token-123")]),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.SourceType.Should().Be("RestApi");
+        result.Value.SourceName.Should().Be("https://alt.example.com/export/kunden");
+        result.Value.SourceName.Should().NotContainAny("apiKey", "supergeheim");
+        result.Value.Tables.Should().ContainSingle(t => t.Name == "Kunden" && t.RowCount == 1);
+        context.Sessions.Sessions.Should().ContainSingle();
+        context.Parser.LastApiUrl.Should().Be(new Uri("https://alt.example.com/export/kunden?apiKey=supergeheim"));
+        context.Parser.LastApiHeaders.Should().ContainSingle(h => h.Name == "Authorization");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("kein-link")]
+    [InlineData("ftp://alt.example.com/kunden")]
+    [InlineData("/nur/ein/pfad")]
+    public async Task Send_CreateApiImportSessionWithInvalidUrl_ReturnsValidationFailure(string url)
+    {
+        ImportTestSetup.TestContext context = ImportTestSetup.Build();
+
+        Result<ImportSessionResponse> result = await context.Sender.Send(
+            new CreateApiImportSessionCommand(url, []), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Validation.Failed");
+        result.Error.Failures.Should().ContainKey(nameof(CreateApiImportSessionCommand.Url));
+        context.Sessions.Sessions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Send_CreateApiImportSessionWithInvalidHeaderName_ReturnsValidationFailure()
+    {
+        ImportTestSetup.TestContext context = ImportTestSetup.Build();
+
+        Result<ImportSessionResponse> result = await context.Sender.Send(
+            new CreateApiImportSessionCommand(
+                "https://alt.example.com/kunden",
+                [new ImportApiHeader("X-Api Key: kaputt", "wert")]),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Validation.Failed");
+    }
+
+    [Fact]
+    public async Task Send_CreateApiImportSessionWhenParserFindsNoTables_ReturnsNoTablesError()
+    {
+        ImportTestSetup.TestContext context = ImportTestSetup.Build();
+        context.Parser.NextApiResult = new ImportTableSet([]);
+
+        Result<ImportSessionResponse> result = await context.Sender.Send(
+            new CreateApiImportSessionCommand("https://alt.example.com/leer", []), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Import.NoTables");
+        context.Sessions.Sessions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Send_CreateApiImportSessionWhenParserFails_PropagatesParserError()
+    {
+        ImportTestSetup.TestContext context = ImportTestSetup.Build();
+        context.Parser.NextApiResult = Error.Unavailable("Import.ApiUnreachable", "no answer");
+
+        Result<ImportSessionResponse> result = await context.Sender.Send(
+            new CreateApiImportSessionCommand("https://alt.example.com/kunden", []), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Import.ApiUnreachable");
+    }
+
+    [Fact]
     public async Task Send_GetImportSession_ReturnsSessionWithTablesAndSampleRows()
     {
         ImportTestSetup.TestContext context = ImportTestSetup.Build();

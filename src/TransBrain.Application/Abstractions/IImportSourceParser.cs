@@ -17,10 +17,13 @@ public enum DatabaseImportProvider
     Odbc
 }
 
+/// <summary>One HTTP request header sent along a REST-API import call, for example an Authorization or API-key header.</summary>
+public sealed record ImportApiHeader(string Name, string Value);
+
 /// <summary>
 /// Turns an import source into the normalized <see cref="ImportTableSet"/>. Implemented in
 /// Infrastructure; failures come back as <see cref="Error"/>s (unreadable file, unreachable
-/// database, missing driver), never as exceptions.
+/// database, missing driver, unreachable API), never as exceptions.
 /// </summary>
 public interface IImportSourceParser
 {
@@ -34,5 +37,11 @@ public interface IImportSourceParser
     Task<Result<ImportTableSet>> ReadDatabaseAsync(
         DatabaseImportProvider provider,
         string connectionString,
+        CancellationToken cancellationToken);
+
+    /// <summary>Fetches a REST API's JSON response once and analyzes it like an uploaded JSON file.</summary>
+    Task<Result<ImportTableSet>> ReadApiAsync(
+        Uri url,
+        IReadOnlyList<ImportApiHeader> headers,
         CancellationToken cancellationToken);
 }

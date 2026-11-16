@@ -12,6 +12,8 @@ public sealed class FakeImportSourceParser : IImportSourceParser
 
     public Result<ImportTableSet>? NextDatabaseResult { get; set; }
 
+    public Result<ImportTableSet>? NextApiResult { get; set; }
+
     public ImportSourceType? LastSourceType { get; private set; }
 
     public string? LastFileName { get; private set; }
@@ -21,6 +23,10 @@ public sealed class FakeImportSourceParser : IImportSourceParser
     public DatabaseImportProvider? LastProvider { get; private set; }
 
     public string? LastConnectionString { get; private set; }
+
+    public Uri? LastApiUrl { get; private set; }
+
+    public IReadOnlyList<ImportApiHeader>? LastApiHeaders { get; private set; }
 
     public Task<Result<ImportTableSet>> ParseFileAsync(
         ImportSourceType sourceType, string fileName, byte[] content, CancellationToken cancellationToken)
@@ -37,5 +43,13 @@ public sealed class FakeImportSourceParser : IImportSourceParser
         LastProvider = provider;
         LastConnectionString = connectionString;
         return Task.FromResult(NextDatabaseResult ?? new ImportTableSet([]));
+    }
+
+    public Task<Result<ImportTableSet>> ReadApiAsync(
+        Uri url, IReadOnlyList<ImportApiHeader> headers, CancellationToken cancellationToken)
+    {
+        LastApiUrl = url;
+        LastApiHeaders = headers;
+        return Task.FromResult(NextApiResult ?? new ImportTableSet([]));
     }
 }

@@ -16,7 +16,13 @@ namespace TransBrain.Api.IntegrationTests;
 /// </summary>
 public class ImportParserTests
 {
-    private static readonly ImportSourceParser Parser = new();
+    private static readonly ImportSourceParser Parser = new(new PlainHttpClientFactory());
+
+    /// <summary>The file and API paths need no named-client configuration; a plain client does.</summary>
+    private sealed class PlainHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
+    }
 
     private static async Task<ImportTableSet> ParseAsync(ImportSourceType type, string fileName, byte[] content)
     {
@@ -325,5 +331,71 @@ public class ImportParserTests
         {
             File.Delete(path);
         }
+    }
+
+    [Fact]
+    public async Task ReadApi_JsonArrayResponse_BecomesOneTableNamedAfterTheUrlPath()
+    {
+        using var server = new StubJsonApi("""[{"firma":"Huber GmbH","ort":"München"},{"firma":"Maier KG","ort":"Köln"}]""");
+
+        Result<ImportTableSet> result = await Parser.ReadApiAsync(
+            new Uri($"{server.BaseUrl}/export/kunden"), [], CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(because: result.Error?.Message ?? string.Empty);
+        ImportTable table = result.Value.Tables.Single();
+        table.Name.Should().Be("kunden");
+        table.Columns.Should().Equal("firma", "ort");
+        table.Rows.Should().HaveCount(2);
+        table.Rows[0][1].Should().Be("München");
+    }
+
+    [Fact]
+    public async Task ReadApi_SendsTheConfiguredAuthHeaderWithTheSingleRequest()
+    {
+        using var server = new StubJsonApi("""[{"a":"1"}]""");
+
+        Result<ImportTableSet> result = await Parser.ReadApiAsync(
+            new Uri($"{server.BaseUrl}/daten"),
+            [new ImportApiHeader("Authorization", "ApiKey geheim-123")],
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue(because: result.Error?.Message ?? string.Empty);
+        server.LastAuthorization.Should().Be("ApiKey geheim-123");
+    }
+
+    [Fact]
+    public async Task ReadApi_NonJsonBody_ReturnsValidationError()
+    {
+        using var server = new StubJsonApi("<html>kein json</html>");
+
+        Result<ImportTableSet> result = await Parser.ReadApiAsync(
+            new Uri($"{server.BaseUrl}/seite"), [], CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Import.InvalidJson");
+    }
+
+    [Fact]
+    public async Task ReadApi_ErrorStatus_ReturnsUnavailableWithTheStatusCode()
+    {
+        using var server = new StubJsonApi("""{"error":"weg"}""", statusCode: 404);
+
+        Result<ImportTableSet> result = await Parser.ReadApiAsync(
+            new Uri($"{server.BaseUrl}/kunden"), [], CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Import.ApiRequestFailed");
+        result.Error.Message.Should().Contain("404");
+    }
+
+    [Fact]
+    public async Task ReadApi_ConnectionRefused_ReturnsUnavailable()
+    {
+        Result<ImportTableSet> result = await Parser.ReadApiAsync(
+            new Uri("http://127.0.0.1:1/kunden"), [], CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("Import.ApiUnreachable");
+        result.Error.Type.Should().Be(ErrorType.Unavailable);
     }
 }

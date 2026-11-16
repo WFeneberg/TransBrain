@@ -719,7 +719,7 @@ export const de: Record<keyof typeof en, string> = {
 
     'imports.title': 'Datenimport',
     'imports.subtitle':
-        'Daten aus anderen Programmen übernehmen – Datei hochladen oder Datenbank verbinden, Felder zuordnen, Vorschau prüfen, importieren',
+        'Daten aus anderen Programmen übernehmen – Datei hochladen, Datenbank verbinden oder REST-API abrufen, Felder zuordnen, Vorschau prüfen, importieren',
     'imports.signIn': 'Bitte anmelden, um Daten zu importieren.',
     'imports.back': 'Zurück',
     'imports.next': 'Weiter',
@@ -742,6 +742,15 @@ export const de: Record<keyof typeof en, string> = {
         'Wird nur einmal für die Analyse verwendet und nicht gespeichert.',
     'imports.source.accessHint': 'Access-Dateien (.mdb/.accdb) werden per Datei-Upload importiert.',
     'imports.source.connect': 'Verbinden & analysieren',
+    'imports.source.api': 'REST-API',
+    'imports.source.apiUrl': 'API-URL',
+    'imports.source.apiHint':
+        'Die API wird einmalig per GET abgerufen; die JSON-Antwort wird wie eine JSON-Datei analysiert. URL und Header werden nicht gespeichert.',
+    'imports.source.apiHeaderName': 'Header-Name',
+    'imports.source.apiHeaderValue': 'Header-Wert',
+    'imports.source.apiAddHeader': 'Header hinzufügen',
+    'imports.source.apiRemoveHeader': 'Header entfernen',
+    'imports.source.apiConnect': 'Abrufen & analysieren',
     'imports.table.label': 'Quelltabelle',
     'imports.table.rowCount': '{count} Zeilen',
     'imports.table.sample': 'Beispieldaten',

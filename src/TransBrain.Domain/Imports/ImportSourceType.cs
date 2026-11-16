@@ -22,5 +22,8 @@ public enum ImportSourceType
     Sqlite,
 
     /// <summary>A live SQL database reached over a connection string (PostgreSQL, SQL Server, MySQL/MariaDB, ODBC).</summary>
-    Database
+    Database,
+
+    /// <summary>A REST API reached over an HTTP(S) URL whose JSON response is analyzed like a JSON file.</summary>
+    RestApi
 }

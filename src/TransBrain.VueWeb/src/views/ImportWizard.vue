@@ -2,6 +2,7 @@
 import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
 import {
+    createApiImportSession,
     createDatabaseImportSession,
     createFileImportSession,
     executeImport,
@@ -9,6 +10,7 @@ import {
     IMPORT_MAX_FILE_MB,
     listImportTargets,
     previewImport,
+    type ImportApiHeader,
     type ImportDatabaseProvider,
     type ImportExecution,
     type ImportFieldKind,
@@ -46,10 +48,12 @@ const { t } = useI18n();
 const step = ref(1);
 
 // Step 1 — source.
-const sourceMode = ref<'file' | 'database'>('file');
+const sourceMode = ref<'file' | 'database' | 'api'>('file');
 const file = ref<File | File[] | null>(null);
 const provider = ref<ImportDatabaseProvider>('PostgreSql');
 const connectionString = ref('');
+const apiUrl = ref('');
+const apiHeaders = ref<ImportApiHeader[]>([]);
 const analyzing = ref(false);
 const sourceError = ref<string | null>(null);
 
@@ -161,6 +165,11 @@ async function analyze(): Promise<void> {
         return;
     }
 
+    if (sourceMode.value === 'api') {
+        await analyzeApi();
+        return;
+    }
+
     const trimmed = connectionString.value.trim();
     if (trimmed === '') {
         sourceError.value = t('import.source.connectionStringRequired');
@@ -178,6 +187,38 @@ async function analyze(): Promise<void> {
     } finally {
         analyzing.value = false;
     }
+}
+
+async function analyzeApi(): Promise<void> {
+    const url = apiUrl.value.trim();
+    if (url === '') {
+        sourceError.value = t('import.source.apiUrlRequired');
+        return;
+    }
+    // Half-filled header rows are leftovers of the add button, not an input error.
+    const headers = apiHeaders.value
+        .map((header) => ({ name: header.name.trim(), value: header.value.trim() }))
+        .filter((header) => header.name !== '' && header.value !== '');
+    analyzing.value = true;
+    try {
+        adoptSession(await createApiImportSession(url, headers));
+    } catch (error) {
+        // 503 is the API's "could not reach it" answer; its detail is English, the UI is not.
+        sourceError.value =
+            axios.isAxiosError(error) && error.response?.status === 503
+                ? t('import.error.apiUnreachable')
+                : describeFailure(error, t('import.error.analyze'));
+    } finally {
+        analyzing.value = false;
+    }
+}
+
+function addApiHeader(): void {
+    apiHeaders.value = [...apiHeaders.value, { name: '', value: '' }];
+}
+
+function removeApiHeader(index: number): void {
+    apiHeaders.value = apiHeaders.value.filter((_, i) => i !== index);
 }
 
 function adoptSession(created: ImportSession): void {
@@ -274,6 +315,8 @@ function resetWizard(): void {
     step.value = 1;
     file.value = null;
     connectionString.value = '';
+    apiUrl.value = '';
+    apiHeaders.value = [];
     sourceError.value = null;
     session.value = null;
     tableName.value = null;
@@ -343,6 +386,9 @@ function describeFailure(error: unknown, fallback: string): string {
                             <v-btn value="database" prepend-icon="mdi-database-outline" data-testid="import-mode-database">{{
                                 t('import.source.database')
                             }}</v-btn>
+                            <v-btn value="api" prepend-icon="mdi-cloud-download-outline" data-testid="import-mode-api">{{
+                                t('import.source.api')
+                            }}</v-btn>
                         </v-btn-toggle>
 
                         <v-row v-if="sourceMode === 'file'">
@@ -359,7 +405,7 @@ function describeFailure(error: unknown, fallback: string): string {
                                 />
                             </v-col>
                         </v-row>
-                        <v-row v-else>
+                        <v-row v-else-if="sourceMode === 'database'">
                             <v-col cols="12" sm="4" md="3">
                                 <v-select
                                     v-model="provider"
@@ -382,6 +428,63 @@ function describeFailure(error: unknown, fallback: string): string {
                                 />
                             </v-col>
                         </v-row>
+                        <template v-else>
+                            <v-row>
+                                <v-col cols="12" md="8">
+                                    <v-text-field
+                                        v-model="apiUrl"
+                                        v-native-testid="'import-api-url'"
+                                        :label="t('import.source.apiUrl')"
+                                        :hint="t('import.source.apiHint')"
+                                        persistent-hint
+                                        placeholder="https://altsystem.example.com/api/kunden"
+                                        variant="outlined"
+                                        density="compact"
+                                    />
+                                </v-col>
+                            </v-row>
+                            <v-row v-for="(header, index) in apiHeaders" :key="index">
+                                <v-col cols="12" sm="4" md="3">
+                                    <v-text-field
+                                        v-model="header.name"
+                                        v-native-testid="`import-api-header-name-${index}`"
+                                        :label="t('import.source.apiHeaderName')"
+                                        placeholder="Authorization"
+                                        variant="outlined"
+                                        density="compact"
+                                    />
+                                </v-col>
+                                <v-col cols="10" sm="6" md="5">
+                                    <v-text-field
+                                        v-model="header.value"
+                                        v-native-testid="`import-api-header-value-${index}`"
+                                        :label="t('import.source.apiHeaderValue')"
+                                        placeholder="Bearer …"
+                                        variant="outlined"
+                                        density="compact"
+                                    />
+                                </v-col>
+                                <v-col cols="2" sm="2" md="1" class="d-flex align-center">
+                                    <v-btn
+                                        icon="mdi-delete-outline"
+                                        variant="text"
+                                        density="comfortable"
+                                        :aria-label="t('import.source.apiRemoveHeader')"
+                                        :data-testid="`import-api-header-remove-${index}`"
+                                        @click="removeApiHeader(index)"
+                                    />
+                                </v-col>
+                            </v-row>
+                            <v-btn
+                                variant="outlined"
+                                prepend-icon="mdi-plus"
+                                class="mt-1"
+                                data-testid="import-api-add-header"
+                                @click="addApiHeader"
+                            >
+                                {{ t('import.source.apiAddHeader') }}
+                            </v-btn>
+                        </template>
 
                         <p v-if="sourceError" class="text-error error-line" data-testid="import-source-error">{{ sourceError }}</p>
                         <div class="step-actions">

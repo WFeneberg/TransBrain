@@ -1281,7 +1281,7 @@ bisherigen Import-Sitzungen.
 
 ### Schritt 1: Quelle
 
-Zwei Arten von Quellen stehen zur Wahl:
+Drei Arten von Quellen stehen zur Wahl:
 
 - **Datei hochladen** — unterstützt werden die gängigen Austauschformate:
   - **CSV** (`.csv`, `.txt`): Trennzeichen Semikolon, Komma oder Tabulator werden automatisch erkannt;
@@ -1309,7 +1309,18 @@ Zwei Arten von Quellen stehen zur Wahl:
   Ist die Datenbank nicht erreichbar, lehnt der Schritt mit einer klaren Meldung ab, ohne
   die Zugangsdaten preiszugeben.
 
-In beiden Fällen liest TransBrain die Quelle sofort vollständig ein und legt eine
+- **REST-API** — eine HTTP-Schnittstelle eines Altsystems wird direkt abgerufen: die
+  eingegebene URL (`http://` oder `https://`) wird **einmalig per GET** gelesen und die
+  JSON-Antwort wie eine JSON-Datei analysiert (ein Array von Objekten ergibt eine Tabelle,
+  ein Objekt mit Array-Eigenschaften je Eigenschaft eine; verschachtelte Objekte werden als
+  `adresse.ort` zu Spalten flachgelegt). Bis zu 20 eigene HTTP-Header können mitgegeben
+  werden, etwa `Authorization` mit einem API-Schlüssel. URL und Header werden **nicht
+  gespeichert** — im Verlauf erscheint nur die Adresse ohne Abfrageparameter und
+  Zugangsdaten, z. B. `https://altsystem.example.com/api/kunden`. Die Antwort darf höchstens
+  **25 MB** groß sein; ist die API nicht erreichbar oder antwortet sie mit einem Fehler,
+  lehnt der Schritt mit einer klaren Meldung ab.
+
+In allen Fällen liest TransBrain die Quelle sofort vollständig ein und legt eine
 **Import-Sitzung** an: alle Tabellen mit ihren Spalten und Zeilen, mandantenbezogen und
 komprimiert in der TransBrain-Datenbank abgelegt. Ab jetzt wird die Quelle nicht mehr
 benötigt — Vorschau und Ausführung arbeiten ausschließlich mit der Sitzung. Je Quelle werden

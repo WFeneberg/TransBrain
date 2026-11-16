@@ -7,7 +7,7 @@ using TransBrain.Domain.Imports;
 namespace TransBrain.Infrastructure.Imports;
 
 /// <summary>Routes each import source type to its parser. The Application layer only sees this seam.</summary>
-internal sealed class ImportSourceParser : IImportSourceParser
+internal sealed class ImportSourceParser(IHttpClientFactory httpClientFactory) : IImportSourceParser
 {
     public async Task<Result<ImportTableSet>> ParseFileAsync(
         ImportSourceType sourceType,
@@ -60,5 +60,14 @@ internal sealed class ImportSourceParser : IImportSourceParser
         }
 
         return await DatabaseTableReader.ReadAsync(connection, dialect, cancellationToken);
+    }
+
+    public async Task<Result<ImportTableSet>> ReadApiAsync(
+        Uri url,
+        IReadOnlyList<ImportApiHeader> headers,
+        CancellationToken cancellationToken)
+    {
+        HttpClient client = httpClientFactory.CreateClient(RestApiImportReader.HttpClientName);
+        return await RestApiImportReader.ReadAsync(client, url, headers, cancellationToken);
     }
 }

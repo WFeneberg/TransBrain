@@ -199,6 +199,62 @@ public class ImportEndpointsTests(TransBrainApiFactory factory) : IClassFixture<
     }
 
     [Fact]
+    public async Task CreateApiImport_FetchesJsonOnceAndAnalyzesItLikeAFile()
+    {
+        using var server = new StubJsonApi(
+            """[{"firma":"Api Kunde GmbH","ort":"Hamburg"},{"firma":"Api Kunde Zwei KG","ort":"Bremen"}]""");
+
+        HttpResponseMessage response = await factory.CreateSystemAdminClient().PostAsJsonAsync(
+            Url("/apis"),
+            new
+            {
+                url = $"{server.BaseUrl}/export/kunden?apiKey=supergeheim",
+                headers = new[] { new { name = "Authorization", value = "Bearer token-123" } }
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        ImportSessionResponse session = (await response.Content.ReadFromJsonAsync<ImportSessionResponse>())!;
+        session.SourceType.Should().Be("RestApi");
+        session.Status.Should().Be("Ready");
+        session.SourceName.Should().NotContainAny("apiKey", "supergeheim");
+        ImportTableResponse table = session.Tables!.Single();
+        table.Name.Should().Be("kunden");
+        table.Columns.Should().Contain("firma");
+        table.RowCount.Should().Be(2);
+        server.LastAuthorization.Should().Be("Bearer token-123");
+    }
+
+    [Fact]
+    public async Task CreateApiImport_WithInvalidUrl_ReturnsValidationProblem()
+    {
+        HttpResponseMessage response = await factory.CreateSystemAdminClient().PostAsJsonAsync(
+            Url("/apis"), new { url = "ftp://alt.example.com/kunden" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateApiImport_WithUnreachableServer_ReturnsServiceUnavailable()
+    {
+        HttpResponseMessage response = await factory.CreateSystemAdminClient().PostAsJsonAsync(
+            Url("/apis"), new { url = "http://127.0.0.1:1/kunden" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+    }
+
+    [Fact]
+    public async Task CreateApiImport_WhenApiAnswersWithErrorStatus_ReturnsServiceUnavailable()
+    {
+        using var server = new StubJsonApi("""{"error":"kaputt"}""", statusCode: 500);
+
+        HttpResponseMessage response = await factory.CreateSystemAdminClient().PostAsJsonAsync(
+            Url("/apis"), new { url = $"{server.BaseUrl}/kunden" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("500");
+    }
+
+    [Fact]
     public async Task CreateDatabaseImport_WithUnreachableServer_ReturnsServiceUnavailableWithoutLeakingSecrets()
     {
         HttpResponseMessage response = await factory.CreateSystemAdminClient().PostAsJsonAsync(

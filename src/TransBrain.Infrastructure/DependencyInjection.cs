@@ -33,6 +33,12 @@ public static class DependencyInjection
         services.AddScoped<ITenantDirectory, PostgresTenantDirectory>();
         services.AddScoped<IImportSessionRepository, ImportSessionRepository>();
         services.AddSingleton<IImportSourceParser, ImportSourceParser>();
+        services.AddHttpClient(RestApiImportReader.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(60);
+            // Some public APIs refuse anonymous clients; identify the importer honestly.
+            client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "TransBrain-Import/1.0");
+        });
         services.AddScoped<ICacheService, RedisCacheService>();
         services.AddHttpClient<OpenRouteServiceClient>((provider, client) =>
         {

@@ -1,4 +1,5 @@
 using TransBrain.Api.Common;
+using TransBrain.Application.Abstractions;
 using TransBrain.Application.Common.Messaging;
 using TransBrain.Application.Features.Imports;
 using TransBrain.Application.Features.Imports.CreateImportSession;
@@ -74,6 +75,22 @@ public sealed class ImportEndpoints : IEndpointGroup
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        group.MapPost("/apis", async (
+                Guid tenantId, CreateApiImportSessionRequest request, ISender sender, CancellationToken ct) =>
+            {
+                Result<ImportSessionResponse> result = await sender.Send(
+                    new CreateApiImportSessionCommand(
+                        request.Url,
+                        request.Headers?.Select(h => new ImportApiHeader(h.Name, h.Value)).ToList() ?? []),
+                    ct);
+                return result.ToHttpResult(session =>
+                    Results.Created($"/api/system/tenants/{tenantId}/imports/{session.Id}", session));
+            })
+            .WithName("CreateApiImportSession")
+            .Produces<ImportSessionResponse>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         group.MapGet("/", async (ISender sender, CancellationToken ct) =>
             {
                 Result<IReadOnlyList<ImportSessionResponse>> result =
@@ -135,6 +152,16 @@ public sealed class ImportEndpoints : IEndpointGroup
 
 /// <summary>A live-database import source. The connection string is used once and never stored.</summary>
 public sealed record CreateDatabaseImportSessionRequest(string Provider, string ConnectionString);
+
+/// <summary>
+/// A REST-API import source: the JSON answer of one GET request is analyzed like an uploaded
+/// JSON file. The optional headers carry authentication (Authorization, API keys); they are used
+/// once and never stored.
+/// </summary>
+public sealed record CreateApiImportSessionRequest(string Url, IReadOnlyList<ApiImportHeaderRequest>? Headers);
+
+/// <summary>One HTTP request header of a REST-API import call.</summary>
+public sealed record ApiImportHeaderRequest(string Name, string Value);
 
 /// <summary>Mapping test run. <c>MaxRows</c> limits the returned row details, not the counted total.</summary>
 public sealed record PreviewImportRequest(

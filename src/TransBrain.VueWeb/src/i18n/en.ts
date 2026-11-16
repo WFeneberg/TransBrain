@@ -694,7 +694,7 @@ export const en = {
         'Both services read an OpenStreetMap extract stored on the server. Updating or replacing the map material is an administrator task — see the operator guide.',
 
     'import.title': 'Data import',
-    'import.subtitle': 'Take over data from other programs: upload a file or connect a database, map the columns, preview and import.',
+    'import.subtitle': 'Take over data from other programs: upload a file, connect a database or fetch a REST API, map the columns, preview and import.',
     'import.signInHint': 'Please sign in to use the data import.',
     'import.back': 'Back',
     'import.continue': 'Continue',
@@ -714,10 +714,21 @@ export const en = {
     'import.source.connectionStringHint':
         'Used once for the analysis and never stored. Access files (.mdb/.accdb) are imported via file upload instead.',
     'import.source.connectionStringRequired': 'Please enter a connection string.',
+    'import.source.api': 'REST API',
+    'import.source.apiUrl': 'API URL',
+    'import.source.apiHint':
+        'The API is fetched once via GET; the JSON response is analyzed like a JSON file. URL and headers are never stored.',
+    'import.source.apiUrlRequired': 'Please enter an API URL.',
+    'import.source.apiHeaderName': 'Header name',
+    'import.source.apiHeaderValue': 'Header value',
+    'import.source.apiAddHeader': 'Add header',
+    'import.source.apiRemoveHeader': 'Remove header',
     'import.source.analyze': 'Analyze source',
     'import.error.analyze': 'The source could not be analyzed.',
     'import.error.databaseUnreachable':
         'Database unreachable. Please check the connection string and whether the server can be reached.',
+    'import.error.apiUnreachable':
+        'API unreachable. Please check the URL, the headers and whether the service can be reached.',
     'import.table.title': 'Source table',
     'import.table.rowCount': '{count} rows',
     'import.table.sampleTitle': 'Sample data (first {count} rows)',

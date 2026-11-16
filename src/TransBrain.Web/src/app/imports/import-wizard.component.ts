@@ -17,6 +17,7 @@ import { I18nService, TranslationKey } from '../i18n/i18n.service';
 import {
     IMPORT_FILE_EXTENSIONS,
     IMPORT_MAX_FILE_BYTES,
+    ImportApiHeader,
     ImportDatabaseProvider,
     ImportExecution,
     ImportFieldKind,
@@ -114,6 +115,10 @@ interface MappingRow {
                                         <mat-icon>database</mat-icon>
                                         {{ i18n.t('imports.source.database') }}
                                     </mat-button-toggle>
+                                    <mat-button-toggle value="api" data-testid="import-mode-api">
+                                        <mat-icon>cloud_download</mat-icon>
+                                        {{ i18n.t('imports.source.api') }}
+                                    </mat-button-toggle>
                                 </mat-button-toggle-group>
 
                                 @if (sourceMode() === 'file') {
@@ -151,7 +156,7 @@ interface MappingRow {
                                             })
                                         }}
                                     </p>
-                                } @else {
+                                } @else if (sourceMode() === 'database') {
                                     <div class="database-form">
                                         <mat-form-field
                                             appearance="outline"
@@ -196,6 +201,102 @@ interface MappingRow {
                                         {{ i18n.t('imports.source.connectionStringHint') }}
                                         {{ i18n.t('imports.source.accessHint') }}
                                     </p>
+                                } @else {
+                                    <div class="database-form">
+                                        <mat-form-field
+                                            appearance="outline"
+                                            subscriptSizing="dynamic"
+                                            class="grow"
+                                        >
+                                            <mat-label>{{
+                                                i18n.t('imports.source.apiUrl')
+                                            }}</mat-label>
+                                            <input
+                                                matInput
+                                                [value]="apiUrl()"
+                                                (input)="apiUrl.set($any($event.target).value)"
+                                                placeholder="https://altsystem.example.com/api/kunden"
+                                                data-testid="import-api-url"
+                                            />
+                                        </mat-form-field>
+                                    </div>
+                                    @for (header of apiHeaders(); track $index) {
+                                        <div class="database-form">
+                                            <mat-form-field
+                                                appearance="outline"
+                                                subscriptSizing="dynamic"
+                                            >
+                                                <mat-label>{{
+                                                    i18n.t('imports.source.apiHeaderName')
+                                                }}</mat-label>
+                                                <input
+                                                    matInput
+                                                    [value]="header.name"
+                                                    (input)="
+                                                        setApiHeaderName(
+                                                            $index,
+                                                            $any($event.target).value
+                                                        )
+                                                    "
+                                                    placeholder="Authorization"
+                                                    [attr.data-testid]="
+                                                        'import-api-header-name-' + $index
+                                                    "
+                                                />
+                                            </mat-form-field>
+                                            <mat-form-field
+                                                appearance="outline"
+                                                subscriptSizing="dynamic"
+                                                class="grow"
+                                            >
+                                                <mat-label>{{
+                                                    i18n.t('imports.source.apiHeaderValue')
+                                                }}</mat-label>
+                                                <input
+                                                    matInput
+                                                    [value]="header.value"
+                                                    (input)="
+                                                        setApiHeaderValue(
+                                                            $index,
+                                                            $any($event.target).value
+                                                        )
+                                                    "
+                                                    placeholder="Bearer …"
+                                                    [attr.data-testid]="
+                                                        'import-api-header-value-' + $index
+                                                    "
+                                                />
+                                            </mat-form-field>
+                                            <button
+                                                mat-icon-button
+                                                type="button"
+                                                (click)="removeApiHeader($index)"
+                                                [attr.aria-label]="
+                                                    i18n.t('imports.source.apiRemoveHeader')
+                                                "
+                                                [attr.data-testid]="
+                                                    'import-api-header-remove-' + $index
+                                                "
+                                            >
+                                                <mat-icon>delete</mat-icon>
+                                            </button>
+                                        </div>
+                                    }
+                                    <div>
+                                        <button
+                                            mat-stroked-button
+                                            type="button"
+                                            (click)="addApiHeader()"
+                                            data-testid="import-api-add-header"
+                                        >
+                                            <mat-icon>add</mat-icon>
+                                            {{ i18n.t('imports.source.apiAddHeader') }}
+                                        </button>
+                                    </div>
+                                    <p class="hint">
+                                        <mat-icon aria-hidden="true">info</mat-icon>
+                                        {{ i18n.t('imports.source.apiHint') }}
+                                    </p>
                                 }
 
                                 @if (sourceError(); as message) {
@@ -220,7 +321,7 @@ interface MappingRow {
                                         <mat-icon>cloud_upload</mat-icon>
                                         {{ i18n.t('imports.source.upload') }}
                                     </button>
-                                } @else {
+                                } @else if (sourceMode() === 'database') {
                                     <button
                                         mat-flat-button
                                         type="button"
@@ -230,6 +331,17 @@ interface MappingRow {
                                     >
                                         <mat-icon>cable</mat-icon>
                                         {{ i18n.t('imports.source.connect') }}
+                                    </button>
+                                } @else {
+                                    <button
+                                        mat-flat-button
+                                        type="button"
+                                        [disabled]="!apiUrl().trim() || creating()"
+                                        (click)="connectApi()"
+                                        data-testid="import-connect-api"
+                                    >
+                                        <mat-icon>cloud_download</mat-icon>
+                                        {{ i18n.t('imports.source.apiConnect') }}
                                     </button>
                                 }
                             </div>
@@ -876,10 +988,12 @@ export class ImportWizardComponent {
     protected readonly acceptAttribute = IMPORT_FILE_EXTENSIONS.join(',');
     protected readonly maxFileMb = MAX_FILE_MB;
 
-    protected readonly sourceMode = signal<'file' | 'database'>('file');
+    protected readonly sourceMode = signal<'file' | 'database' | 'api'>('file');
     protected readonly selectedFile = signal<File | null>(null);
     protected readonly provider = signal<ImportDatabaseProvider>('PostgreSql');
     protected readonly connectionString = signal('');
+    protected readonly apiUrl = signal('');
+    protected readonly apiHeaders = signal<ImportApiHeader[]>([]);
     protected readonly creating = signal(false);
     protected readonly sourceError = signal<string | null>(null);
 
@@ -1034,6 +1148,46 @@ export class ImportWizardComponent {
         });
     }
 
+    protected addApiHeader(): void {
+        this.apiHeaders.update((headers) => [...headers, { name: '', value: '' }]);
+    }
+
+    protected removeApiHeader(index: number): void {
+        this.apiHeaders.update((headers) => headers.filter((_, i) => i !== index));
+    }
+
+    protected setApiHeaderName(index: number, name: string): void {
+        this.apiHeaders.update((headers) =>
+            headers.map((header, i) => (i === index ? { ...header, name } : header)),
+        );
+    }
+
+    protected setApiHeaderValue(index: number, value: string): void {
+        this.apiHeaders.update((headers) =>
+            headers.map((header, i) => (i === index ? { ...header, value } : header)),
+        );
+    }
+
+    protected connectApi(): void {
+        const url = this.apiUrl().trim();
+        if (!url || this.creating()) {
+            return;
+        }
+        // Half-filled header rows are leftovers of the add button, not an input error.
+        const headers = this.apiHeaders()
+            .map((header) => ({ name: header.name.trim(), value: header.value.trim() }))
+            .filter((header) => header.name !== '' && header.value !== '');
+        this.creating.set(true);
+        this.sourceError.set(null);
+        this.service.connectApi(url, headers).subscribe({
+            next: (created) => this.onSessionCreated(created),
+            error: (error: HttpErrorResponse) => {
+                this.creating.set(false);
+                this.sourceError.set(this.describe(error, this.i18n.t('imports.error.create')));
+            },
+        });
+    }
+
     protected onStepChange(event: StepperSelectionEvent): void {
         if (event.selectedIndex === 2) {
             this.autoMap();
@@ -1079,6 +1233,8 @@ export class ImportWizardComponent {
     protected reset(): void {
         this.selectedFile.set(null);
         this.connectionString.set('');
+        this.apiUrl.set('');
+        this.apiHeaders.set([]);
         this.creating.set(false);
         this.sourceError.set(null);
         this.importSession.set(null);

@@ -712,7 +712,7 @@ export const en = {
 
     'imports.title': 'Data import',
     'imports.subtitle':
-        'Take over data from other programs - upload a file or connect a database, map the fields, check the preview, import',
+        'Take over data from other programs - upload a file, connect a database or fetch a REST API, map the fields, check the preview, import',
     'imports.signIn': 'Please sign in to import data.',
     'imports.back': 'Back',
     'imports.next': 'Next',
@@ -734,6 +734,15 @@ export const en = {
     'imports.source.connectionStringHint': 'Used once for the analysis and never stored.',
     'imports.source.accessHint': 'Access files (.mdb/.accdb) are imported via file upload.',
     'imports.source.connect': 'Connect & analyze',
+    'imports.source.api': 'REST API',
+    'imports.source.apiUrl': 'API URL',
+    'imports.source.apiHint':
+        'The API is fetched once via GET; the JSON response is analyzed like a JSON file. URL and headers are never stored.',
+    'imports.source.apiHeaderName': 'Header name',
+    'imports.source.apiHeaderValue': 'Header value',
+    'imports.source.apiAddHeader': 'Add header',
+    'imports.source.apiRemoveHeader': 'Remove header',
+    'imports.source.apiConnect': 'Fetch & analyze',
     'imports.table.label': 'Source table',
     'imports.table.rowCount': '{count} rows',
     'imports.table.sample': 'Sample data',

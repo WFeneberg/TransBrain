@@ -49,6 +49,12 @@ export interface ImportSession {
 
 export type ImportDatabaseProvider = 'PostgreSql' | 'SqlServer' | 'MySql' | 'Odbc';
 
+/** One HTTP request header of a REST-API import call (e.g. Authorization); used once, never stored. */
+export interface ImportApiHeader {
+    name: string;
+    value: string;
+}
+
 /** A column-to-field assignment; `constantValue` fills the field when the cell is empty. */
 export interface ImportFieldMapping {
     targetField: string;
@@ -131,6 +137,10 @@ export class ImportService {
             provider,
             connectionString,
         });
+    }
+
+    connectApi(url: string, headers: ImportApiHeader[]): Observable<ImportSession> {
+        return this.http.post<ImportSession>(`${this.base()}/apis`, { url, headers });
     }
 
     list(): Observable<ImportSession[]> {

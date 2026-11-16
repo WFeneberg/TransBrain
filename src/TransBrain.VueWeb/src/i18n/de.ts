@@ -696,7 +696,7 @@ export const de: Record<MessageKey, string> = {
         'Beide Dienste lesen einen OpenStreetMap-Auszug auf dem Server. Das Aktualisieren oder Ersetzen des Kartenmaterials übernimmt die Administration — siehe Bedienungsanleitung.',
 
     'import.title': 'Datenimport',
-    'import.subtitle': 'Daten aus anderen Programmen übernehmen: Datei hochladen oder Datenbank verbinden, Spalten zuordnen, prüfen und importieren.',
+    'import.subtitle': 'Daten aus anderen Programmen übernehmen: Datei hochladen, Datenbank verbinden oder REST-API abrufen, Spalten zuordnen, prüfen und importieren.',
     'import.signInHint': 'Bitte melden Sie sich an, um den Datenimport zu nutzen.',
     'import.back': 'Zurück',
     'import.continue': 'Weiter',
@@ -716,10 +716,21 @@ export const de: Record<MessageKey, string> = {
     'import.source.connectionStringHint':
         'Wird einmalig für die Analyse verwendet und nicht gespeichert. Access-Dateien (.mdb/.accdb) importieren Sie bitte per Datei-Upload.',
     'import.source.connectionStringRequired': 'Bitte geben Sie eine Verbindungszeichenfolge ein.',
+    'import.source.api': 'REST-API',
+    'import.source.apiUrl': 'API-URL',
+    'import.source.apiHint':
+        'Die API wird einmalig per GET abgerufen; die JSON-Antwort wird wie eine JSON-Datei analysiert. URL und Header werden nicht gespeichert.',
+    'import.source.apiUrlRequired': 'Bitte geben Sie eine API-URL ein.',
+    'import.source.apiHeaderName': 'Header-Name',
+    'import.source.apiHeaderValue': 'Header-Wert',
+    'import.source.apiAddHeader': 'Header hinzufügen',
+    'import.source.apiRemoveHeader': 'Header entfernen',
     'import.source.analyze': 'Quelle analysieren',
     'import.error.analyze': 'Die Quelle konnte nicht analysiert werden.',
     'import.error.databaseUnreachable':
         'Datenbank nicht erreichbar. Bitte prüfen Sie die Verbindungszeichenfolge und ob der Server erreichbar ist.',
+    'import.error.apiUnreachable':
+        'API nicht erreichbar. Bitte prüfen Sie die URL, die Header und ob der Dienst erreichbar ist.',
     'import.table.title': 'Quelltabelle',
     'import.table.rowCount': '{count} Zeilen',
     'import.table.sampleTitle': 'Beispieldaten (erste {count} Zeilen)',

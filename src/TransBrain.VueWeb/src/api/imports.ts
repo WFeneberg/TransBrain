@@ -23,6 +23,12 @@ export const IMPORT_DATABASE_PROVIDERS = ['PostgreSql', 'SqlServer', 'MySql', 'O
 
 export type ImportDatabaseProvider = (typeof IMPORT_DATABASE_PROVIDERS)[number];
 
+/** One HTTP request header of a REST-API import call (e.g. Authorization); used once, never stored. */
+export interface ImportApiHeader {
+    name: string;
+    value: string;
+}
+
 export type ImportSessionStatus = 'Ready' | 'Completed' | 'CompletedWithErrors' | 'Failed';
 
 export type ImportFieldKind = 'Text' | 'Integer' | 'Decimal' | 'Date' | 'Boolean' | 'TextList';
@@ -134,6 +140,12 @@ export async function createDatabaseImportSession(
     connectionString: string,
 ): Promise<ImportSession> {
     const response = await client.post<ImportSession>(`${systemApiBase()}/imports/databases`, { provider, connectionString });
+    return response.data;
+}
+
+/** Fetches a REST API's JSON response once; URL and headers are never stored by the API. */
+export async function createApiImportSession(url: string, headers: ImportApiHeader[]): Promise<ImportSession> {
+    const response = await client.post<ImportSession>(`${systemApiBase()}/imports/apis`, { url, headers });
     return response.data;
 }
 
