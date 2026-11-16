@@ -121,9 +121,12 @@ in seinen Antworten darauf beziehen.
 
 **Ob der Assistent überhaupt zur Verfügung steht, entscheidet die Systemverwaltung** (siehe
 Abschnitt „Wartung“, Reiter „KI-Assistent“). Ist er abgeschaltet oder gar nicht
-eingerichtet, fehlt die Schaltfläche vollständig — das ist kein Fehler. Ebenso legt die
-Systemverwaltung fest, ob der Assistent nur liest und antwortet oder auch selbst Daten
-anlegen und ändern darf („Autonome Aktionen“). Der Chat steht den vier Mandanten-Rollen
+eingerichtet, fehlt die Schaltfläche vollständig — das ist kein Fehler. Schreibaktionen, die
+Sie dem Assistenten klar beauftragen (etwa „Lege diesen Anhänger an“), führt er selbst über
+die TransBrain-API aus, sofern Ihre eigene Rolle schreiben darf (`admin` oder `disponent`;
+`fahrer` und `viewer` bekommen stattdessen die Bedienschritte erklärt). Ob er darüber hinaus
+auch **eigene Vorschläge ohne Einzelanweisung** umsetzen darf, legt die Systemverwaltung mit
+dem Schalter „Autonome Aktionen“ fest. Der Chat steht den vier Mandanten-Rollen
 (`admin`, `disponent`, `fahrer`, `viewer`) offen; der `system-admin` konfiguriert ihn nur
 und hat selbst keinen Chat.
 
@@ -1571,10 +1574,11 @@ Die Felder im Einzelnen:
   aktiviert ist; Leerzeichen sind nicht erlaubt.
 - **Basis-URL des Endpunkts** erscheint nur beim Anbieter „Eigener OpenAI-kompatibler
   Endpunkt“ und verlangt eine absolute http(s)-Adresse, z. B. `http://localhost:11434/v1`.
-- **„Autonome Aktionen erlauben“**: Standardmäßig liest der Assistent nur und antwortet.
-  Mit diesem Schalter darf er über die API auch **schreibende** Aktionen ausführen — also
-  etwa Aufträge anlegen oder Daten ändern, wenn eine Benutzerin ihn darum bittet. Schalten
-  Sie das nur ein, wenn das gewünscht ist.
+- **„Autonome Aktionen erlauben“**: Klar beauftragte Schreibaktionen von Benutzern mit
+  Schreibrechten (`admin`, `disponent`) führt der Assistent immer aus — also etwa einen
+  Auftrag anlegen, wenn eine Benutzerin ihn darum bittet. Mit diesem Schalter darf er
+  **zusätzlich selbstinitiiert** handeln, d. h. eigene Vorschläge ohne Einzelanweisung
+  umsetzen. Schalten Sie das nur ein, wenn das gewünscht ist.
 - **API-Schlüssel**: der Zugangsschlüssel des gewählten Anbieters. Er wird im
   Agent-Container gespeichert und **nie wieder angezeigt**; ist bereits ein Schlüssel
   hinterlegt, sagt das Feld „Schlüssel ist hinterlegt – leer lassen zum Beibehalten.“ —

@@ -147,9 +147,31 @@ internal sealed class ChatWithAssistantCommandHandler(
             context.AppendLine($"- Aktuell geöffnete Seite: {payload.PageContext}");
         }
 
-        context.AppendLine(configuration.AutonomousActionsEnabled
-            ? "- Autonome Aktionen sind erlaubt: klar beauftragte Schreibaktionen darfst du über den Skill transbrain-api selbst ausführen; kündige sie vorher kurz an."
-            : "- Autonome Aktionen sind NICHT erlaubt: führe keine schreibenden API-Aufrufe aus, sondern erkläre die nötigen Schritte in der Oberfläche.");
+        // Write policy: the user's own role decides whether instructed writes are allowed at all;
+        // the autonomy switch only adds self-initiated actions on top. The hard boundary stays the
+        // service account's role and tenant, whatever the prompt says.
+        bool mayInstructWrites = currentUser.IsInRole("admin") || currentUser.IsInRole("disponent");
+        if (!mayInstructWrites)
+        {
+            context.AppendLine(
+                "- Schreibende API-Aufrufe sind für diesen Benutzer NICHT erlaubt (Rolle ohne Schreibrechte): " +
+                "führe keine aus, sondern erkläre die nötigen Schritte in der Oberfläche.");
+        }
+        else if (configuration.AutonomousActionsEnabled)
+        {
+            context.AppendLine(
+                "- Autonome Aktionen sind erlaubt: Schreibaktionen darfst du über den Skill transbrain-api " +
+                "ausführen — beauftragte sofort, sinnvolle eigene Vorschläge auch ohne Einzelanweisung; " +
+                "kündige jede vorher kurz an.");
+        }
+        else
+        {
+            context.AppendLine(
+                "- Schreibaktionen auf Anweisung sind erlaubt: was dieser Benutzer in der Unterhaltung klar " +
+                "beauftragt (z. B. \"lege an\", \"ändere\", \"storniere\"), führst du über den Skill " +
+                "transbrain-api aus; kündige es vorher kurz an. Nicht beauftragte Änderungen schlägst du " +
+                "nur vor, statt sie auszuführen.");
+        }
 
         return context.ToString();
     }

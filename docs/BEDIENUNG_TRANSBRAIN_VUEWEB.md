@@ -1455,10 +1455,12 @@ gesendeten Nachricht hinaus; sie gelten nur für diese eine Nachricht und werden
 weiteren Gesprächsverlauf nicht erneut übertragen. Bilder werden dem KI-Modell direkt
 gezeigt, alle anderen Dateien liest der Agent über sein Datenverzeichnis.
 
-Was der Assistent darf, hängt von der zentralen Einstellung **„Allow autonomous actions"**
-(Autonome Aktionen erlauben) ab: Ist sie aus, erklärt er nur die nötigen Schritte in der
-Oberfläche; ist sie an, darf er klar beauftragte Schreibaktionen (etwa einen Auftrag anlegen)
-selbst über die TransBrain-API ausführen und kündigt das vorher an.
+Schreibaktionen, die Sie dem Assistenten im Chat klar beauftragen (etwa „Lege diesen Anhänger
+an"), führt er selbst über die TransBrain-API aus und kündigt das vorher an — vorausgesetzt,
+Ihre eigene Rolle darf schreiben (`admin` oder `disponent`; `fahrer` und `viewer` bekommen
+stattdessen die nötigen Schritte in der Oberfläche erklärt). Die zentrale Einstellung
+**„Allow autonomous actions"** (Autonome Aktionen erlauben) steuert zusätzlich, ob der
+Assistent auch eigene Vorschläge ohne Einzelanweisung umsetzen darf.
 
 Kommt keine Antwort zustande, erscheint ein schließbarer Hinweis im Chat-Fenster — etwa wenn
 der Assistent noch nicht fertig konfiguriert ist („Der KI-Assistent ist noch nicht fertig
@@ -1566,11 +1568,11 @@ Die Felder im Einzelnen:
   aktiviert ist, ist das Feld Pflicht.
 - **„Base URL"** (Basis-URL): erscheint nur beim eigenen Endpunkt und verlangt eine absolute
   http(s)-Adresse, z. B. `http://localhost:11434/v1`.
-- **„Allow autonomous actions"** (Autonome Aktionen erlauben): Ist der Schalter aus, erklärt
-  der Assistent nur Bedienschritte. Ist er an, darf der Agent klar beauftragte
-  **Schreibaktionen selbst über die TransBrain-API ausführen** (z. B. einen Auftrag anlegen) —
-  mit einem eigenen technischen Benutzerkonto. Aktivieren Sie das nur, wenn dieses Vertrauen
-  gewollt ist.
+- **„Allow autonomous actions"** (Autonome Aktionen erlauben): Klar beauftragte
+  Schreibaktionen von Benutzern mit Schreibrechten (`admin`, `disponent`) führt der Assistent
+  immer selbst über die TransBrain-API aus — mit einem eigenen technischen Benutzerkonto.
+  Dieser Schalter erlaubt **zusätzlich selbstinitiierte Aktionen**: eigene Vorschläge des
+  Assistenten ohne Einzelanweisung. Aktivieren Sie das nur, wenn dieses Vertrauen gewollt ist.
 - **„API key"** (API-Schlüssel): der Schlüssel des gewählten Anbieters. Er wird **nur
   geschrieben und nie wieder angezeigt**; ob einer hinterlegt ist, verrät der Hinweis unter
   dem Feld („A key is stored – leave empty to keep it." — Schlüssel ist hinterlegt, leer

@@ -18,7 +18,7 @@ required_environment_variables:
 | `TRANSBRAIN_API_BASE_URL` | Base URL of the TransBrain API, e.g. `http://api:8080` |
 | `TRANSBRAIN_OIDC_TOKEN_URL` | Keycloak token endpoint of the `transbrain` realm |
 | `TRANSBRAIN_AGENT_CLIENT_ID` / `TRANSBRAIN_AGENT_CLIENT_SECRET` | Client credentials of the agent's service account (role `disponent`, fixed demo tenant) |
-| `TRANSBRAIN_ASSISTANT_AUTONOMY` | `true` = write actions are allowed, otherwise **read-only** |
+| `TRANSBRAIN_ASSISTANT_AUTONOMY` | `true` = self-initiated write actions are allowed too; instructed writes follow the per-conversation system context |
 
 If any of these are missing, say so instead of guessing.
 
@@ -87,9 +87,12 @@ Discover anything else via the OpenAPI document at `GET $TRANSBRAIN_API_BASE_URL
 
 ## Rules
 
-1. **Autonomy gate:** before any `POST`/`PUT`/`DELETE`, check `TRANSBRAIN_ASSISTANT_AUTONOMY`.
-   If it is not `true`, do not write — explain to the user what you *would* do and how to do it
-   in the UI instead.
+1. **Write gate:** whether you may `POST`/`PUT`/`DELETE` is stated in the system message of each
+   conversation ("Kontext dieser Anfrage"): writes the user **clearly instructed** are allowed
+   whenever that context says the user may instruct writes. `TRANSBRAIN_ASSISTANT_AUTONOMY=true`
+   additionally allows **self-initiated** writes (your own sensible proposals, without a per-action
+   instruction). When writing is not allowed, explain what you *would* do and how to do it in the
+   UI instead.
 2. Announce every write action in one short sentence before executing it, and report the result
    (including the id of anything you created).
 3. On `403` you lack the role for that action — say so. On `503` the service behind the endpoint

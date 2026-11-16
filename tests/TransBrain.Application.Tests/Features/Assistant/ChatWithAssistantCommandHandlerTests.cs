@@ -86,15 +86,31 @@ public class ChatWithAssistantCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AutonomyOff_SystemContextForbidsWriteActions()
+    public async Task Handle_UserWithoutWriteRole_SystemContextForbidsWritesEvenWithAutonomyOn()
     {
         InMemoryAssistantConfigurationStore store = new InMemoryAssistantConfigurationStore().ProvisionedAndReady();
+        store.Configuration = store.Configuration with { AutonomousActionsEnabled = true };
         FakeAssistantGateway gateway = new();
         ChatWithAssistantCommandHandler handler = new(store, gateway, new FakeAssistantFileDrop(), StubCurrentUser.Viewer());
 
         await handler.Handle(ACommand(), CancellationToken.None);
 
-        gateway.LastTurn!.Messages[0].Content.Should().Contain("NICHT erlaubt");
+        gateway.LastTurn!.Messages[0].Content.Should().Contain("NICHT erlaubt",
+            "the user's own role is the hard gate, not the autonomy switch");
+    }
+
+    [Fact]
+    public async Task Handle_WriteRoleAutonomyOff_SystemContextAllowsInstructedWrites()
+    {
+        InMemoryAssistantConfigurationStore store = new InMemoryAssistantConfigurationStore().ProvisionedAndReady();
+        FakeAssistantGateway gateway = new();
+        ChatWithAssistantCommandHandler handler = new(store, gateway, new FakeAssistantFileDrop(), StubCurrentUser.Dispatcher());
+
+        await handler.Handle(ACommand(), CancellationToken.None);
+
+        gateway.LastTurn!.Messages[0].Content.Should().Contain("Schreibaktionen auf Anweisung sind erlaubt",
+            "a dispatcher's explicit instruction must not be blocked by the autonomy switch")
+            .And.NotContain("NICHT erlaubt");
     }
 
     [Fact]

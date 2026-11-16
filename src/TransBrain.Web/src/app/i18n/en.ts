@@ -852,7 +852,7 @@ export const en = {
     'assistant.settings.baseUrlInvalid': 'Please enter an absolute http(s) URL.',
     'assistant.settings.autonomy': 'Allow autonomous actions',
     'assistant.settings.autonomyHint':
-        'The assistant may then also perform write actions through the API (e.g. create or change data) – not just read and answer.',
+        'Write actions clearly instructed in chat by a user with write permissions are always carried out. This switch additionally allows self-initiated actions – the assistant acting on its own proposals without a per-action instruction.',
     'assistant.settings.apiKey': 'API key',
     'assistant.settings.apiKeyStored': 'A key is stored – leave empty to keep it.',
     'assistant.settings.apiKeyHint':

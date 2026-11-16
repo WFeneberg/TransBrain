@@ -659,7 +659,7 @@ export const de: Record<MessageKey, string> = {
         'Absolute http(s)-Adresse des OpenAI-kompatiblen Endpunkts, z. B. http://localhost:11434/v1.',
     'maintenance.assistant.autonomy': 'Autonome Aktionen erlauben',
     'maintenance.assistant.autonomyHint':
-        'Wenn aktiv, darf der Assistent klar beauftragte Schreibaktionen (Daten anlegen oder ändern) selbst über die TransBrain-API ausführen.',
+        'Schreibaktionen, die ein Benutzer mit Schreibrechten im Chat klar beauftragt, führt der Assistent immer aus. Dieser Schalter erlaubt zusätzlich selbstinitiierte Aktionen – eigene Vorschläge ohne Einzelanweisung.',
     'maintenance.assistant.apiKey': 'API-Schlüssel',
     'maintenance.assistant.apiKeyHint':
         'Der Schlüssel wird im Agent-Datenverzeichnis gespeichert und nie wieder angezeigt.',

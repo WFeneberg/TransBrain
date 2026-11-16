@@ -657,7 +657,7 @@ export const en = {
         'Absolute http(s) address of the OpenAI-compatible endpoint, e.g. http://localhost:11434/v1.',
     'maintenance.assistant.autonomy': 'Allow autonomous actions',
     'maintenance.assistant.autonomyHint':
-        'When enabled, the assistant may perform clearly requested write actions (create or change data) through the TransBrain API itself.',
+        'Write actions clearly instructed in chat by a user with write permissions are always carried out. This switch additionally allows self-initiated actions – the assistant acting on its own proposals without a per-action instruction.',
     'maintenance.assistant.apiKey': 'API key',
     'maintenance.assistant.apiKeyHint': 'The key is stored in the agent volume and never shown again.',
     'maintenance.assistant.apiKeyKeepHint': 'A key is stored – leave empty to keep it.',

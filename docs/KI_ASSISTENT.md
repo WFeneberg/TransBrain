@@ -79,11 +79,14 @@ If `BaseUrl`/`DataDirectory` are absent the feature reports "not provisioned" in
   normal JWT, builds the system context (user, roles, current page, autonomy rule) and calls the
   gateway server-to-server with the `API_SERVER_KEY`. Users cannot inject a `system` message —
   the API rejects that role.
-- **Autonomy is opt-in and double-gated.** The agent can act on the API only with the
+- **Write actions are role- and instruction-gated.** The agent can act on the API only with the
   `transbrain-agent` service account (client-credentials flow, role `disponent`, pinned to one
-  tenant). The `TRANSBRAIN_ASSISTANT_AUTONOMY` switch is sent to the agent in every system
-  message and in the skill's rules: while off, the agent must explain steps instead of doing
-  them; while on, it may perform clearly delegated write actions and must announce them.
+  tenant). Every system message tells the agent whether the signed-in user may instruct writes
+  (roles `admin`/`disponent` may; `fahrer`/`viewer` may not — for them the agent explains the UI
+  steps instead). Writes clearly instructed by a write-capable user are always allowed; the
+  `TRANSBRAIN_ASSISTANT_AUTONOMY` switch **additionally** permits self-initiated actions (the
+  agent acting on its own proposals without a per-action instruction) and is sent to the agent
+  in every system message and in the skill's rules. The agent must announce every write action.
   Defence in depth: even a confused agent can never exceed the service account's own role and
   tenant.
 - **Privacy**: conversations go to whatever LLM provider is configured. The persona instructs

@@ -862,7 +862,7 @@ export const de: Record<keyof typeof en, string> = {
     'assistant.settings.baseUrlInvalid': 'Bitte eine absolute http(s)-Adresse eingeben.',
     'assistant.settings.autonomy': 'Autonome Aktionen erlauben',
     'assistant.settings.autonomyHint':
-        'Der Assistent darf dann über die API auch schreibende Aktionen ausführen (z. B. Daten anlegen oder ändern) – nicht nur lesen und antworten.',
+        'Schreibaktionen, die ein Benutzer mit Schreibrechten im Chat klar beauftragt, führt der Assistent immer aus. Dieser Schalter erlaubt zusätzlich selbstinitiierte Aktionen – eigene Vorschläge ohne Einzelanweisung.',
     'assistant.settings.apiKey': 'API-Schlüssel',
     'assistant.settings.apiKeyStored': 'Schlüssel ist hinterlegt – leer lassen zum Beibehalten.',
     'assistant.settings.apiKeyHint':
