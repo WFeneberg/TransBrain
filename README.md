@@ -16,6 +16,7 @@ exists today, and `.superpowers/sdd/` for the phase plans.
 
 ## Documentation
 
+- [Project page](https://wfeneberg.github.io/TransBrain/) — a visual introduction to the software (GitHub Pages, served from `site/` by `.github/workflows/pages.yml`)
 - [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) — architecture, conventions, how to extend and test
 - [docs/INSTALLATION.md](docs/INSTALLATION.md) — local (Aspire), Docker Compose and Azure (Bicep)
 - [docs/KEYCLOAK.md](docs/KEYCLOAK.md) — authentication setup
