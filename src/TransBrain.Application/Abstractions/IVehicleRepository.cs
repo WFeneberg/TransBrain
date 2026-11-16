@@ -37,4 +37,14 @@ public interface IVehicleRepository
     Task<Result<VehicleDocument>> AddDocumentAsync(VehicleDocument document, CancellationToken cancellationToken);
 
     Task RemoveDocumentAsync(VehicleDocument document, CancellationToken cancellationToken);
+
+    /// <summary>The vehicle's maintenance history: ordered by <see cref="VehicleMaintenance.PerformedOn"/>, latest first.</summary>
+    Task<IReadOnlyList<VehicleMaintenance>> ListMaintenancesAsync(Guid vehicleId, CancellationToken cancellationToken);
+
+    Task<VehicleMaintenance?> GetMaintenanceAsync(Guid vehicleId, Guid maintenanceId, CancellationToken cancellationToken);
+
+    /// <summary>Adds and saves.</summary>
+    Task AddMaintenanceAsync(VehicleMaintenance maintenance, CancellationToken cancellationToken);
+
+    Task RemoveMaintenanceAsync(VehicleMaintenance maintenance, CancellationToken cancellationToken);
 }

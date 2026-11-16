@@ -14,6 +14,11 @@ using TransBrain.Application.Features.Vehicles.VehicleDocuments.AddVehicleDocume
 using TransBrain.Application.Features.Vehicles.VehicleDocuments.DeleteVehicleDocument;
 using TransBrain.Application.Features.Vehicles.VehicleDocuments.ListVehicleDocuments;
 using TransBrain.Application.Features.Vehicles.VehicleDocuments.UpdateVehicleDocument;
+using TransBrain.Application.Features.Vehicles.VehicleMaintenances;
+using TransBrain.Application.Features.Vehicles.VehicleMaintenances.AddVehicleMaintenance;
+using TransBrain.Application.Features.Vehicles.VehicleMaintenances.DeleteVehicleMaintenance;
+using TransBrain.Application.Features.Vehicles.VehicleMaintenances.ListVehicleMaintenances;
+using TransBrain.Application.Features.Vehicles.VehicleMaintenances.UpdateVehicleMaintenance;
 using TransBrain.Domain.Common;
 
 namespace TransBrain.Api.Endpoints;
@@ -105,6 +110,7 @@ public sealed class VehicleEndpoints : IEndpointGroup
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         MapDocuments(group);
+        MapMaintenances(group);
     }
 
     private static void MapDocuments(RouteGroupBuilder group)
@@ -168,6 +174,63 @@ public sealed class VehicleEndpoints : IEndpointGroup
             })
             .RequireAuthorization(Policies.MasterDataWrite)
             .WithName("DeleteVehicleDocument")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+    }
+    private static void MapMaintenances(RouteGroupBuilder group)
+    {
+        group.MapGet("/{id:guid}/maintenances", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
+            {
+                Result<VehicleMaintenanceResponse[]> result =
+                    await sender.Send(new ListVehicleMaintenancesQuery(id), cancellationToken);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.Read)
+            .WithName("ListVehicleMaintenances")
+            .WithSummary("Lists the vehicle's maintenance history, latest maintenance first.")
+            .Produces<VehicleMaintenanceResponse[]>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/maintenances", async (
+                Guid id, VehicleMaintenanceRequest request, ISender sender, CancellationToken cancellationToken) =>
+            {
+                Result<VehicleMaintenanceResponse> result = await sender.Send(
+                    request.ToAddCommand(id), cancellationToken);
+                return result.ToHttpResult(maintenance =>
+                    Results.Created($"/api/vehicles/{id}/maintenances/{maintenance.Id}", maintenance));
+            })
+            .RequireAuthorization(Policies.MasterDataWrite)
+            .WithName("AddVehicleMaintenance")
+            .Produces<VehicleMaintenanceResponse>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/maintenances/{maintenanceId:guid}", async (
+                Guid id,
+                Guid maintenanceId,
+                VehicleMaintenanceRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+            {
+                Result<VehicleMaintenanceResponse> result = await sender.Send(
+                    request.ToUpdateCommand(id, maintenanceId), cancellationToken);
+                return result.ToHttpResult();
+            })
+            .RequireAuthorization(Policies.MasterDataWrite)
+            .WithName("UpdateVehicleMaintenance")
+            .Produces<VehicleMaintenanceResponse>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/{id:guid}/maintenances/{maintenanceId:guid}", async (
+                Guid id, Guid maintenanceId, ISender sender, CancellationToken cancellationToken) =>
+            {
+                Result<Unit> result = await sender.Send(
+                    new DeleteVehicleMaintenanceCommand(id, maintenanceId), cancellationToken);
+                return result.ToHttpResult(_ => Results.NoContent());
+            })
+            .RequireAuthorization(Policies.MasterDataWrite)
+            .WithName("DeleteVehicleMaintenance")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound);
     }
@@ -241,3 +304,21 @@ public sealed record VehicleDocumentRequest(
 /// <summary>Body of a vehicle status change.</summary>
 /// <param name="Status">Available, InWorkshop or Decommissioned (case-insensitive).</param>
 public sealed record ChangeVehicleStatusRequest(string Status);
+
+/// <summary>Body of adding or updating a maintenance entry. Ids come from the route.</summary>
+/// <param name="Kind">Service, Inspection, Repair, TireChange or Other (case-insensitive).</param>
+public sealed record VehicleMaintenanceRequest(
+    string Kind,
+    DateOnly PerformedOn,
+    string Description,
+    string? Workshop = null,
+    int? OdometerKm = null,
+    decimal? Cost = null,
+    DateOnly? NextDueOn = null)
+{
+    public AddVehicleMaintenanceCommand ToAddCommand(Guid vehicleId) =>
+        new(vehicleId, Kind, PerformedOn, Description, Workshop, OdometerKm, Cost, NextDueOn);
+
+    public UpdateVehicleMaintenanceCommand ToUpdateCommand(Guid vehicleId, Guid maintenanceId) =>
+        new(vehicleId, maintenanceId, Kind, PerformedOn, Description, Workshop, OdometerKm, Cost, NextDueOn);
+}

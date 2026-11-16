@@ -21,6 +21,7 @@ import {
 import { listDrivers, type Driver } from '../api/drivers';
 import { catalogSelectOptions, listVehicleCatalog, type VehicleCatalogEntry } from '../api/vehicleCatalog';
 import VehicleDocuments from '../components/VehicleDocuments.vue';
+import VehicleMaintenances from '../components/VehicleMaintenances.vue';
 import { useVehicleLabels } from '../composables/useVehicleLabels';
 import { vNativeTestid } from '../directives/nativeTestId';
 import { useAuthStore } from '../stores/auth';
@@ -1038,6 +1039,10 @@ function describeFailure(error: unknown, fallback: string): string {
 
                 <v-col cols="12">
                     <VehicleDocuments :vehicle-id="vehicleId" :document-types="documentTypes" />
+                </v-col>
+
+                <v-col cols="12">
+                    <VehicleMaintenances :vehicle-id="vehicleId" />
                 </v-col>
 
                 <v-col cols="12">

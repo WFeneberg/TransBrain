@@ -8,16 +8,21 @@ public sealed class InMemoryVehicleRepository : IVehicleRepository
 {
     private readonly List<Vehicle> _vehicles = [];
     private readonly List<VehicleDocument> _documents = [];
+    private readonly List<VehicleMaintenance> _maintenances = [];
 
     public IReadOnlyList<Vehicle> Vehicles => _vehicles;
 
     public IReadOnlyList<VehicleDocument> Documents => _documents;
+
+    public IReadOnlyList<VehicleMaintenance> Maintenances => _maintenances;
 
     public int SaveChangesCallCount { get; private set; }
 
     public void Seed(params Vehicle[] vehicles) => _vehicles.AddRange(vehicles);
 
     public void SeedDocuments(params VehicleDocument[] documents) => _documents.AddRange(documents);
+
+    public void SeedMaintenances(params VehicleMaintenance[] maintenances) => _maintenances.AddRange(maintenances);
 
     public Task<bool> ExistsByLicensePlateAsync(LicensePlate plate, Guid? excludingId, CancellationToken cancellationToken)
         => Task.FromResult(_vehicles.Any(v => v.LicensePlate == plate && (excludingId == null || v.Id != excludingId)));
@@ -55,6 +60,7 @@ public sealed class InMemoryVehicleRepository : IVehicleRepository
     {
         _vehicles.Remove(vehicle);
         _documents.RemoveAll(d => d.VehicleId == vehicle.Id);
+        _maintenances.RemoveAll(m => m.VehicleId == vehicle.Id);
         return Task.CompletedTask;
     }
 
@@ -87,6 +93,32 @@ public sealed class InMemoryVehicleRepository : IVehicleRepository
     public Task RemoveDocumentAsync(VehicleDocument document, CancellationToken cancellationToken)
     {
         _documents.Remove(document);
+        SaveChangesCallCount++;
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<VehicleMaintenance>> ListMaintenancesAsync(Guid vehicleId, CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyList<VehicleMaintenance>>(
+            _maintenances
+                .Where(m => m.VehicleId == vehicleId)
+                .OrderByDescending(m => m.PerformedOn)
+                .ThenByDescending(m => m.ModifiedAt)
+                .ToList());
+
+    public Task<VehicleMaintenance?> GetMaintenanceAsync(
+        Guid vehicleId, Guid maintenanceId, CancellationToken cancellationToken)
+        => Task.FromResult(_maintenances.SingleOrDefault(m => m.VehicleId == vehicleId && m.Id == maintenanceId));
+
+    public Task AddMaintenanceAsync(VehicleMaintenance maintenance, CancellationToken cancellationToken)
+    {
+        _maintenances.Add(maintenance);
+        SaveChangesCallCount++;
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveMaintenanceAsync(VehicleMaintenance maintenance, CancellationToken cancellationToken)
+    {
+        _maintenances.Remove(maintenance);
         SaveChangesCallCount++;
         return Task.CompletedTask;
     }

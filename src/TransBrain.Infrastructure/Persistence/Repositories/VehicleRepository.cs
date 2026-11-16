@@ -109,6 +109,33 @@ internal sealed class VehicleRepository(TransBrainDbContext context) : IVehicleR
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    // Entries sharing a day keep a stable order via the audit stamp; newest change first.
+    public async Task<IReadOnlyList<VehicleMaintenance>> ListMaintenancesAsync(
+        Guid vehicleId, CancellationToken cancellationToken)
+        => await context.VehicleMaintenances
+            .Where(m => m.VehicleId == vehicleId)
+            .OrderByDescending(m => m.PerformedOn)
+            .ThenByDescending(m => m.ModifiedAt)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+    public Task<VehicleMaintenance?> GetMaintenanceAsync(
+        Guid vehicleId, Guid maintenanceId, CancellationToken cancellationToken)
+        => context.VehicleMaintenances.SingleOrDefaultAsync(
+            m => m.VehicleId == vehicleId && m.Id == maintenanceId, cancellationToken);
+
+    public async Task AddMaintenanceAsync(VehicleMaintenance maintenance, CancellationToken cancellationToken)
+    {
+        await context.VehicleMaintenances.AddAsync(maintenance, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RemoveMaintenanceAsync(VehicleMaintenance maintenance, CancellationToken cancellationToken)
+    {
+        context.VehicleMaintenances.Remove(maintenance);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
     private IQueryable<Vehicle> Filter(VehicleStatus? status, VehicleType? type)
         => context.Vehicles
             .Where(v => status == null || v.Status == status)

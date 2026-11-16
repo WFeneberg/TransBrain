@@ -304,6 +304,40 @@ record special documents.“ – speichern Sie das Fahrzeug zuerst und öffnen S
 - **Papierkorb-Symbol:** löscht das Sonderpapier nach einer Sicherheitsabfrage.
 - Wird das Fahrzeug gelöscht, werden seine Sonderpapiere mitgelöscht.
 
+### Wartungen (Maintenance)
+
+Der Bereich **Maintenance** führt die Wartungshistorie des Fahrzeugs: Services, Inspektionen,
+Reparaturen und Reifenwechsel mit Werkstatt, Kilometerstand und Kosten. Wie die Sonderpapiere
+wird er **unabhängig von „Save“** gespeichert: jede Änderung im Dialog ist sofort gespeichert.
+Bei einem neuen Fahrzeug steht dort nur der Hinweis „Save the vehicle first to record
+maintenance.“ – speichern Sie das Fahrzeug zuerst und öffnen Sie es dann erneut.
+
+![Bereich Maintenance](img/web/fahrzeug-wartungen.png)
+
+- **Spalten:** Performed on (Durchführungsdatum), Kind (Art), Work performed (durchgeführte
+  Arbeiten), Workshop (Werkstatt), Odometer (Kilometerstand), Cost (Kosten), Next due (nächste
+  Fälligkeit) mit Status und Last changed (Datum · Benutzer der letzten Änderung). Die
+  Historie ist nach Durchführungsdatum sortiert, der jüngste Eintrag zuerst.
+- **Status** (nur wenn „Next due“ gesetzt ist): **Overdue** (rot, Fälligkeit liegt in der
+  Vergangenheit), **Due soon** (orange, fällig innerhalb der nächsten 30 Tage) oder
+  **Scheduled** (grün).
+- **„Add maintenance“** (nur Administratoren) öffnet den Dialog „Add maintenance“:
+
+  | Feld | Bedeutung | Pflicht | Regeln |
+  |---|---|:---:|---|
+  | Kind | Art der Wartung | ja | Service, Inspection, Repair, Tire change oder Other |
+  | Performed on | Durchführungsdatum | ja | ab 1900 |
+  | Work performed | durchgeführte Arbeiten | ja | max. 1.000 Zeichen |
+  | Workshop | ausführende Werkstatt | – | max. 200 Zeichen |
+  | Odometer | Kilometerstand bei der Wartung | – | 0 bis 9.999.999 km |
+  | Cost | Kosten in Euro | – | 0 bis 10.000.000 |
+  | Next due | nächste Fälligkeit | – | ab 1900, nicht vor „Performed on“ |
+
+- **Stift-Symbol:** öffnet dasselbe Formular zum Bearbeiten („Edit maintenance“), z. B. um
+  die nächste Fälligkeit nach einem Werkstattbesuch fortzuschreiben.
+- **Papierkorb-Symbol:** löscht den Wartungseintrag nach einer Sicherheitsabfrage.
+- Wird das Fahrzeug gelöscht, wird seine Wartungshistorie mitgelöscht.
+
 ## Fahrzeug-Stammdaten
 
 Erreichbar über die Schaltfläche **„Master data lists“** oben in der Fahrzeugliste

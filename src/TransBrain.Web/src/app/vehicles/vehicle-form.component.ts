@@ -41,6 +41,15 @@ import {
     VehicleDocumentDialogData,
 } from './vehicle-document-dialog.component';
 import { VehicleDocument, VehicleDocumentService } from './vehicle-document.service';
+import {
+    VehicleMaintenanceDialogComponent,
+    VehicleMaintenanceDialogData,
+} from './vehicle-maintenance-dialog.component';
+import {
+    VehicleMaintenance,
+    VehicleMaintenanceKind,
+    VehicleMaintenanceService,
+} from './vehicle-maintenance.service';
 import { amountInRange, dateFromYear, wholeNumberInRange } from './vehicle-validators';
 import {
     EMPTY_VEHICLE_COMMERCIAL,
@@ -145,6 +154,23 @@ const DOCUMENT_STATUS: Record<InspectionUrgency, { tone: string; key: Translatio
     overdue: { tone: 'error', key: 'vehicles.documents.status.expired' },
     dueSoon: { tone: 'warning', key: 'vehicles.documents.status.expiresSoon' },
     ok: { tone: 'success', key: 'vehicles.documents.status.valid' },
+};
+
+const BASE_MAINTENANCE_COLUMNS = [
+    'performedOn',
+    'kind',
+    'description',
+    'workshop',
+    'odometerKm',
+    'cost',
+    'nextDueOn',
+    'modified',
+];
+
+const MAINTENANCE_STATUS: Record<InspectionUrgency, { tone: string; key: TranslationKey }> = {
+    overdue: { tone: 'error', key: 'vehicles.maintenance.status.overdue' },
+    dueSoon: { tone: 'warning', key: 'vehicles.maintenance.status.dueSoon' },
+    ok: { tone: 'success', key: 'vehicles.maintenance.status.scheduled' },
 };
 
 function textOrNull(value: string): string | null {
@@ -1163,6 +1189,228 @@ function numberOrNull(value: number | null): number | null {
                         </mat-card-content>
                     </mat-card>
 
+                    <mat-card
+                        appearance="outlined"
+                        class="full-width"
+                        data-testid="vehicle-maintenances"
+                    >
+                        <mat-card-header>
+                            <mat-icon mat-card-avatar class="avatar">build</mat-icon>
+                            <mat-card-title>{{
+                                i18n.t('vehicles.section.maintenance')
+                            }}</mat-card-title>
+                            @if (isEditMode && session.can('masterData.write')) {
+                                <button
+                                    mat-stroked-button
+                                    type="button"
+                                    class="card-action"
+                                    data-testid="vehicle-maintenance-add"
+                                    (click)="openMaintenanceDialog(null)"
+                                >
+                                    <mat-icon>add</mat-icon>
+                                    {{ i18n.t('vehicles.maintenance.add') }}
+                                </button>
+                            }
+                        </mat-card-header>
+                        <mat-card-content>
+                            @if (!isEditMode) {
+                                <p class="hint" data-testid="vehicle-maintenances-hint">
+                                    <mat-icon aria-hidden="true">info</mat-icon>
+                                    {{ i18n.t('vehicles.maintenance.hint') }}
+                                </p>
+                            } @else {
+                                @if (maintenanceError(); as message) {
+                                    <p
+                                        class="error-banner"
+                                        data-testid="vehicle-maintenances-error"
+                                    >
+                                        <mat-icon aria-hidden="true">error_outline</mat-icon
+                                        >{{ message }}
+                                    </p>
+                                }
+                                @if (maintenances().length > 0) {
+                                    <div class="table-scroll">
+                                        <table mat-table [dataSource]="maintenances()">
+                                            <ng-container matColumnDef="performedOn">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.maintenance.performedOn') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let m"
+                                                    data-testid="vehicle-maintenance-performedOn"
+                                                >
+                                                    {{ date(m.performedOn) }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="kind">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.maintenance.kind') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let m"
+                                                    class="maintenance-kind"
+                                                    data-testid="vehicle-maintenance-kind"
+                                                >
+                                                    {{ maintenanceKindLabel(m.kind) }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="description">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.maintenance.description') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let m"
+                                                    class="remark"
+                                                    data-testid="vehicle-maintenance-description"
+                                                >
+                                                    {{ m.description }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="workshop">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.maintenance.workshop') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let m"
+                                                    data-testid="vehicle-maintenance-workshop"
+                                                >
+                                                    {{ m.workshop }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="odometerKm">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.maintenance.odometerKm') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let m"
+                                                    data-testid="vehicle-maintenance-odometerKm"
+                                                >
+                                                    {{ odometer(m.odometerKm) }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="cost">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.maintenance.cost') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let m"
+                                                    data-testid="vehicle-maintenance-cost"
+                                                >
+                                                    {{ cost(m.cost) }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="nextDueOn">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.maintenance.nextDueOn') }}
+                                                </th>
+                                                <td mat-cell *matCellDef="let m">
+                                                    @if (m.nextDueOn) {
+                                                        <span
+                                                            data-testid="vehicle-maintenance-nextDueOn"
+                                                            >{{ date(m.nextDueOn) }}</span
+                                                        >
+                                                        <mat-chip-set class="due-chip">
+                                                            <mat-chip
+                                                                class="chip"
+                                                                [attr.data-tone]="
+                                                                    maintenanceStatus(m.nextDueOn)
+                                                                        .tone
+                                                                "
+                                                                data-testid="vehicle-maintenance-status"
+                                                                >{{
+                                                                    i18n.t(
+                                                                        maintenanceStatus(
+                                                                            m.nextDueOn
+                                                                        ).key
+                                                                    )
+                                                                }}</mat-chip
+                                                            >
+                                                        </mat-chip-set>
+                                                    }
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="modified">
+                                                <th mat-header-cell *matHeaderCellDef>
+                                                    {{ i18n.t('vehicles.maintenance.modified') }}
+                                                </th>
+                                                <td
+                                                    mat-cell
+                                                    *matCellDef="let m"
+                                                    class="modified"
+                                                    data-testid="vehicle-maintenance-modified"
+                                                >
+                                                    {{ maintenanceModified(m) }}
+                                                </td>
+                                            </ng-container>
+                                            <ng-container matColumnDef="actions">
+                                                <th
+                                                    mat-header-cell
+                                                    *matHeaderCellDef
+                                                    class="actions-cell"
+                                                >
+                                                    <span class="cdk-visually-hidden">{{
+                                                        i18n.t('common.actions')
+                                                    }}</span>
+                                                </th>
+                                                <td mat-cell *matCellDef="let m" class="actions-cell">
+                                                    <button
+                                                        mat-icon-button
+                                                        type="button"
+                                                        data-testid="vehicle-maintenance-edit"
+                                                        [matTooltip]="i18n.t('common.edit')"
+                                                        [attr.aria-label]="
+                                                            i18n.t('common.edit') +
+                                                            ' ' +
+                                                            maintenanceKindLabel(m.kind)
+                                                        "
+                                                        (click)="openMaintenanceDialog(m)"
+                                                    >
+                                                        <mat-icon>edit</mat-icon>
+                                                    </button>
+                                                    <button
+                                                        mat-icon-button
+                                                        type="button"
+                                                        class="delete"
+                                                        data-testid="vehicle-maintenance-delete"
+                                                        [matTooltip]="i18n.t('common.delete')"
+                                                        [attr.aria-label]="
+                                                            i18n.t('common.delete') +
+                                                            ' ' +
+                                                            maintenanceKindLabel(m.kind)
+                                                        "
+                                                        (click)="deleteMaintenance(m)"
+                                                    >
+                                                        <mat-icon>delete</mat-icon>
+                                                    </button>
+                                                </td>
+                                            </ng-container>
+                                            <tr
+                                                mat-header-row
+                                                *matHeaderRowDef="maintenanceColumns()"
+                                            ></tr>
+                                            <tr
+                                                mat-row
+                                                *matRowDef="let row; columns: maintenanceColumns()"
+                                                data-testid="vehicle-maintenance-row"
+                                            ></tr>
+                                        </table>
+                                    </div>
+                                } @else if (maintenancesLoaded()) {
+                                    <p class="hint" data-testid="vehicle-maintenances-empty">
+                                        <mat-icon aria-hidden="true">build</mat-icon>
+                                        {{ i18n.t('vehicles.maintenance.empty') }}
+                                    </p>
+                                }
+                            }
+                        </mat-card-content>
+                    </mat-card>
+
                     <mat-card appearance="outlined" class="full-width">
                         <mat-card-header>
                             <mat-icon mat-card-avatar class="avatar">notes</mat-icon>
@@ -1470,6 +1718,16 @@ function numberOrNull(value: number | null): number | null {
                 font-weight: 500;
             }
 
+            .maintenance-kind {
+                font-weight: 500;
+                white-space: nowrap;
+            }
+
+            .due-chip {
+                display: inline-block;
+                margin-left: 8px;
+            }
+
             .remark {
                 white-space: pre-line;
             }
@@ -1530,6 +1788,7 @@ export class VehicleFormComponent {
     private readonly driverService = inject(DriverService);
     private readonly catalogService = inject(VehicleCatalogService);
     private readonly documentService = inject(VehicleDocumentService);
+    private readonly maintenanceService = inject(VehicleMaintenanceService);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
@@ -1592,6 +1851,15 @@ export class VehicleFormComponent {
         this.session.can('masterData.write')
             ? [...BASE_DOCUMENT_COLUMNS, 'actions']
             : BASE_DOCUMENT_COLUMNS,
+    );
+
+    protected readonly maintenances = signal<VehicleMaintenance[]>([]);
+    protected readonly maintenancesLoaded = signal(false);
+    protected readonly maintenanceError = signal<string | null>(null);
+    protected readonly maintenanceColumns = computed(() =>
+        this.session.can('masterData.write')
+            ? [...BASE_MAINTENANCE_COLUMNS, 'actions']
+            : BASE_MAINTENANCE_COLUMNS,
     );
 
     protected readonly modifiedText = computed(() => {
@@ -1752,6 +2020,7 @@ export class VehicleFormComponent {
                         ),
                 });
             this.loadDocuments();
+            this.loadMaintenances();
         }
     }
 
@@ -1843,6 +2112,36 @@ export class VehicleFormComponent {
         });
     }
 
+    protected maintenanceKindLabel(kind: VehicleMaintenanceKind): string {
+        return this.i18n.t(`vehicles.maintenance.kindOption.${kind}` as const);
+    }
+
+    protected maintenanceStatus(nextDueOn: string): { tone: string; key: TranslationKey } {
+        return MAINTENANCE_STATUS[inspectionUrgency(nextDueOn)];
+    }
+
+    protected maintenanceModified(maintenance: VehicleMaintenance): string {
+        return this.i18n.t('vehicles.maintenance.modifiedValue', {
+            date: formatDateTime(maintenance.modifiedAt, this.i18n.locale()),
+            user: maintenance.modifiedBy ?? '–',
+        });
+    }
+
+    protected cost(value: number | null): string {
+        return value === null
+            ? ''
+            : new Intl.NumberFormat(this.i18n.locale() === 'de' ? 'de-AT' : 'en-GB', {
+                  style: 'currency',
+                  currency: 'EUR',
+              }).format(value);
+    }
+
+    protected odometer(value: number | null): string {
+        return value === null
+            ? ''
+            : `${new Intl.NumberFormat(this.i18n.locale() === 'de' ? 'de-AT' : 'en-GB').format(value)} km`;
+    }
+
     // Special documents are saved on their own endpoints right from the dialog, independent of
     // the vehicle's Save button - unsaved edits in the form are neither sent nor lost.
     protected openDocumentDialog(document: VehicleDocument | null): void {
@@ -1894,6 +2193,64 @@ export class VehicleFormComponent {
                 error: (error: HttpErrorResponse) =>
                     this.documentError.set(
                         this.describeFailure(error, this.i18n.t('vehicles.documents.error.delete')),
+                    ),
+            });
+    }
+
+    // Maintenance entries are saved on their own endpoints right from the dialog, independent of
+    // the vehicle's Save button - unsaved edits in the form are neither sent nor lost.
+    protected openMaintenanceDialog(maintenance: VehicleMaintenance | null): void {
+        this.maintenanceError.set(null);
+        this.dialog
+            .open<
+                VehicleMaintenanceDialogComponent,
+                VehicleMaintenanceDialogData,
+                VehicleMaintenance
+            >(VehicleMaintenanceDialogComponent, {
+                data: {
+                    vehicleId: this.vehicleId!,
+                    maintenance,
+                },
+                width: '560px',
+                autoFocus: 'first-tabbable',
+            })
+            .afterClosed()
+            .pipe(filter((saved) => !!saved))
+            .subscribe(() => this.loadMaintenances());
+    }
+
+    protected deleteMaintenance(maintenance: VehicleMaintenance): void {
+        this.maintenanceError.set(null);
+        const data: ConfirmDialogData = {
+            title: this.i18n.t('vehicles.maintenance.deleteTitle'),
+            message: this.i18n.t('vehicles.maintenance.deleteConfirm', {
+                date: this.date(maintenance.performedOn),
+            }),
+            confirmLabel: this.i18n.t('common.delete'),
+            cancelLabel: this.i18n.t('common.cancel'),
+            confirmTestId: 'vehicle-maintenance-delete-confirm',
+            cancelTestId: 'vehicle-maintenance-delete-cancel',
+            icon: 'delete',
+        };
+        this.dialog
+            .open<ConfirmDialogComponent, ConfirmDialogData, boolean>(ConfirmDialogComponent, {
+                data,
+                width: '440px',
+            })
+            .afterClosed()
+            .pipe(
+                filter((confirmed) => confirmed === true),
+                switchMap(() => this.session.ready),
+                switchMap(() => this.maintenanceService.remove(this.vehicleId!, maintenance.id)),
+            )
+            .subscribe({
+                next: () => this.loadMaintenances(),
+                error: (error: HttpErrorResponse) =>
+                    this.maintenanceError.set(
+                        this.describeFailure(
+                            error,
+                            this.i18n.t('vehicles.maintenance.error.delete'),
+                        ),
                     ),
             });
     }
@@ -2051,6 +2408,21 @@ export class VehicleFormComponent {
                 error: (error: HttpErrorResponse) =>
                     this.documentError.set(
                         this.describeFailure(error, this.i18n.t('vehicles.documents.error.list')),
+                    ),
+            });
+    }
+
+    private loadMaintenances(): void {
+        this.session.ready
+            .pipe(switchMap(() => this.maintenanceService.list(this.vehicleId!)))
+            .subscribe({
+                next: (maintenances) => {
+                    this.maintenances.set(maintenances);
+                    this.maintenancesLoaded.set(true);
+                },
+                error: (error: HttpErrorResponse) =>
+                    this.maintenanceError.set(
+                        this.describeFailure(error, this.i18n.t('vehicles.maintenance.error.list')),
                     ),
             });
     }

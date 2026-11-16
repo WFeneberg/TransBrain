@@ -1361,6 +1361,62 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                     b.ToTable("vehicle_documents", (string)null);
                 });
 
+            modelBuilder.Entity("TransBrain.Domain.Vehicles.VehicleMaintenance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Cost")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateOnly?>("NextDueOn")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("OdometerKm")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("PerformedOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("VehicleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Workshop")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("VehicleId", "PerformedOn");
+
+                    b.ToTable("vehicle_maintenances", (string)null);
+                });
+
             modelBuilder.Entity("TransBrain.Infrastructure.Persistence.Imports.ImportSessionData", b =>
                 {
                     b.Property<Guid>("ImportSessionId")
@@ -2521,6 +2577,15 @@ namespace TransBrain.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("TransBrain.Domain.Vehicles.VehicleDocument", b =>
+                {
+                    b.HasOne("TransBrain.Domain.Vehicles.Vehicle", null)
+                        .WithMany()
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TransBrain.Domain.Vehicles.VehicleMaintenance", b =>
                 {
                     b.HasOne("TransBrain.Domain.Vehicles.Vehicle", null)
                         .WithMany()
