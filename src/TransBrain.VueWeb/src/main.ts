@@ -29,6 +29,7 @@ import InvoiceForm from './views/InvoiceForm.vue';
 import InvoiceDetail from './views/InvoiceDetail.vue';
 import InvoiceDesign from './views/InvoiceDesign.vue';
 import Geodata from './views/Geodata.vue';
+import SettingsShell from './views/SettingsShell.vue';
 import ImportWizard from './views/ImportWizard.vue';
 import ImportHistory from './views/ImportHistory.vue';
 import ExportPage from './views/ExportPage.vue';
@@ -75,11 +76,20 @@ const router = createRouter({
         // No capability: a viewer may look. The issue/pay/cancel buttons inside are gated
         // individually on dispatch.write.
         { path: '/invoices/:id', component: InvoiceDetail },
+        // The Einstellungen area bundles the tenant-level configuration pages under one tab bar.
         // The designer edits the tenant's company data and letterhead - master data maintenance,
-        // admin-only like the export (the API's PUT and preview demand MasterDataWrite).
-        { path: '/invoice-design', component: InvoiceDesign, meta: { capability: 'masterData.write' } },
-        // Readable by every signed-in role; the write controls inside are gated on masterData.write.
-        { path: '/geodata', component: Geodata },
+        // admin-only like the export (the API's PUT and preview demand MasterDataWrite). The
+        // geodata list stays readable by every signed-in role; the write controls inside are
+        // gated on masterData.write.
+        {
+            path: '/settings',
+            component: SettingsShell,
+            children: [
+                { path: '', redirect: '/settings/invoice-design' },
+                { path: 'invoice-design', component: InvoiceDesign, meta: { capability: 'masterData.write' } },
+                { path: 'geodata', component: Geodata },
+            ],
+        },
         // The global Wartung area bundles the system tooling under one tab bar: backup/restore
         // plus the import wizard, its history and the export. All of it is cross-tenant work on
         // /api/system/... and demands the system.maintenance capability, which only the
@@ -98,6 +108,10 @@ const router = createRouter({
         // old bookmarks working.
         { path: '/import', redirect: '/maintenance/import' },
         { path: '/import/verlauf', redirect: '/maintenance/import/verlauf' },
+        // Rechnungsdesign and the geodata maintenance lived at the top level before they moved
+        // into the Einstellungen area; keep old bookmarks working.
+        { path: '/invoice-design', redirect: '/settings/invoice-design' },
+        { path: '/geodata', redirect: '/settings/geodata' },
         { path: '/callback', component: AuthCallback },
     ],
 });

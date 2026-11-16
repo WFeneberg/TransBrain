@@ -442,7 +442,9 @@ export const de: Record<MessageKey, string> = {
     'orders.charges.deleteFailed': 'Die Zusatzposition konnte nicht gelöscht werden.',
 
     'nav.invoices': 'Abrechnung',
-    'nav.invoiceDesign': 'Rechnungsdesign',
+    'nav.settings': 'Einstellungen',
+    'settings.tabs.invoiceDesign': 'Rechnungsdesign',
+    'settings.tabs.geodata': 'Geodaten',
     'invoices.count': '{count} Rechnungen',
     'invoices.add': 'Rechnung erstellen',
     'invoices.new': 'Neue Rechnung',
@@ -597,7 +599,6 @@ export const de: Record<MessageKey, string> = {
 
     'callback.error': 'Die Anmeldung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.',
 
-    'nav.geodata': 'Geodaten',
     'nav.maintenance': 'Wartung',
     'maintenance.title': 'Wartung',
     'maintenance.tabs.backup': 'Datensicherung',

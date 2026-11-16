@@ -1140,9 +1140,10 @@ TransBrain Logistik GmbH aus dem Abschnitt `InvoiceSeller` der API-Konfiguration
 
 ## Rechnungsdesign
 
-Erreichbar über den Menüpunkt **Rechnungsdesign** (`/invoice-design`). Menüpunkt und Seite
-gibt es nur für Administratoren, denn hier werden die Stammdaten der eigenen Firma gepflegt;
-andere Rollen leitet die Adresszeile zur Startseite um.
+Erreichbar über den Menüpunkt **Einstellungen**, Reiter **Rechnungsdesign**
+(`/settings/invoice-design`; die frühere Adresse `/invoice-design` leitet dorthin um).
+Menüpunkt und Seite gibt es nur für Administratoren, denn hier werden die Stammdaten der
+eigenen Firma gepflegt; andere Rollen leitet die Adresszeile zur Startseite um.
 
 Hintergrund: Jeder Mandant ist eine eigene Firma mit eigenem Briefkopf, eigener
 USt-IdNr. und eigener Bankverbindung. Diese Seite legt fest, wie die Rechnungs-PDFs und
@@ -1190,7 +1191,8 @@ schon die Seite beim Auswählen der Datei ab.
 
 ## Geodaten-Wartung
 
-Erreichbar über den Menüpunkt **Geodata** (`/geodata`). Der Menüpunkt erscheint nur für
+Erreichbar über den Menüpunkt **Einstellungen**, Reiter **Geodaten** (`/settings/geodata`;
+die frühere Adresse `/geodata` leitet dorthin um). Der Menüpunkt erscheint nur für
 Administratoren; über die Adresszeile können alle Rollen die Seite lesend öffnen.
 
 Hintergrund: Für Kartenpositionen und Tourrouten übersetzt das System Adressen in Koordinaten.
@@ -1536,7 +1538,8 @@ Touren …) stehen ihm nicht zur Verfügung.
 `admin`; „New order“, „Edit“, „Cancel order“ und „Plan tour“ sowie „Rechnung erstellen“,
 „Ausstellen“, „Als bezahlt markieren“ und „Stornieren“ (Abrechnung) nur für `admin` und
 `disponent`; „Start tour“ und „Complete tour“ für `admin`, `disponent` und `fahrer`. Der
-Menüpunkt **Geodata** und die Änderungen der Geodaten-Wartung („Add coordinates“,
+Menüpunkt **Einstellungen** — mit den Reitern **Rechnungsdesign** und **Geodaten** — und die
+Änderungen der Geodaten-Wartung („Add coordinates“,
 „Set coordinates“, „Remove manual coordinates“) sind ebenfalls `admin` vorbehalten. Der
 Menüpunkt **Maintenance** — mit der Mandantenwahl und den Reitern **Backup & restore**
 (Datensicherung), **Import** und **Import history** (Datenimport) sowie **Export**

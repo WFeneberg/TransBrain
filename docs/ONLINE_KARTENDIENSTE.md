@@ -115,7 +115,8 @@ Ohne diese Variablen gilt `SelfHosted`, und die Api erwartet eigene Container un
 
 ## 4. Prüfen, ob alles läuft
 
-1. In einem der Frontends als `admin` die Seite **Geodaten** (`/geodata`) öffnen: Die
+1. In einem der Frontends als `admin` die Seite **Einstellungen → Geodaten**
+   (`/settings/geodata`) öffnen: Die
    Statuskarte muss Geocoder und Routing als **bereit** zeigen. Online-Routing zeigt
    dabei bewusst **kein OSM-Datenstand-Datum** — der öffentliche Dienst hält seine Daten
    selbst aktuell; der öffentliche Nominatim meldet sein Datum wie gewohnt.

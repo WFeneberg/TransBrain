@@ -12,7 +12,8 @@ test('adminUser_editingTheDesignAndPreviewing_rendersAPdfAndSaves', async ({ pag
     const design = page.waitForResponse((response) =>
         response.url().includes('/api/invoice-design'),
     );
-    await page.getByTestId('nav-invoice-design').click();
+    // The Einstellungen tab opens on its first tab, the invoice design editor.
+    await page.getByTestId('nav-settings').click();
     await expect(page.getByRole('heading', { name: 'Invoice design' })).toBeVisible();
     await design;
 
@@ -47,10 +48,10 @@ test('adminUser_editingTheDesignAndPreviewing_rendersAPdfAndSaves', async ({ pag
 });
 
 test('viewerUser_navigatingToInvoiceDesign_isRedirectedHome', async ({ page }) => {
-    // Design writes need masterData.write: a viewer has no nav entry, and a typed URL bounces
-    // back to the home page.
+    // Design writes need masterData.write: a viewer has no settings nav entry, and a typed URL
+    // (the old top-level one included) bounces back to the home page.
     await signIn(page, 'viewer');
-    await expect(page.getByTestId('nav-invoice-design')).toBeHidden();
+    await expect(page.getByTestId('nav-settings')).toBeHidden();
     await page.goto('/invoice-design');
     await expect(page.getByTestId('home-greeting')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Invoice design' })).toBeHidden();

@@ -34,13 +34,8 @@
                 }}</a>
             }
             @if (session.can('masterData.write')) {
-                <a mat-button routerLink="/geodata" data-testid="nav-geodata">{{
-                    i18n.t('nav.geodata')
-                }}</a>
-            }
-            @if (session.can('masterData.write')) {
-                <a mat-button routerLink="/invoice-design" data-testid="nav-invoice-design">{{
-                    i18n.t('nav.invoiceDesign')
+                <a mat-button routerLink="/settings" data-testid="nav-settings">{{
+                    i18n.t('nav.settings')
                 }}</a>
             }
             @if (session.can('system.maintenance')) {

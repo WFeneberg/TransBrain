@@ -7,7 +7,8 @@ function uniqueSuffix(): string {
 }
 
 async function openGeodata(page: Page): Promise<void> {
-    await page.getByTestId('nav-geodata').click();
+    await page.getByTestId('nav-settings').click();
+    await page.getByTestId('settings-tab-geodata').click();
     await expect(page.getByRole('heading', { name: 'Geodata maintenance' })).toBeVisible();
 }
 
@@ -79,10 +80,11 @@ test('invalidLatitude_staysInTheDialog', async ({ page }) => {
 test('viewerUser_onGeodata_seesNoWriteActions', async ({ page }) => {
     await signIn(page, 'viewer');
 
-    // The maintenance page is not offered to a viewer ...
-    await expect(page.getByTestId('nav-geodata')).toHaveCount(0);
+    // The settings area is not offered to a viewer ...
+    await expect(page.getByTestId('nav-settings')).toHaveCount(0);
 
-    // ... but reading it directly works, matching the API's read policy.
+    // ... but reading the geodata page directly works, matching the API's read policy. The old
+    // top-level URL redirects into the settings area.
     await page.goto('/geodata');
     await expect(page.getByRole('heading', { name: 'Geodata maintenance' })).toBeVisible();
     await expect(page.getByTestId('geodata-count')).toBeVisible();

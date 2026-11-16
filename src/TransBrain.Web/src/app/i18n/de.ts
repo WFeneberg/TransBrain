@@ -575,7 +575,6 @@ export const de: Record<keyof typeof en, string> = {
     'tours.route.error.unavailable':
         'Die Routenberechnung ist derzeit nicht verfügbar. Der Routing-Dienst ist nicht konfiguriert oder nicht erreichbar.',
 
-    'nav.geodata': 'Geodaten',
     'nav.maintenance': 'Wartung',
     'maintenance.title': 'Wartung',
     'maintenance.tabs.backup': 'Datensicherung',
@@ -628,7 +627,9 @@ export const de: Record<keyof typeof en, string> = {
     'export.hint':
         'Exportierte Dateien lassen sich über den Reiter „Import“ wieder einspielen – die Spalten werden dabei automatisch zugeordnet.',
     'export.error': 'Der Export ist fehlgeschlagen.',
-    'nav.invoiceDesign': 'Rechnungsdesign',
+    'nav.settings': 'Einstellungen',
+    'settings.tabs.invoiceDesign': 'Rechnungsdesign',
+    'settings.tabs.geodata': 'Geodaten',
     'invoiceDesign.title': 'Rechnungsdesign',
     'invoiceDesign.subtitle':
         'Firmendaten und Gestaltung der Rechnungsdokumente dieses Mandanten – gilt für jedes PDF und jede XRechnung.',

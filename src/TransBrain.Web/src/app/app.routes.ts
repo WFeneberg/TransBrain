@@ -38,6 +38,8 @@ const loadInvoiceDesign = () =>
 const loadHome = () => import('./home/home.component').then((m) => m.HomeComponent);
 const loadGeodataList = () =>
     import('./geodata/geodata-list.component').then((m) => m.GeodataListComponent);
+const loadSettingsShell = () =>
+    import('./settings/settings-shell.component').then((m) => m.SettingsShellComponent);
 const loadMaintenance = () =>
     import('./maintenance/maintenance.component').then((m) => m.MaintenanceComponent);
 const loadMaintenanceShell = () =>
@@ -159,14 +161,28 @@ export const routes: Routes = [
         loadComponent: loadInvoiceDetail,
         canActivate: [requireAuthentication],
     },
-    // Readable by every signed-in role; the write controls inside are gated on masterData.write.
-    { path: 'geodata', loadComponent: loadGeodataList, canActivate: [requireAuthentication] },
-    // The design page is an editor through and through - saving and previewing both need the
-    // API's MasterDataWrite policy - so it is guarded like the other admin-only editors.
+    // The Einstellungen area bundles the tenant-level configuration pages under one tab bar.
+    // The shell only needs a signed-in user: the geodata list stays readable by every role,
+    // matching the API's read policy, while the design page is an editor through and through -
+    // saving and previewing both need the API's MasterDataWrite policy - so it keeps its
+    // admin-only guard like the other editors.
     {
-        path: 'invoice-design',
-        loadComponent: loadInvoiceDesign,
-        canActivate: [requireCapability('masterData.write')],
+        path: 'settings',
+        loadComponent: loadSettingsShell,
+        canActivate: [requireAuthentication],
+        children: [
+            { path: '', pathMatch: 'full', redirectTo: 'invoice-design' },
+            {
+                path: 'invoice-design',
+                loadComponent: loadInvoiceDesign,
+                canActivate: [requireCapability('masterData.write')],
+            },
+            {
+                path: 'geodata',
+                loadComponent: loadGeodataList,
+                canActivate: [requireAuthentication],
+            },
+        ],
     },
     // The global Wartung area is system-admin territory: the shell asks which tenant to work
     // on, then offers backup/restore, the import wizard, its history and the data export — all
@@ -203,4 +219,8 @@ export const routes: Routes = [
     // bookmarks working. Order matters: 'import/verlauf' must match before 'import'.
     { path: 'import/verlauf', redirectTo: '/maintenance/import/verlauf' },
     { path: 'import', redirectTo: '/maintenance/import' },
+    // Rechnungsdesign and the geodata maintenance lived at the top level before they moved into
+    // the Einstellungen area; keep old bookmarks working.
+    { path: 'invoice-design', redirectTo: '/settings/invoice-design' },
+    { path: 'geodata', redirectTo: '/settings/geodata' },
 ];

@@ -440,7 +440,9 @@ export const en = {
     'orders.charges.deleteFailed': 'The additional charge could not be deleted.',
 
     'nav.invoices': 'Billing',
-    'nav.invoiceDesign': 'Invoice design',
+    'nav.settings': 'Settings',
+    'settings.tabs.invoiceDesign': 'Invoice design',
+    'settings.tabs.geodata': 'Geodata',
     'invoices.count': '{count} invoices',
     'invoices.add': 'Create invoice',
     'invoices.new': 'New invoice',
@@ -595,7 +597,6 @@ export const en = {
 
     'callback.error': 'Sign-in could not be completed. Please try again.',
 
-    'nav.geodata': 'Geodata',
     'nav.maintenance': 'Maintenance',
     'maintenance.title': 'Maintenance',
     'maintenance.tabs.backup': 'Backup & restore',

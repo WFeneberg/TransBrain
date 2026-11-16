@@ -570,7 +570,6 @@ export const en = {
     'tours.route.error.unavailable':
         'Route planning is currently unavailable. The routing service is not configured or cannot be reached.',
 
-    'nav.geodata': 'Geodata',
     'nav.maintenance': 'Maintenance',
     'maintenance.title': 'Maintenance',
     'maintenance.tabs.backup': 'Backup & restore',
@@ -622,7 +621,9 @@ export const en = {
     'export.hint':
         'Exported files can be played back through the Import tab – the columns are matched automatically.',
     'export.error': 'The export failed.',
-    'nav.invoiceDesign': 'Invoice design',
+    'nav.settings': 'Settings',
+    'settings.tabs.invoiceDesign': 'Invoice design',
+    'settings.tabs.geodata': 'Geodata',
     'invoiceDesign.title': 'Invoice design',
     'invoiceDesign.subtitle':
         "Company data and look of this tenant's invoice documents – used for every PDF and XRechnung.",

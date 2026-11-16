@@ -9,7 +9,8 @@ import { signIn } from './login';
  */
 test('adminUser_editingTheDesignAndPreviewing_showsTheSampleInvoiceAndSaves', async ({ page }) => {
     await signIn(page, 'admin');
-    await page.getByTestId('nav-invoice-design').click();
+    // The Einstellungen tab opens on its first tab, the invoice design editor.
+    await page.getByTestId('nav-settings').click();
     await expect(page.getByRole('heading', { name: 'Invoice design' })).toBeVisible();
 
     const companyName = page.getByTestId('design-companyName');
@@ -29,10 +30,10 @@ test('adminUser_editingTheDesignAndPreviewing_showsTheSampleInvoiceAndSaves', as
 });
 
 test('viewerUser_cannotReachTheInvoiceDesigner', async ({ page }) => {
-    // The designer needs masterData.write like the export: no nav entry for a viewer, and
-    // typing the URL bounces back to the home page.
+    // The designer needs masterData.write like the export: no settings nav entry for a viewer,
+    // and typing the URL (the old top-level one included) bounces back to the home page.
     await signIn(page, 'viewer');
-    await expect(page.getByTestId('nav-invoice-design')).toBeHidden();
+    await expect(page.getByTestId('nav-settings')).toBeHidden();
     await page.goto('/invoice-design');
     await expect(page.getByTestId('home-greeting')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Invoice design' })).toBeHidden();
