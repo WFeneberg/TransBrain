@@ -173,14 +173,18 @@ internal sealed class ChatWithAssistantCommandHandler(
                 "nur vor, statt sie auszuführen.");
         }
 
-        // The service account can do more than a dispatcher; the prompt pins the agent to the
-        // instructing user's own scope.
-        if (mayInstructWrites && !currentUser.IsInRole("admin"))
+        // The service account passes every tenant policy; the prompt pins the agent to the
+        // instructing user's own scope — and tells it explicitly when there is no limit, so it
+        // never refuses an admin out of assumed permission problems.
+        if (mayInstructWrites)
         {
-            context.AppendLine(
-                "- Rollengrenze: Der Benutzer ist Disponent. Führe nur dispositive Schreibaktionen aus " +
-                "(Aufträge, Touren, Zuweisungen) — keine Stammdaten (Fahrzeuge, Fahrer, Kunden, Kataloge) " +
-                "und keine Einstellungen.");
+            context.AppendLine(currentUser.IsInRole("admin")
+                ? "- Rollengrenze: keine — der Benutzer ist Admin und darf alle Aktionen beauftragen " +
+                  "(Stammdaten wie Fahrzeuge/Fahrer/Kunden, Disposition, Touren, Einstellungen). " +
+                  "Lehne beauftragte Aktionen nicht aus vermeintlichen Rechtegründen ab."
+                : "- Rollengrenze: Der Benutzer ist Disponent. Führe nur dispositive Schreibaktionen aus " +
+                  "(Aufträge, Touren, Zuweisungen) — keine Stammdaten (Fahrzeuge, Fahrer, Kunden, Kataloge) " +
+                  "und keine Einstellungen.");
         }
 
         return context.ToString();

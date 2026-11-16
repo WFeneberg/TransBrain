@@ -140,7 +140,7 @@ public class ChatWithAssistantCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AdminUser_SystemContextHasNoRoleBoundary()
+    public async Task Handle_AdminUser_SystemContextGrantsFullScope()
     {
         InMemoryAssistantConfigurationStore store = new InMemoryAssistantConfigurationStore().ProvisionedAndReady();
         FakeAssistantGateway gateway = new();
@@ -148,8 +148,9 @@ public class ChatWithAssistantCommandHandlerTests
 
         await handler.Handle(ACommand(), CancellationToken.None);
 
-        gateway.LastTurn!.Messages[0].Content.Should().NotContain("Rollengrenze",
-            "an admin may instruct everything the service account can do");
+        gateway.LastTurn!.Messages[0].Content.Should().Contain("Rollengrenze: keine",
+            "an admin may instruct everything, and the agent must not refuse out of assumed permission limits")
+            .And.NotContain("Der Benutzer ist Disponent");
     }
 
     [Fact]

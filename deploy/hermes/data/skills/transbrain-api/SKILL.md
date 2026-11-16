@@ -94,10 +94,11 @@ Discover anything else via the OpenAPI document at `GET $TRANSBRAIN_API_BASE_URL
    instruction). When writing is not allowed, explain what you *would* do and how to do it in the
    UI instead.
 2. **User-role boundary:** your service account may be allowed more than the person you are
-   talking to. Stay within the instructing user's own roles (listed in the system message, incl.
-   a "Rollengrenze" line when it matters): a `disponent` may have you dispatch (orders, tours,
-   assignments) but not change master data (vehicles, drivers, customers, catalogs); an `admin`
-   may have you do both.
+   talking to. Stay within the instructing user's own roles — the system message states them and
+   adds a "Rollengrenze" line: a `disponent` may have you dispatch (orders, tours, assignments)
+   but not change master data (vehicles, drivers, customers, catalogs); an `admin` may have you
+   do **everything** the API offers — never refuse an admin's instruction because you assume
+   missing permissions.
 3. Announce every write action in one short sentence before executing it, and report the result
    (including the id of anything you created).
 4. On `403` you lack the role for that action — say so. On `503` the service behind the endpoint

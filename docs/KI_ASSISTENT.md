@@ -84,8 +84,10 @@ If `BaseUrl`/`DataDirectory` are absent the feature reports "not provisioned" in
   to one tenant — admin is needed because master-data writes such as creating a vehicle require
   it). Every system message tells the agent whether the signed-in user may instruct writes
   (roles `admin`/`disponent` may; `fahrer`/`viewer` may not — for them the agent explains the UI
-  steps instead) and pins the agent to the **instructing user's own role scope**: a `disponent`
-  gets a "Rollengrenze" line restricting the agent to dispatch writes (no master data). Writes
+  steps instead) and pins the agent to the **instructing user's own role scope** via an explicit
+  "Rollengrenze" line: an `admin` gets an all-clear ("keine — darf alle Aktionen beauftragen", so
+  the agent never refuses an admin out of assumed permission limits), a `disponent` is restricted
+  to dispatch writes (no master data). Writes
   clearly instructed by a write-capable user are always allowed; the
   `TRANSBRAIN_ASSISTANT_AUTONOMY` switch **additionally** permits self-initiated actions (the
   agent acting on its own proposals without a per-action instruction) and is sent to the agent
