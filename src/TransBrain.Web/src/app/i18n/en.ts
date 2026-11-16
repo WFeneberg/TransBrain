@@ -602,6 +602,7 @@ export const en = {
         'Planned driving of {time} h exceeds the 10 h maximum for one day.',
     'tours.route.violation.Tour.ExtendedDailyDriving':
         'Planned driving of {time} h needs the 10 h extension, which is allowed twice a week.',
+    'tours.route.loading': 'The route is being calculated …',
     'tours.route.error.load': 'The route could not be loaded.',
     'tours.route.error.addressNotFound':
         'The address "{address}" was not found in the loaded map extract, so the route cannot be calculated.',

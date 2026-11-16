@@ -615,6 +615,7 @@ export const en = {
     'route.schedule': 'Schedule',
     'route.violations': 'Driving and rest time notes',
     'route.noViolations': 'No violations or warnings.',
+    'route.loading': 'The route is being calculated …',
     'route.loadFailed': 'The route could not be loaded.',
     'route.addressNotFound':
         'The address "{address}" was not found in the loaded map extract, so the route cannot be calculated.',

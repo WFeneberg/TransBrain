@@ -949,7 +949,9 @@ Der Bereich wird unten unter „Route der Tour“ beschrieben.
 ### Route der Tour
 
 Die Route wird beim Öffnen der Seite berechnet und nach jedem Zuordnen oder Entfernen eines
-Auftrags neu geladen. Sie besteht aus:
+Auftrags neu geladen. Die Berechnung dauert spürbar länger als die übrigen Abfragen der Seite;
+solange sie läuft, zeigt der Bereich einen Drehkreis mit dem Hinweis „Die Route wird
+berechnet …“. Die Route besteht aus:
 
 - **Strecke** und **Fahrzeit** (Stunden:Minuten) der gesamten Tour.
 - **Karte** mit der Fahrstrecke als blaue Linie und den nummerierten Stopps (1, 2, …) in

@@ -7,6 +7,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -39,6 +40,7 @@ const VIOLATION_KEYS: Partial<Record<string, TranslationKey>> = {
         MatFormFieldModule,
         MatIconModule,
         MatProgressBarModule,
+        MatProgressSpinnerModule,
         MatSelectModule,
         MatTableModule,
         MatTooltipModule,
@@ -442,6 +444,12 @@ const VIOLATION_KEYS: Partial<Record<string, TranslationKey>> = {
                                     </button>
                                 </div>
                             }
+                            @if (routeLoading()) {
+                                <p class="hint" data-testid="tour-route-loading">
+                                    <mat-spinner diameter="18" />
+                                    {{ i18n.t('tours.route.loading') }}
+                                </p>
+                            }
                             @if (routeError(); as message) {
                                 <p class="hint" data-testid="tour-route-error">
                                     <mat-icon aria-hidden="true">info</mat-icon>{{ message }}
@@ -671,6 +679,9 @@ export class TourDetailComponent {
     protected readonly actionError = signal<string | null>(null);
     protected readonly tourRoute = signal<TourRoute | null>(null);
     protected readonly routeError = signal<string | null>(null);
+    // Route calculation is noticeably slower than the other queries on this page, so the card
+    // tells the user it is still working - on the first load and after every change to the stops.
+    protected readonly routeLoading = signal(false);
     protected readonly stopMarkers = computed<MapMarker[]>(() =>
         (this.tourRoute()?.stops ?? []).map((stop) => ({
             latitude: stop.latitude,
@@ -812,15 +823,19 @@ export class TourDetailComponent {
     // refetch supersedes one still in flight, so a slow earlier answer cannot overwrite a newer.
     private loadRoute(): void {
         this.routeSub?.unsubscribe();
+        this.routeLoading.set(true);
+        // A stale error would contradict the loading hint; the next answer sets it again if needed.
+        this.routeError.set(null);
         this.routeSub = this.session.ready
             .pipe(switchMap(() => this.service.getRoute(this.tourId)))
             .subscribe({
                 next: (route) => {
                     this.tourRoute.set(route);
-                    this.routeError.set(null);
+                    this.routeLoading.set(false);
                 },
                 error: (error: HttpErrorResponse) => {
                     this.tourRoute.set(null);
+                    this.routeLoading.set(false);
                     const detail: string = error.error?.detail ?? '';
                     this.routeError.set(
                         error.status === 503

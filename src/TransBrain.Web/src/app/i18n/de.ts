@@ -607,6 +607,7 @@ export const de: Record<keyof typeof en, string> = {
         'Die geplante Lenkzeit von {time} h überschreitet die zulässige Tageslenkzeit von 10 Stunden.',
     'tours.route.violation.Tour.ExtendedDailyDriving':
         'Die geplante Lenkzeit von {time} h nutzt die Verlängerung auf 10 Stunden, die zweimal pro Woche zulässig ist.',
+    'tours.route.loading': 'Die Route wird berechnet …',
     'tours.route.error.load': 'Die Route konnte nicht geladen werden.',
     'tours.route.error.addressNotFound':
         'Die Adresse „{address}“ wurde im geladenen Kartenausschnitt nicht gefunden. Ohne sie lässt sich die Route nicht berechnen.',

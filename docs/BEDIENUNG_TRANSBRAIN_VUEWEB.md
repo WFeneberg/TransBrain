@@ -907,7 +907,9 @@ Stopps. Darunter stehen:
 - **Hinweise zu Lenk- und Ruhezeiten** — ein Verstoß erscheint rot, eine Warnung gelb. Ohne
   Befund steht dort „Keine Verstöße oder Warnungen.“
 
-Die Route berechnet der Server neu, sobald sich die Stopps ändern. Das übernimmt ein Routing-Dienst auf dem
+Die Route berechnet der Server beim Öffnen der Seite und neu, sobald sich die Stopps ändern. Die
+Berechnung dauert spürbar länger als die übrigen Abfragen der Seite; solange sie läuft, zeigt der
+Bereich einen Drehkreis mit dem Hinweis „Die Route wird berechnet …“. Das Berechnen übernimmt ein Routing-Dienst auf dem
 eigenen Server, ohne externen Dienst oder Schlüssel; er kann nur Strecken im geladenen
 Kartenausschnitt planen. Ist der Dienst noch im Aufbau oder nicht
 erreichbar, erscheint anstelle der Route die Meldung „Der Karten- und Routingdienst ist nicht

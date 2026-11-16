@@ -39,6 +39,9 @@ const actionError = ref<string | null>(null);
 const tourRoute = ref<TourRoute | null>(null);
 // Its own slot like actionError: a route the service cannot compute must not blank the tour.
 const routeError = ref<string | null>(null);
+// Route calculation is noticeably slower than the other queries on this page, so the card
+// tells the user it is still working - on the first load and after every change to the stops.
+const routeLoading = ref(false);
 const fittingOrders = ref<FittingOrders | null>(null);
 
 const stopHeaders = computed(() => [
@@ -133,9 +136,11 @@ async function loadFittingOrders(): Promise<void> {
 // The route depends on what is assigned, so it is reloaded after every change to the stops.
 // 503 means the routing service is not configured or unreachable - a friendly message, not the raw error.
 async function loadRoute(): Promise<void> {
+    routeLoading.value = true;
+    // A stale error would contradict the loading hint; the next answer sets it again if needed.
+    routeError.value = null;
     try {
         tourRoute.value = await getTourRoute(tourId);
-        routeError.value = null;
     } catch (error) {
         tourRoute.value = null;
         const problem = axios.isAxiosError(error) ? error.response?.data : undefined;
@@ -147,6 +152,8 @@ async function loadRoute(): Promise<void> {
                   ? // The server quotes the address it could not place.
                     t('route.addressNotFound', { address: /'(.+)'/.exec(detail)?.[1] ?? detail })
                   : describe(error, t('route.loadFailed'));
+    } finally {
+        routeLoading.value = false;
     }
 }
 
@@ -521,6 +528,10 @@ function describe(error: unknown, fallback: string): string {
                                     >{{ t('tours.optimize') }}</v-btn
                                 >
                             </div>
+                            <p v-if="routeLoading" class="section-hint" data-testid="tour-route-loading">
+                                <v-progress-circular indeterminate color="primary" size="16" width="2" />
+                                {{ t('route.loading') }}
+                            </p>
                             <p v-if="routeError" class="text-error error-line" data-testid="tour-route-error">{{ routeError }}</p>
                             <template v-if="tourRoute">
                                 <dl class="route-figures">
